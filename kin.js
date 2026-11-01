@@ -161,7 +161,8 @@
 
   var FONT = '"Readex Pro", system-ui, sans-serif';
   var COL = { me: '#F4EFE6', up: '#FF8A80', side: '#E9C46A', down: '#2EC4B6', mate: '#8FB8DE' };
-  var RING = 'M63.82 27.62A34.25 34.25 0 1 1 48.92 37.79A22.55 22.55 0 0 1 57.42 41.18A25.75 25.75 0 1 0 72.32 34.39A37.45 37.45 0 0 0 63.82 27.62Z';
+  // The Shorbaka mark: two threads (family + friends) woven together, in a 120x120 box.
+  var THREAD_A = 'M14 34 C40 34 44 86 60 86 S80 34 106 34', THREAD_B = 'M14 86 C40 86 44 34 60 34 S80 86 106 86';
 
   function setFont(ctx, weight, size) { ctx.font = weight + ' ' + size + 'px ' + FONT; }
 
@@ -203,19 +204,26 @@
     ctx.closePath();
   }
 
+  // Draws the two-thread mark centred on (cx, cy), h px tall (about h * 102 / 72 wide).
+  // The gap where one thread crosses the other is cut out for real (offscreen canvas),
+  // so it looks right on any background, including see-through ones.
   function drawMark(ctx, cx, cy, h, light) {
     if (typeof Path2D === 'undefined') return;
-    var s = h / 72, p = new Path2D(RING);
-    ctx.save();
-    ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-60, -60);
-    ctx.fillStyle = light ? '#F0675C' : '#FF8A80'; ctx.fill(p);
-    ctx.save(); ctx.translate(60, 60); ctx.rotate(Math.PI); ctx.translate(-60, -60);
-    ctx.fillStyle = light ? '#1A9E92' : '#2EC4B6'; ctx.fill(p);
-    ctx.restore();
-    ctx.beginPath(); ctx.arc(60, 60, 9.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#F4EFE6'; ctx.fill();
-    if (light) { ctx.lineWidth = 1.2; ctx.strokeStyle = '#C4AA6A'; ctx.stroke(); }
-    ctx.restore();
+    var s = h / 72, k = 3, W = Math.ceil(120 * s * k), H = W;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d');
+    var a = new Path2D(THREAD_A), b = new Path2D(THREAD_B);
+    var ca = light ? '#1A9E92' : '#2EC4B6', cb = light ? '#F0675C' : '#FF8A80';
+    g.scale(s * k, s * k); g.lineCap = 'round'; g.lineJoin = 'round';
+    function thread(p, col) {
+      g.globalCompositeOperation = 'destination-out'; g.lineWidth = 20; g.stroke(p);
+      g.globalCompositeOperation = 'source-over'; g.lineWidth = 11; g.strokeStyle = col; g.stroke(p);
+    }
+    g.lineWidth = 11; g.strokeStyle = ca; g.stroke(a);
+    thread(b, cb);
+    // the teal thread goes back over the coral one at the right crossing
+    g.save(); g.beginPath(); g.arc(83, 60, 19, 0, Math.PI * 2); g.clip(); thread(a, ca); g.restore();
+    ctx.drawImage(c, cx - 60 * s, cy - 60 * s, 120 * s, 120 * s);
   }
 
   function pearl(ctx, x, y, r) {

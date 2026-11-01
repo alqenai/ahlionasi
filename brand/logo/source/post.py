@@ -1,0 +1,20 @@
+from PIL import Image
+import os
+os.chdir('/tmp/claude-0/-home-claude/a5781fe5-8e6a-530b-96e8-3ff8bf60a15a/scratchpad/logo/out')
+fav=Image.open('fav-512.png').convert('RGBA');fav.resize((32,32),Image.LANCZOS).save('web/favicon-32.png');fav.save('web/favicon.ico',sizes=[(16,16),(32,32),(48,48)])
+app=Image.open('png/app-icon-1024.png').convert('RGB')
+for n,s in [('apple-touch-icon',180),('icon-192',192),('icon-512',512)]:app.resize((s,s),Image.LANCZOS).save(f'web/{n}.png')
+os.remove('fav-512.png')
+W=1800;sheet=Image.new('RGB',(W,1500),'#777')
+def put(f,box,bg,size):
+    im=Image.open(f).convert('RGBA');im.thumbnail(size,Image.LANCZOS)
+    t=Image.new('RGBA',size,bg);t.alpha_composite(im,((size[0]-im.width)//2,(size[1]-im.height)//2));sheet.paste(t.convert('RGB'),box)
+put('png/logo-stacked-for-dark-bg.png',(0,0),'#5a3d7a',(900,360))
+put('png/logo-stacked-for-light-bg.png',(900,0),'#F4EFE6',(900,360))
+put('web/og-image.png',(0,370),'#000',(900,480))
+put('png/logo-horizontal-en-for-light-bg.png',(900,370),'#ffffff',(900,200))
+put('png/mark-for-dark-bg.png',(900,580),'#0E2A47',(300,270))
+put('png/app-icon-1024.png',(1210,580),'#777',(270,270))
+put('png/instagram-profile-1080.png',(1490,580),'#777',(270,270))
+put('png/wordmark-for-dark-bg.png',(0,860),'#0E2A47',(1800,640))
+sheet.save('../check.png')
