@@ -1,4 +1,4 @@
-# أهلي وناسي | Ahli o Nasi
+# شرباكة | Shorbaka
 
 Map your family, your friends and everyone in between, then share it as an Instagram story, a post, or a printable PDF.
 
