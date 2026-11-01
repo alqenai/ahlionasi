@@ -602,7 +602,8 @@
     }
 
     function node(i, main, hint, type, isCur) {
-      var li = el('li', 'kin-node' + (isCur ? ' is-cur' : '') + (i < 0 ? ' is-me' : ''));
+      var waiting = i < 0 && !st.open;
+      var li = el('li', 'kin-node' + (isCur ? ' is-cur' : '') + (i < 0 ? ' is-me' : '') + (waiting ? ' is-waiting' : ''));
       li.style.setProperty('--c', COL[type]);
       li.appendChild(el('span', 'kin-dot'));
       var b = el('button', 'kin-node-btn');
@@ -620,7 +621,22 @@
         focusNext();
       });
       li.appendChild(b);
-      if (i < 0 && !st.open) li.appendChild(el('span', 'kin-tap', 'دوس على اسمك'));
+      if (waiting) {
+        // an arrow pointing at the name; tapping the tag works like tapping the name
+        var tap = el('button', 'kin-tap');
+        tap.type = 'button';
+        tap.tabIndex = -1;
+        tap.setAttribute('aria-hidden', 'true');
+        tap.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg>';
+        tap.appendChild(el('span', 'kin-tap-long', 'دوس على اسمك'));
+        tap.appendChild(el('span', 'kin-tap-short', 'دوس هني'));
+        tap.addEventListener('click', function () { b.click(); });
+        li.appendChild(tap);
+        // on a narrow phone or with a long name, the short words leave the name room (checked before it is drawn)
+        requestAnimationFrame(function () {
+          if (m.scrollWidth > m.clientWidth + 1) li.classList.add('is-tight');
+        });
+      }
       return li;
     }
 
