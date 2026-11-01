@@ -379,25 +379,20 @@
     ctx.restore();
   }
 
+  // The small sign-off at the bottom: the mark and the address, on a see-through pill that sits in the story.
   function drawSticker(ctx, cy) {
-    var t1 = 'اكتشف شنو يقرب لك', t2 = 'shorbaka.com';
-    setFont(ctx, '700', 42); var w1 = ctx.measureText(t1).width;
-    setFont(ctx, '500', 32); var w2 = ctx.measureText(t2).width;
-    var markW = 112, markH = 79, pad = 36, h = 124;
-    var w = pad + markW + 22 + w1 + 26 + w2 + pad;
-    var x0 = 540 - w / 2, y0 = cy - h / 2;
+    var label = 'shorbaka.com', markH = 56, markW = markH * 102 / 72, gap = 18, padS = 28, padE = 34, h = 96;
     ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
-    roundRect(ctx, x0, y0, w, h, h / 2); ctx.fillStyle = '#F4EFE6'; ctx.fill();
-    ctx.restore();
-    var xr = x0 + w - pad;
-    drawMark(ctx, xr - markW / 2, cy, markH, true);
-    xr -= markW + 22;
-    ctx.textAlign = 'right'; ctx.fillStyle = '#0E2A47'; setFont(ctx, '700', 42);
-    ctx.fillText(t1, xr, cy + 14);
-    xr -= w1 + 26;
-    ctx.save(); ctx.direction = 'ltr'; ctx.textAlign = 'right'; ctx.fillStyle = '#4A5F78'; setFont(ctx, '500', 32);
-    ctx.fillText(t2, xr, cy + 11);
+    ctx.direction = 'ltr'; ctx.textAlign = 'left'; setFont(ctx, '500', 40);
+    var m = ctx.measureText(label), w = padS + markW + gap + m.width + padE;
+    var x0 = 540 - w / 2;
+    roundRect(ctx, x0, cy - h / 2, w, h, h / 2);
+    ctx.fillStyle = 'rgba(244, 239, 230, 0.07)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.2)'; ctx.stroke();
+    drawMark(ctx, x0 + padS + markW / 2, cy, markH, false);
+    var ink = (m.actualBoundingBoxAscent || 30) - (m.actualBoundingBoxDescent || 0);
+    ctx.fillStyle = '#F4EFE6';
+    ctx.fillText(label, x0 + padS + markW + gap, cy + ink / 2);
     ctx.restore();
   }
 
@@ -555,7 +550,7 @@
       back: $('kin-back'), reset: $('kin-reset'), result: $('kin-result'), rLabel: $('kin-r-label'),
       rSentence: $('kin-r-sentence'), rExtra: $('kin-r-extra'), story: $('kin-story'), save: $('kin-save'),
       copy: $('kin-copy'), again: $('kin-again'), wallet: $('kin-wallet'), wCount: $('kin-w-count'),
-      wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), modal: $('kin-modal'),
+      wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), wIn: $('kin-w-in'), modal: $('kin-modal'),
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
       privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
       authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close'),
@@ -684,19 +679,25 @@
       }
     }
 
+    // The wallet has its own box under the finder. Signed out with nothing saved, it invites them to sign in.
     function drawWallet(items, inAccount) {
-      var failed = !items, list = (items || []).filter(function (it) { return replay(it.steps); });
-      ui.wallet.hidden = !inAccount && !list.length;
+      var a = accounts(), failed = !items, list = (items || []).filter(function (it) { return replay(it.steps); });
+      var invite = !inAccount && !!a && acctReady && !list.length;
+      ui.wallet.hidden = !inAccount && !list.length && !invite;
       ui.wCount.textContent = list.length ? people(list.length) : '';
       if (ui.acctCount) ui.acctCount.textContent = inAccount && list.length ? people(list.length) : '';
       if (ui.wEmpty) {
-        ui.wEmpty.hidden = !inAccount || list.length > 0;
-        ui.wEmpty.textContent = failed ? 'ما قدرنا نجيب محفظتك الحين، جرّب بعد شوي.' : 'محفظتك فاضية. احفظ أي صلة قرابة وبتلقاها هني.';
+        ui.wEmpty.hidden = list.length > 0;
+        ui.wEmpty.textContent = failed ? 'ما قدرنا نجيب محفظتك الحين، جرّب بعد شوي.'
+          : inAccount ? 'محفظتك فاضية. احفظ أي صلة قرابة وبتلقاها هني.'
+          : 'احفظ صلات القرابة اللي تكتشفها، وتلقاها هني من أي جهاز تدخل منه.';
       }
+      if (ui.wIn) ui.wIn.hidden = !invite;
       if (ui.wNote) {
+        ui.wNote.hidden = invite;
         ui.wNote.textContent = inAccount ? 'محفوظة بحسابك، وتلقاها من أي جهاز تدخل منه.'
-          : accounts() ? 'محفوظة في جهازك بس. سجّل دخول وتنتقل لحسابك.'
-          : 'محفوظة في جهازك بس. أول ما يفتح تسجيل الدخول، تقدر تنقلها لحسابك.';
+          : a ? 'محفوظة في جهازك بس. سجّل دخول وتنتقل لحسابك.'
+          : 'محفوظة في جهازك بس.';
       }
       ui.wList.textContent = '';
       list.forEach(function (it) {
@@ -741,7 +742,7 @@
     function renderAccount() {
       var a = accounts();
       if (ui.privacy) {
-        ui.privacy.textContent = a ? 'الأسماء ما تطلع من جهازك إلا اللي تحفظها بحسابك، وما يشوفها أحد غيرك.'
+        ui.privacy.textContent = a ? 'الأسماء ما تطلع من جهازك إلا اللي تحفظها بمحفظتك.'
           : 'الأسماء تبقى في جهازك، ما تطلع لأحد.';
       }
       // Top of the page: "sign in" when signed out, the person's chip with their account menu when in.
@@ -971,6 +972,7 @@
       else if (ui.acctMenu && !ui.acctMenu.hidden) closeMenu(true);
     });
 
+    if (ui.wIn) ui.wIn.addEventListener('click', function () { openAuth(null, ui.wIn); });
     if (ui.acctBox) {
       ui.acctIn.addEventListener('click', function () { openAuth(null, ui.acctIn); });
       ui.acctBtn.addEventListener('click', function () { if (ui.acctMenu.hidden) openMenu(); else closeMenu(); });
