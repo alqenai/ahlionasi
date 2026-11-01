@@ -709,8 +709,8 @@
       if (ui.acctCount) ui.acctCount.textContent = inAccount && list.length ? people(list.length) : '';
       if (ui.wEmpty) {
         ui.wEmpty.hidden = list.length > 0;
-        ui.wEmpty.textContent = failed ? 'ما قدرنا نجيب محفظتك الحين، جرّب بعد شوي.'
-          : inAccount ? 'محفظتك فاضية. احفظ أي صلة قرابة وبتلقاها هني.'
+        ui.wEmpty.textContent = failed ? 'ما قدرنا نجيب اللي حفظتهم الحين، جرّب بعد شوي.'
+          : inAccount ? 'ما حفظت أحد للحين. احفظ أي صلة قرابة وبتلقاها هني.'
           : 'احفظ صلات القرابة اللي تكتشفها، وتلقاها هني من أي جهاز تدخل منه.';
       }
       if (ui.wIn) ui.wIn.hidden = !invite;
@@ -735,10 +735,15 @@
           ui.result.focus({ preventScroll: true });
           ui.result.scrollIntoView({ block: 'center', behavior: 'smooth' });
         });
+        var edit = el('button', 'kin-w-edit');
+        edit.type = 'button';
+        edit.appendChild(el('span', null, 'عدّل'));
+        edit.setAttribute('aria-label', 'عدّل اسم ' + subject(path, it.them));
+        edit.addEventListener('click', function () { editItem(li, it, path, inAccount); });
         var del = el('button', 'kin-w-del');
         del.type = 'button';
         del.appendChild(el('span', null, 'شيل'));
-        del.setAttribute('aria-label', 'شيل ' + subject(path, it.them) + ' من المحفظة');
+        del.setAttribute('aria-label', 'شيل ' + subject(path, it.them));
         del.addEventListener('click', function () {
           if (del.dataset.armed) {
             if (inAccount) {
@@ -755,15 +760,60 @@
           setTimeout(function () { delete del.dataset.armed; }, 3000);
         });
         li.appendChild(open);
+        li.appendChild(edit);
         li.appendChild(del);
         ui.wList.appendChild(li);
+      });
+    }
+
+    // Fixing a name that was typed wrong: the row turns into a small form in place.
+    function editItem(li, it, path, inAccount) {
+      var form = el('form', 'kin-w-form'), field = el('div', 'kin-w-field');
+      var input = el('input', 'kin-w-input');
+      input.type = 'text'; input.value = it.them; input.maxLength = 40;
+      input.autocomplete = 'off'; input.setAttribute('enterkeyhint', 'done');
+      input.placeholder = gender(path) === 'f' ? 'اسمها' : 'اسمه';
+      input.setAttribute('aria-label', 'الاسم');
+      field.appendChild(input);
+      field.appendChild(el('span', 'kin-w-rel', verb(path) + ' ' + phrase(path)));
+      var ok = el('button', 'kin-w-ok'), no = el('button', 'kin-w-no');
+      ok.type = 'submit'; ok.appendChild(el('span', null, 'حفظ'));
+      no.type = 'button'; no.appendChild(el('span', null, 'إلغاء'));
+      form.appendChild(field); form.appendChild(ok); form.appendChild(no);
+      li.textContent = '';
+      li.classList.add('is-editing');
+      li.appendChild(form);
+      input.focus();
+      input.select();
+
+      var busy = function (on) { ok.disabled = no.disabled = input.disabled = on; };
+      no.addEventListener('click', renderWallet);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { e.stopPropagation(); renderWallet(); }
+      });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var name = input.value.trim().slice(0, 40);
+        if (name === it.them) { renderWallet(); return; }
+        busy(true);
+        if (inAccount) {
+          accounts().rename(it.id, name).then(renderWallet, function () { busy(false); flash(ok, 'ما زبط', 2000); });
+          return;
+        }
+        // On the device: if that name with that relation is already saved, the two become one (the saved one stays).
+        var list = loadWallet();
+        var same = list.some(function (x) { return x.id !== it.id && x.them === name && x.path === it.path; });
+        if (same) list = list.filter(function (x) { return x.id !== it.id; });
+        else list.forEach(function (x) { if (x.id === it.id) x.them = name; });
+        if (storeWallet(list)) renderWallet();
+        else { busy(false); flash(ok, 'ما زبط', 2000); }
       });
     }
 
     function renderAccount() {
       var a = accounts();
       if (ui.privacy) {
-        ui.privacy.textContent = a ? 'الأسماء ما تطلع من جهازك إلا اللي تحفظها بمحفظتك.'
+        ui.privacy.textContent = a ? 'الأسماء ما تطلع من جهازك إلا اللي تحفظها بحسابك.'
           : 'الأسماء تبقى في جهازك، ما تطلع لأحد.';
       }
       // Top of the page: "sign in" when signed out, the person's chip with their account menu when in.
@@ -864,8 +914,8 @@
       st.pending = pending || null;
       ui.authTitle.textContent = pending ? 'احفظها بحسابك' : 'سجّل دخولك';
       ui.authText.textContent = pending
-        ? 'سجّل دخولك بجوجل عشان تنحفظ صلة القرابة بمحفظتك، وتلقاها من أي جهاز.'
-        : 'سجّل دخولك بجوجل عشان تشوف محفظتك وتحفظ فيها من أي جهاز.';
+        ? 'سجّل دخولك بجوجل عشان تنحفظ صلة القرابة بحسابك، وتلقاها من أي جهاز.'
+        : 'سجّل دخولك بجوجل عشان تشوف اللي حفظتهم، وتحفظ من أي جهاز.';
       ui.authErr.hidden = true;
       if (ui.authHint) ui.authHint.hidden = !stuck;
       showLocal(stuck);
@@ -915,7 +965,7 @@
     function saveHere(item) {
       var list = loadWallet().filter(function (it) { return !(it.them === item.them && it.path === item.path); });
       list.unshift(item);
-      if (storeWallet(list)) { flash(ui.save, 'انحفظت بمحفظتك'); renderWallet(); }
+      if (storeWallet(list)) { flash(ui.save, 'انحفظت'); renderWallet(); }
       else flash(ui.save, 'ما قدرت أحفظ هني');
     }
 

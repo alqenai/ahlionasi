@@ -134,6 +134,15 @@
     return client.from('relations').delete().eq('id', id).then(rows);
   }
 
+  // Fixes the name of a saved person. If that name with that relation is already saved, the two become one.
+  function rename(id, them) {
+    return client.from('relations').update({ them: String(them || '').slice(0, 40) }).eq('id', id).then(rows)
+      .catch(function (e) {
+        if (e && e.code === '23505') return remove(id);
+        throw e;
+      });
+  }
+
   // Deletes the account and everything saved in it (the database function cascades).
   function deleteAccount() {
     return client.rpc('delete_my_account').then(rows).then(signOut);
@@ -149,6 +158,7 @@
     list: list,
     save: save,
     remove: remove,
+    rename: rename,
     deleteAccount: deleteAccount
   };
 })(window);

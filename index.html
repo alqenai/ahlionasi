@@ -260,6 +260,24 @@
     .kin-w-rel { font-size: .88rem; line-height: 1.5; color: var(--sand); }
     .kin-w-del { flex: none; min-width: 52px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 12px; background: rgba(244, 239, 230, .06); color: var(--muted); font-size: .82rem; font-weight: 500; cursor: pointer; }
     .kin-w-del[data-armed] { background: rgba(255, 138, 128, .18); color: var(--coral); }
+    .kin-w-edit, .kin-w-no { flex: none; min-width: 52px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 12px; background: rgba(244, 239, 230, .06); color: var(--pearl); font-size: .82rem; font-weight: 500; cursor: pointer; }
+    .kin-w-edit:hover, .kin-w-del:hover, .kin-w-no:hover { background: rgba(244, 239, 230, .12); }
+    /* Fixing a name: the row becomes a small form in place. */
+    .kin-w-item.is-editing { padding: 6px; box-shadow: inset 0 0 0 1px rgba(46, 196, 182, .45); }
+    .kin-w-form { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+    .kin-w-field { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .kin-w-field .kin-w-rel { padding: 3px 10px 1px; }
+    .kin-w-input {
+      width: 100%; height: 42px; padding: 0 10px; border: 0; border-radius: 10px;
+      background: rgba(244, 239, 230, .07); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .22);
+      color: var(--pearl); font: 700 1rem "Readex Pro", system-ui, sans-serif;
+      outline: none; -webkit-appearance: none; appearance: none;
+    }
+    .kin-w-input:focus { box-shadow: inset 0 0 0 2px var(--teal); }
+    .kin-w-input::placeholder { color: #6F86A0; font-weight: 400; }
+    .kin-w-ok { flex: none; min-width: 52px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--pearl); color: var(--navy); font-size: .85rem; font-weight: 700; cursor: pointer; }
+    .kin-w-ok:hover { background: #FFFFFF; }
+    .kin-w-form button:disabled { opacity: .55; cursor: default; }
     .kin-w-note { font-size: .8rem; line-height: 1.7; color: var(--muted); margin-top: 10px; }
     .kin-w-empty { font-size: .92rem; line-height: 1.7; color: var(--muted); margin-top: 10px; padding: 14px; border-radius: 14px; background: rgba(244, 239, 230, .04); text-align: center; }
     .kin-w-in {
@@ -407,7 +425,7 @@
           <div><p class="acct-name" id="acct-name"></p><p class="acct-email" id="acct-email" dir="ltr"></p></div>
         </div>
         <div class="acct-sep"></div>
-        <button type="button" class="acct-item" id="acct-wallet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg><span>محفظتي</span><span class="acct-count" id="acct-count"></span></button>
+        <button type="button" class="acct-item" id="acct-wallet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg><span>اللي يصيرون لي</span><span class="acct-count" id="acct-count"></span></button>
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h10"/></svg><span>تسجيل الخروج</span></button>
         <button type="button" class="acct-item acct-danger" id="acct-del"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2M6.5 7l1 12.2a1.5 1.5 0 0 0 1.5 1.3h6a1.5 1.5 0 0 0 1.5-1.3l1-12.2M10 11v6M14 11v6"/></svg><span>حذف الحساب</span></button>
@@ -474,7 +492,7 @@
     </section>
 
     <section class="kin kin-wallet" id="kin-wallet" tabindex="-1" aria-labelledby="kin-w-title" hidden>
-      <div class="kin-w-head"><h2 id="kin-w-title">محفظتي</h2><span id="kin-w-count"></span></div>
+      <div class="kin-w-head"><h2 id="kin-w-title">اللي يصيرون لي</h2><span id="kin-w-count"></span></div>
       <ul class="kin-w-list" id="kin-w-list"></ul>
       <p class="kin-w-empty" id="kin-w-empty" hidden></p>
       <button type="button" class="kin-w-in" id="kin-w-in" hidden>تسجيل الدخول</button>
@@ -520,7 +538,7 @@
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=3" defer></script>
-  <script src="/kin.js?v=9" defer></script>
+  <script src="/account.js?v=4" defer></script>
+  <script src="/kin.js?v=10" defer></script>
 </body>
 </html>
