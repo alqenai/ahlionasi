@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>شرباكة | Shorbaka</title>
-  <meta name="description" content="ارسم أهلك وناسك ودوايرك في صورة وحدة، وشاركها ستوري. Map your family and friends in one picture and share it as a story. Coming soon.">
+  <title>شرباكة | شنو يقرب لك؟</title>
+  <meta name="description" content="اعرف شنو يقرب لك أي أحد: امشِ بالشجرة خطوة خطوة ونكتب لك صلة القرابة بجملة وحدة، وشاركها ستوري. Find out exactly how you are related to anyone and share it as a story.">
   <meta name="theme-color" content="#0E2A47">
 
   <meta property="og:site_name" content="شرباكة">
-  <meta property="og:title" content="شرباكة | Shorbaka">
-  <meta property="og:description" content="ارسم أهلك وناسك في صورة وحدة، وشاركها ستوري. قريبًا.">
+  <meta property="og:title" content="شرباكة | شنو يقرب لك؟">
+  <meta property="og:description" content="اعرف صلة القرابة بينك وبين أي أحد بجملة وحدة، وشاركها ستوري.">
   <meta property="og:url" content="https://shorbaka.com/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ar_KW">
@@ -125,51 +125,25 @@
       margin-top: 8px;
       animation: up .8s ease-out .9s both;
     }
-    .chips {
-      list-style: none;
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
-      margin: 26px 0 30px;
-      animation: up .8s ease-out 1s both;
-    }
-    .chips li {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 7px 14px; border-radius: 999px;
-      font-size: .95rem; font-weight: 500;
-      background: rgba(244, 239, 230, .06);
-      box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .16);
-    }
-    .chips i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
-    .soon {
-      display: inline-flex; align-items: center; gap: 12px;
-      background: var(--pearl); color: var(--navy);
-      padding: 12px 24px; border-radius: 999px;
+    .cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      margin-top: 28px; padding: 13px 30px; border-radius: 999px;
+      background: var(--pearl); color: var(--navy); text-decoration: none;
       font-size: 1.15rem; font-weight: 700;
       box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
-      animation: up .8s ease-out 1.1s both;
+      animation: up .8s ease-out 1s both;
     }
-    .soon .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 0 rgba(46, 196, 182, .6); animation: ping 2s ease-out 2s infinite; }
-    .soon .en { direction: ltr; font-size: .85rem; font-weight: 500; color: #4A5F78; }
-    @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(46, 196, 182, .6); } 80%, 100% { box-shadow: 0 0 0 10px rgba(46, 196, 182, 0); } }
+    .cta:hover { background: #FFFFFF; }
+    .cta svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; animation: nudge 2.4s ease-in-out 2.4s infinite; }
+    @keyframes nudge { 0%, 100% { transform: none; } 50% { transform: translateY(3px); } }
     @keyframes up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
     [hidden] { display: none !important; }
     html { scroll-behavior: smooth; }
     html.kin-lock { overflow: hidden; }
 
-    .try {
-      display: inline-flex; align-items: center; gap: 8px;
-      margin-top: 16px; padding: 11px 20px; border-radius: 999px;
-      color: var(--pearl); text-decoration: none;
-      font-size: 1rem; font-weight: 500;
-      box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .3);
-      animation: up .8s ease-out 1.25s both;
-    }
-    .try:hover { background: rgba(244, 239, 230, .08); }
-    .try svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; animation: nudge 2.4s ease-in-out 2.6s infinite; }
-    @keyframes nudge { 0%, 100% { transform: none; } 50% { transform: translateY(3px); } }
-
     .kin {
-      width: 100%; margin-top: 72px; padding: 26px 18px 22px;
+      width: 100%; margin-top: 48px; padding: 26px 18px 22px;
       border-radius: 28px; text-align: start;
       background: linear-gradient(180deg, rgba(244, 239, 230, .075), rgba(244, 239, 230, .03));
       box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .12), 0 30px 60px rgba(0, 0, 0, .22);
@@ -177,9 +151,7 @@
     }
     .kin button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
     .kin button:focus-visible, .kin a:focus-visible, .kin-modal button:focus-visible, .kin-modal a:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
-    .kin-eyebrow { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: rgba(233, 196, 106, .14); color: var(--sand); font-size: .85rem; font-weight: 500; }
-    .kin-eyebrow svg { width: 14px; height: 14px; fill: currentColor; }
-    .kin h2 { font-size: clamp(1.75rem, 7.4vw, 2.15rem); font-weight: 700; line-height: 1.3; margin-top: 12px; }
+    .kin h2 { font-size: clamp(1.75rem, 7.4vw, 2.15rem); font-weight: 700; line-height: 1.3; }
     .kin-en { direction: ltr; text-align: right; font-size: .85rem; letter-spacing: .04em; color: var(--sand); margin-top: 2px; }
     .kin-sub { color: var(--muted); font-size: 1rem; line-height: 1.75; margin-top: 10px; }
 
@@ -291,8 +263,6 @@
 
     .kin-privacy { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 18px; font-size: .82rem; color: var(--muted); }
     .kin-privacy svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-    .kin-later { margin-top: 26px; font-size: 1rem; line-height: 1.7; color: var(--muted); text-wrap: balance; }
-    .kin-later b { color: var(--pearl); font-weight: 500; }
 
     .kin-modal {
       position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
@@ -357,24 +327,14 @@
     <h1>شرباكة</h1>
     <div class="latin" lang="en">shorbaka</div>
 
-    <p class="tag">ارسم أهلك وناسك ودوايرك<br>في صورة وحدة، وشاركها ستوري</p>
-    <p class="tag-en" lang="en">Map your family, your friends and everyone in between, then share it as a story.</p>
+    <p class="tag">اعرف شنو يقرب لك أي أحد<br>بجملة وحدة، وشاركها ستوري</p>
+    <p class="tag-en" lang="en">Find out exactly how you are related to anyone, then share it as a story.</p>
 
-    <ul class="chips" aria-label="الدواير">
-      <li><i style="--c:var(--coral)"></i>الأهل</li>
-      <li><i style="--c:var(--teal)"></i>الربع</li>
-      <li><i style="--c:var(--sand)"></i>الديوانية</li>
-      <li><i style="--c:var(--sky)"></i>الدوام</li>
-      <li><i style="--c:var(--pearl)"></i>الهوايات</li>
-    </ul>
-
-    <div class="soon"><span class="dot" aria-hidden="true"></span>قريبًا <span class="en" lang="en">Coming soon</span></div>
-    <a class="try" href="#kin">جرّب: شنو يقرب لك؟<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6.5 13.5L12 19l5.5-5.5"/></svg></a>
+    <a class="cta" href="#kin">ابدأ<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6.5 13.5L12 19l5.5-5.5"/></svg></a>
 
     <section class="kin" id="kin" aria-labelledby="kin-title">
-      <span class="kin-eyebrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17l-5.6 3 1.1-6.2-4.6-4.4 6.3-.9z"/></svg>جرّبها الحين</span>
       <h2 id="kin-title">شنو يقرب لك؟</h2>
-      <p class="kin-en" lang="en">How are you related? Try it.</p>
+      <p class="kin-en" lang="en">How are you related?</p>
       <p class="kin-sub">اكتب اسمك واسم الشخص، ودوس على اسمك. امشِ بالشجرة خطوة خطوة لين توصل له، ونكتب لك صلة القرابة بينكم.</p>
 
       <div class="kin-names">
@@ -418,8 +378,6 @@
 
       <p class="kin-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>الأسماء تبقى في جهازك، ما تطلع لأحد.</p>
     </section>
-
-    <p class="kin-later">وهذي بس البداية.<br><b>قريبًا</b> ترسم أهلك وناسك كلهم في صورة وحدة.</p>
   </main>
 
   <footer>© <span id="y">2026</span> SHORBAKA.COM</footer>
