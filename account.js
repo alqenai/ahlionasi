@@ -4,9 +4,9 @@
   'use strict';
 
   var CONFIG = {
-    supabaseUrl: '',     // https://<project>.supabase.co
-    supabaseKey: '',     // the project's public (anon / publishable) key, safe to ship
-    googleClientId: ''   // <id>.apps.googleusercontent.com
+    supabaseUrl: 'https://jfvbubrhghmivdjfbcku.supabase.co',
+    supabaseKey: 'sb_publishable_nom1uzSkzypbyYisBt2-dQ_psJfSZEe',  // public key, safe to ship: row-level security guards the data
+    googleClientId: ''   // <id>.apps.googleusercontent.com (accounts stay off until this is set)
   };
 
   var SUPABASE_JS = '/vendor/supabase-2.117.3.js';
