@@ -161,7 +161,8 @@
 
   var FONT = '"Readex Pro", system-ui, sans-serif';
   var COL = { me: '#F4EFE6', up: '#FF8A80', side: '#E9C46A', down: '#2EC4B6', mate: '#8FB8DE' };
-  var RING = 'M63.82 27.62A34.25 34.25 0 1 1 48.92 37.79A22.55 22.55 0 0 1 57.42 41.18A25.75 25.75 0 1 0 72.32 34.39A37.45 37.45 0 0 0 63.82 27.62Z';
+  // The Shorbaka mark: two threads (family + friends) woven together, in a 120x120 box.
+  var THREAD_A = 'M14 34 C40 34 44 86 60 86 S80 34 106 34', THREAD_B = 'M14 86 C40 86 44 34 60 34 S80 86 106 86';
 
   function setFont(ctx, weight, size) { ctx.font = weight + ' ' + size + 'px ' + FONT; }
 
@@ -205,16 +206,20 @@
 
   function drawMark(ctx, cx, cy, h, light) {
     if (typeof Path2D === 'undefined') return;
-    var s = h / 72, p = new Path2D(RING);
+    var s = h / 72, a = new Path2D(THREAD_A), b = new Path2D(THREAD_B);
+    var bg = light ? '#F4EFE6' : '#0E2A47', ca = light ? '#1A9E92' : '#2EC4B6', cb = light ? '#F0675C' : '#FF8A80';
+    function thread(p, col, gap) {
+      if (gap) { ctx.lineWidth = 11 + 9; ctx.strokeStyle = bg; ctx.stroke(p); }
+      ctx.lineWidth = 11; ctx.strokeStyle = col; ctx.stroke(p);
+    }
     ctx.save();
     ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-60, -60);
-    ctx.fillStyle = light ? '#F0675C' : '#FF8A80'; ctx.fill(p);
-    ctx.save(); ctx.translate(60, 60); ctx.rotate(Math.PI); ctx.translate(-60, -60);
-    ctx.fillStyle = light ? '#1A9E92' : '#2EC4B6'; ctx.fill(p);
-    ctx.restore();
-    ctx.beginPath(); ctx.arc(60, 60, 9.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#F4EFE6'; ctx.fill();
-    if (light) { ctx.lineWidth = 1.2; ctx.strokeStyle = '#C4AA6A'; ctx.stroke(); }
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    thread(a, ca, false);
+    thread(b, cb, true);
+    // the teal thread goes back over the coral one at the right crossing
+    ctx.beginPath(); ctx.arc(83, 60, 19, 0, Math.PI * 2); ctx.clip();
+    thread(a, ca, true);
     ctx.restore();
   }
 
