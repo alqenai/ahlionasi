@@ -557,14 +557,18 @@
       copy: $('kin-copy'), again: $('kin-again'), wallet: $('kin-wallet'), wCount: $('kin-w-count'),
       wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), modal: $('kin-modal'),
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
-      acct: $('kin-acct'), privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
+      privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
       authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close'),
-      authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local')
+      authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local'),
+      acctBox: $('acct'), acctIn: $('acct-in'), acctBtn: $('acct-btn'), acctAv: $('acct-av'), acctFirst: $('acct-first'),
+      acctMenu: $('acct-menu'), acctAvLg: $('acct-av-lg'), acctName: $('acct-name'), acctEmail: $('acct-email'),
+      acctWallet: $('acct-wallet'), acctCount: $('acct-count'), acctOut: $('acct-out'), acctDel: $('acct-del'),
+      acctConfirm: $('acct-confirm'), acctYes: $('acct-yes'), acctNo: $('acct-no'), acctErr: $('acct-err')
     };
     if (!ui.path) return;
 
     var st = { trail: [], open: false, done: false, pending: null }, file = null, url = null;
-    var sheet = null, sheetFrom = null, wSeq = 0;
+    var sheet = null, sheetFrom = null, wSeq = 0, acctReady = !root.ACCOUNT;
 
     // The account system, when it is switched on and loaded; null otherwise.
     function accounts() { return root.ACCOUNT && root.ACCOUNT.on() ? root.ACCOUNT : null; }
@@ -684,6 +688,7 @@
       var failed = !items, list = (items || []).filter(function (it) { return replay(it.steps); });
       ui.wallet.hidden = !inAccount && !list.length;
       ui.wCount.textContent = list.length ? people(list.length) : '';
+      if (ui.acctCount) ui.acctCount.textContent = inAccount && list.length ? people(list.length) : '';
       if (ui.wEmpty) {
         ui.wEmpty.hidden = !inAccount || list.length > 0;
         ui.wEmpty.textContent = failed ? 'ما قدرنا نجيب محفظتك الحين، جرّب بعد شوي.' : 'محفظتك فاضية. احفظ أي صلة قرابة وبتلقاها هني.';
@@ -739,40 +744,59 @@
         ui.privacy.textContent = a ? 'الأسماء ما تطلع من جهازك إلا اللي تحفظها بحسابك، وما يشوفها أحد غيرك.'
           : 'الأسماء تبقى في جهازك، ما تطلع لأحد.';
       }
-      if (!ui.acct) return;
-      ui.acct.hidden = !a;
-      ui.acct.textContent = '';
-      if (!a) return;
-      var u = a.user();
-      if (!u) {
-        ui.acct.appendChild(el('span', 'kin-acct-txt', 'تبي تحفظ صلات القرابة بحسابك؟'));
-        var signIn = el('button', 'kin-acct-in');
-        signIn.type = 'button';
-        signIn.appendChild(el('span', null, 'سجّل دخول'));
-        signIn.addEventListener('click', function () { openAuth(null, signIn); });
-        ui.acct.appendChild(signIn);
-        return;
-      }
-      ui.acct.appendChild(el('span', 'kin-acct-txt', 'داخل باسم ' + (u.first || u.email || 'حسابك')));
-      var out = el('button', 'kin-acct-link');
-      out.type = 'button';
-      out.appendChild(el('span', null, 'طلّعني'));
-      out.addEventListener('click', function () { a.signOut().then(renderWallet); });
-      var wipe = el('button', 'kin-acct-link kin-acct-danger');
-      wipe.type = 'button';
-      wipe.appendChild(el('span', null, 'امسح حسابي'));
-      wipe.addEventListener('click', function () {
-        if (wipe.dataset.armed) {
-          wipe.disabled = true;
-          a.deleteAccount().then(renderWallet, function () { wipe.disabled = false; flash(wipe, 'ما زبط، جرّب بعدين', 2400); });
-          return;
-        }
-        wipe.dataset.armed = '1';
-        flash(wipe, 'يمسح كل المحفوظ، متأكد؟', 4000);
-        setTimeout(function () { delete wipe.dataset.armed; }, 4000);
-      });
-      ui.acct.appendChild(out);
-      ui.acct.appendChild(wipe);
+      // Top of the page: "sign in" when signed out, the person's chip with their account menu when in.
+      if (!ui.acctBox) return;
+      ui.acctBox.hidden = !a || !acctReady;
+      var u = ui.acctBox.hidden ? null : a.user();
+      ui.acctIn.hidden = ui.acctBox.hidden || !!u;
+      ui.acctBtn.hidden = !u;
+      if (!u) { closeMenu(); ui.acctBtn.dataset.who = ''; return; }
+      var who = u.id + ' ' + u.picture + ' ' + u.name;
+      if (ui.acctBtn.dataset.who === who) return;
+      ui.acctBtn.dataset.who = who;
+      avatar(ui.acctAv, u);
+      avatar(ui.acctAvLg, u);
+      ui.acctFirst.textContent = u.first || u.name || 'حسابي';
+      ui.acctName.textContent = u.name || u.first || 'حسابي';
+      ui.acctEmail.textContent = u.email;
+      ui.acctBtn.setAttribute('aria-label', 'حسابك: ' + (u.name || u.email || ''));
+    }
+
+    // Their Google photo, or the first letter of their name when there is none (or it doesn't load).
+    function avatar(box, u) {
+      var letter = Array.from((u.name || u.email || '؟').trim())[0] || '؟';
+      box.textContent = '';
+      if (!u.picture) { box.textContent = letter.toUpperCase(); return; }
+      var img = new Image();
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.onerror = function () { box.textContent = letter.toUpperCase(); };
+      img.src = u.picture;
+      box.appendChild(img);
+    }
+
+    function openMenu() {
+      ui.acctMenu.hidden = false;
+      ui.acctBtn.setAttribute('aria-expanded', 'true');
+      askDelete(false);
+      ui.acctWallet.focus({ preventScroll: true });
+    }
+
+    function closeMenu(focusBtn) {
+      if (!ui.acctMenu || ui.acctMenu.hidden) return;
+      ui.acctMenu.hidden = true;
+      ui.acctBtn.setAttribute('aria-expanded', 'false');
+      askDelete(false);
+      if (focusBtn) ui.acctBtn.focus();
+    }
+
+    // Deleting the account asks once more, inside the menu.
+    function askDelete(on) {
+      ui.acctConfirm.hidden = !on;
+      ui.acctDel.hidden = on;
+      ui.acctErr.hidden = true;
+      ui.acctYes.disabled = ui.acctNo.disabled = false;
+      if (on) ui.acctNo.focus({ preventScroll: true });
     }
 
     function openSheet(m, from) {
@@ -942,8 +966,44 @@
       if (m) m.addEventListener('click', function (e) { if (e.target === m) { if (m === ui.auth) st.pending = null; closeSheet(m); } });
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && sheet) { if (sheet === ui.auth) st.pending = null; closeSheet(sheet); }
+      if (e.key !== 'Escape') return;
+      if (sheet) { if (sheet === ui.auth) st.pending = null; closeSheet(sheet); }
+      else if (ui.acctMenu && !ui.acctMenu.hidden) closeMenu(true);
     });
+
+    if (ui.acctBox) {
+      ui.acctIn.addEventListener('click', function () { openAuth(null, ui.acctIn); });
+      ui.acctBtn.addEventListener('click', function () { if (ui.acctMenu.hidden) openMenu(); else closeMenu(); });
+      document.addEventListener('click', function (e) {
+        if (!ui.acctMenu.hidden && !ui.acctBox.contains(e.target)) closeMenu();
+      });
+      ui.acctWallet.addEventListener('click', function () {
+        closeMenu();
+        ui.wallet.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        ui.wallet.focus({ preventScroll: true });
+      });
+      ui.acctOut.addEventListener('click', function () {
+        var a = accounts();
+        closeMenu();
+        if (a) a.signOut().then(function () { renderWallet(); ui.acctIn.focus({ preventScroll: true }); });
+      });
+      ui.acctDel.addEventListener('click', function () { askDelete(true); });
+      ui.acctNo.addEventListener('click', function () { askDelete(false); ui.acctDel.focus({ preventScroll: true }); });
+      ui.acctYes.addEventListener('click', function () {
+        var a = accounts();
+        if (!a) return;
+        ui.acctYes.disabled = ui.acctNo.disabled = true;
+        ui.acctErr.hidden = true;
+        a.deleteAccount().then(function () {
+          closeMenu();
+          renderWallet();
+          ui.acctIn.focus({ preventScroll: true });
+        }, function () {
+          ui.acctYes.disabled = ui.acctNo.disabled = false;
+          ui.acctErr.hidden = false;
+        });
+      });
+    }
     ui.share.addEventListener('click', function () {
       if (file) navigator.share({ files: [file] }).catch(function () {});
     });
@@ -952,7 +1012,8 @@
     renderWallet();
     if (root.ACCOUNT) {
       root.ACCOUNT.onChange(renderWallet);
-      root.ACCOUNT.ready.then(renderWallet);
+      // The top of the page waits until we know whether they are signed in, so it doesn't flicker.
+      root.ACCOUNT.ready.then(function () { acctReady = true; renderWallet(); });
     }
   }
 

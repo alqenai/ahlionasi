@@ -32,7 +32,8 @@
   function toUser(u) {
     if (!u) return null;
     var m = u.user_metadata || {}, full = m.full_name || m.name || '';
-    return { id: u.id, email: u.email || '', name: full, first: m.given_name || full.split(' ')[0] || '' };
+    return { id: u.id, email: u.email || '', name: full, first: m.given_name || full.split(' ')[0] || '',
+      picture: m.avatar_url || m.picture || '' };
   }
 
   // Listeners run on a later tick: Supabase asks not to call it again from inside its own auth callback.

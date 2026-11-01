@@ -50,7 +50,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px 20px calc(28px + env(safe-area-inset-bottom));
+      padding: calc(72px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
       overflow-x: hidden;
       text-align: center;
     }
@@ -247,7 +247,8 @@
     .kin-btn:disabled { opacity: .75; cursor: progress; }
     .kin-link { display: block; margin: 8px auto 0; }
 
-    .kin-wallet { margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(244, 239, 230, .1); }
+    .kin-wallet { margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(244, 239, 230, .1); scroll-margin-top: 24px; }
+    .kin-wallet:focus { outline: none; }
     .kin-w-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
     .kin-w-head h3 { font-size: 1.2rem; font-weight: 700; }
     .kin-w-head span { font-size: .85rem; color: var(--muted); }
@@ -262,17 +263,68 @@
     .kin-w-note { font-size: .8rem; line-height: 1.7; color: var(--muted); margin-top: 10px; }
     .kin-w-empty { font-size: .92rem; line-height: 1.7; color: var(--muted); margin-top: 10px; padding: 14px; border-radius: 14px; background: rgba(244, 239, 230, .04); text-align: center; }
 
-    .kin-acct { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; margin-top: 22px; font-size: .9rem; color: var(--muted); }
-    .kin-acct-txt { color: #C9D6E3; }
-    .kin-acct-in {
-      min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px; cursor: pointer;
-      background: var(--pearl); color: var(--navy); font-size: .92rem; font-weight: 700;
+    /* Account, top of the page: a sign-in button, or the person's chip that opens their account menu. */
+    .top {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+      display: flex; justify-content: flex-end; align-items: center;
+      padding: calc(14px + env(safe-area-inset-top)) 16px 0;
+      pointer-events: none;
     }
-    .kin-acct-in:hover { background: #FFFFFF; }
-    .kin-acct-link { min-height: 36px; padding: 0 8px; border: 0; background: none; color: var(--sand); font-size: .88rem; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
-    .kin-acct-danger { color: var(--muted); }
-    .kin-acct-danger[data-armed] { color: var(--coral); }
-    .kin-acct button:disabled { opacity: .6; cursor: progress; }
+    .acct { position: relative; pointer-events: auto; animation: fade .4s ease-out both; }
+    .acct svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .acct button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+    .acct button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .acct-in, .acct-btn {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 44px;
+      border: 0; border-radius: 999px; cursor: pointer; font-size: .92rem; font-weight: 500;
+      color: var(--pearl); background: rgba(14, 42, 71, .6);
+      box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .18);
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    }
+    .acct-in { padding: 0 16px; }
+    .acct-in svg { width: 18px; height: 18px; }
+    .acct-btn { padding-block: 5px; padding-inline: 5px 12px; }
+    .acct-in:hover, .acct-btn:hover, .acct-btn[aria-expanded="true"] { background: rgba(244, 239, 230, .12); }
+    .acct-first { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .acct-chev { width: 16px; height: 16px; color: var(--muted); transition: transform .2s ease; }
+    .acct-btn[aria-expanded="true"] .acct-chev { transform: rotate(180deg); }
+    .acct-av {
+      width: 34px; height: 34px; flex: none; border-radius: 50%; overflow: hidden;
+      display: grid; place-items: center; font-size: .95rem; font-weight: 700; line-height: 1;
+      color: var(--navy); background: linear-gradient(140deg, var(--teal), var(--sky));
+    }
+    .acct-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .acct-av-lg { width: 46px; height: 46px; font-size: 1.2rem; }
+    .acct-menu {
+      position: absolute; top: calc(100% + 8px); inset-inline-end: 0;
+      width: min(300px, calc(100vw - 32px)); padding: 6px; border-radius: 18px;
+      background: #0F2E4D; text-align: start;
+      box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .12), 0 24px 60px rgba(0, 0, 0, .45);
+      animation: drop .16s ease-out both;
+    }
+    @keyframes drop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .acct-who { display: flex; align-items: center; gap: 12px; padding: 10px 10px 12px; }
+    .acct-who > div { min-width: 0; }
+    .acct-name { font-size: 1rem; font-weight: 700; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .acct-email { font-size: .82rem; line-height: 1.5; color: var(--muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .acct-sep { height: 1px; margin: 4px 8px; background: rgba(244, 239, 230, .1); }
+    .acct-item {
+      width: 100%; display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px;
+      border: 0; border-radius: 12px; background: none; color: var(--pearl);
+      font-size: .95rem; text-align: start; cursor: pointer;
+    }
+    .acct-item:hover { background: rgba(244, 239, 230, .06); }
+    .acct-item svg { width: 20px; height: 20px; flex: none; color: var(--muted); }
+    .acct-count { margin-inline-start: auto; font-size: .82rem; color: var(--muted); }
+    .acct-danger, .acct-danger svg { color: var(--coral); }
+    .acct-confirm { padding: 8px 10px 6px; }
+    .acct-warn { font-size: .88rem; line-height: 1.7; color: #C9D6E3; }
+    .acct-confirm-btns { display: flex; gap: 8px; margin-top: 10px; }
+    .acct-confirm-btns button { flex: 1; min-height: 42px; border: 0; border-radius: 12px; font-size: .92rem; font-weight: 700; cursor: pointer; }
+    .acct-yes { background: var(--coral); color: #3B0D08; }
+    .acct-no { background: rgba(244, 239, 230, .08); color: var(--pearl); }
+    .acct-confirm button:disabled { opacity: .6; cursor: progress; }
+    .acct-err { font-size: .85rem; line-height: 1.6; color: var(--coral); margin-top: 8px; }
 
     .kin-auth-text { font-size: 1rem; line-height: 1.75; color: #C9D6E3; padding: 0 6px; }
     .kin-gbtn { display: flex; justify-content: center; align-items: center; min-height: 52px; margin: 18px 0 6px; color: var(--muted); font-size: .9rem; }
@@ -327,6 +379,32 @@
   <span class="bub" style="--x:61%;--s:12px;--d:21s;--w:-3s" aria-hidden="true"></span>
   <span class="bub" style="--x:76%;--s:7px;--d:17s;--w:-9s" aria-hidden="true"></span>
   <span class="bub" style="--x:90%;--s:9px;--d:25s;--w:-15s" aria-hidden="true"></span>
+
+  <header class="top">
+    <div class="acct" id="acct" hidden>
+      <button type="button" class="acct-in" id="acct-in" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.9-3.6 3.7-5.6 7-5.6s6.1 2 7 5.6"/></svg><span>تسجيل الدخول</span></button>
+      <button type="button" class="acct-btn" id="acct-btn" aria-expanded="false" aria-controls="acct-menu" hidden><span class="acct-av" id="acct-av" aria-hidden="true"></span><span class="acct-first" id="acct-first"></span><svg class="acct-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.5L12 15l5.5-5.5"/></svg></button>
+      <div class="acct-menu" id="acct-menu" hidden>
+        <div class="acct-who">
+          <span class="acct-av acct-av-lg" id="acct-av-lg" aria-hidden="true"></span>
+          <div><p class="acct-name" id="acct-name"></p><p class="acct-email" id="acct-email" dir="ltr"></p></div>
+        </div>
+        <div class="acct-sep"></div>
+        <button type="button" class="acct-item" id="acct-wallet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg><span>محفظتي</span><span class="acct-count" id="acct-count"></span></button>
+        <div class="acct-sep"></div>
+        <button type="button" class="acct-item" id="acct-out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h10"/></svg><span>تسجيل الخروج</span></button>
+        <button type="button" class="acct-item acct-danger" id="acct-del"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2M6.5 7l1 12.2a1.5 1.5 0 0 0 1.5 1.3h6a1.5 1.5 0 0 0 1.5-1.3l1-12.2M10 11v6M14 11v6"/></svg><span>حذف الحساب</span></button>
+        <div class="acct-confirm" id="acct-confirm" hidden>
+          <p class="acct-warn">بينمسح حسابك وكل صلات القرابة اللي حفظتها فيه، وما تقدر ترجعها.</p>
+          <div class="acct-confirm-btns">
+            <button type="button" class="acct-yes" id="acct-yes">احذف حسابي</button>
+            <button type="button" class="acct-no" id="acct-no">تراجع</button>
+          </div>
+          <p class="acct-err" id="acct-err" role="alert" hidden>ما زبط الحذف، جرّب بعد شوي.</p>
+        </div>
+      </div>
+    </div>
+  </header>
 
   <main>
     <svg class="mark" viewBox="9 24 102 72" role="img" aria-label="شعار شرباكة: حلقتين مربوطة وبالنص لولوة">
@@ -390,14 +468,13 @@
         <button type="button" class="kin-link" id="kin-again">جرّب مع شخص ثاني</button>
       </div>
 
-      <div class="kin-wallet" id="kin-wallet" hidden>
+      <div class="kin-wallet" id="kin-wallet" tabindex="-1" hidden>
         <div class="kin-w-head"><h3>محفظتي</h3><span id="kin-w-count"></span></div>
         <ul class="kin-w-list" id="kin-w-list"></ul>
         <p class="kin-w-empty" id="kin-w-empty" hidden></p>
         <p class="kin-w-note" id="kin-w-note">محفوظة في جهازك بس. أول ما يفتح تسجيل الدخول، تقدر تنقلها لحسابك.</p>
       </div>
 
-      <p class="kin-acct" id="kin-acct" hidden></p>
       <p class="kin-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="kin-privacy-text">الأسماء تبقى في جهازك، ما تطلع لأحد.</span></p>
     </section>
   </main>
@@ -435,7 +512,7 @@
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=2" defer></script>
-  <script src="/kin.js?v=3" defer></script>
+  <script src="/account.js?v=3" defer></script>
+  <script src="/kin.js?v=4" defer></script>
 </body>
 </html>
