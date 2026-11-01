@@ -204,23 +204,26 @@
     ctx.closePath();
   }
 
+  // Draws the two-thread mark centred on (cx, cy), h px tall (about h * 102 / 72 wide).
+  // The gap where one thread crosses the other is cut out for real (offscreen canvas),
+  // so it looks right on any background, including see-through ones.
   function drawMark(ctx, cx, cy, h, light) {
     if (typeof Path2D === 'undefined') return;
-    var s = h / 72, a = new Path2D(THREAD_A), b = new Path2D(THREAD_B);
-    var bg = light ? '#F4EFE6' : '#0E2A47', ca = light ? '#1A9E92' : '#2EC4B6', cb = light ? '#F0675C' : '#FF8A80';
-    function thread(p, col, gap) {
-      if (gap) { ctx.lineWidth = 11 + 9; ctx.strokeStyle = bg; ctx.stroke(p); }
-      ctx.lineWidth = 11; ctx.strokeStyle = col; ctx.stroke(p);
+    var s = h / 72, k = 3, W = Math.ceil(120 * s * k), H = W;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d');
+    var a = new Path2D(THREAD_A), b = new Path2D(THREAD_B);
+    var ca = light ? '#1A9E92' : '#2EC4B6', cb = light ? '#F0675C' : '#FF8A80';
+    g.scale(s * k, s * k); g.lineCap = 'round'; g.lineJoin = 'round';
+    function thread(p, col) {
+      g.globalCompositeOperation = 'destination-out'; g.lineWidth = 20; g.stroke(p);
+      g.globalCompositeOperation = 'source-over'; g.lineWidth = 11; g.strokeStyle = col; g.stroke(p);
     }
-    ctx.save();
-    ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-60, -60);
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    thread(a, ca, false);
-    thread(b, cb, true);
+    g.lineWidth = 11; g.strokeStyle = ca; g.stroke(a);
+    thread(b, cb);
     // the teal thread goes back over the coral one at the right crossing
-    ctx.beginPath(); ctx.arc(83, 60, 19, 0, Math.PI * 2); ctx.clip();
-    thread(a, ca, true);
-    ctx.restore();
+    g.save(); g.beginPath(); g.arc(83, 60, 19, 0, Math.PI * 2); g.clip(); thread(a, ca); g.restore();
+    ctx.drawImage(c, cx - 60 * s, cy - 60 * s, 120 * s, 120 * s);
   }
 
   function pearl(ctx, x, y, r) {
