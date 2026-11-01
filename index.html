@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>أهلي وناسي · Ahli o Nasi — قريبًا</title>
+  <meta name="description" content="ارسم أهلك وربعك ودوايرك في خريطة وحدة، وشاركها ستوري. Map your family and friends in one playful tree. Coming soon.">
+  <meta property="og:title" content="أهلي وناسي · Ahli o Nasi">
+  <meta property="og:description" content="ارسم أهلك وربعك في خريطة وحدة، وشاركها ستوري. قريبًا.">
+  <meta property="og:url" content="https://ahlionasi.com">
+  <meta name="theme-color" content="#FFF4E6">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%23FF6B4A'/><circle cx='50' cy='50' r='18' fill='%23FFF4E6'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;700;800&family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FFF4E6;
+      --ink: #2B2140;
+      --muted: #6E6383;
+      --coral: #FF6B4A;
+      --teal: #1FB5A6;
+      --sun: #FFC23D;
+      --violet: #7A5CFA;
+      --pink: #FF8FB8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: "Baloo Bhaijaan 2", "Poppins", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      overflow-x: hidden;
+      text-align: center;
+    }
+    .blob {
+      position: fixed; border-radius: 50%; filter: blur(60px); opacity: .35; z-index: -1;
+    }
+    .b1 { width: 320px; height: 320px; background: var(--pink); top: -80px; right: -80px; }
+    .b2 { width: 280px; height: 280px; background: var(--teal); bottom: -90px; left: -60px; }
+    .b3 { width: 200px; height: 200px; background: var(--sun); top: 40%; left: 60%; opacity: .25; }
+
+    .map { width: min(360px, 86vw); height: auto; margin-bottom: 12px; overflow: visible; }
+    .map line { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 4 6; opacity: .35; }
+    .node { transform-box: fill-box; transform-origin: center; animation: bob 4s ease-in-out infinite; }
+    .node:nth-of-type(2n) { animation-delay: -1.3s; }
+    .node:nth-of-type(3n) { animation-delay: -2.6s; }
+    .ring { fill: none; stroke-width: 2.5; stroke-dasharray: 6 8; opacity: .55; transform-origin: 180px 150px; animation: spin 40s linear infinite; }
+    @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    h1 {
+      font-size: clamp(2.6rem, 11vw, 4.4rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.5px;
+    }
+    h1 .o { color: var(--coral); }
+    .en-name {
+      font-family: "Poppins", sans-serif;
+      font-weight: 700;
+      font-size: clamp(1rem, 4.2vw, 1.25rem);
+      color: var(--violet);
+      margin-top: 4px;
+      direction: ltr;
+    }
+    .tag {
+      font-size: clamp(1.15rem, 4.8vw, 1.45rem);
+      font-weight: 500;
+      margin: 18px auto 6px;
+      max-width: 30ch;
+    }
+    .tag-en {
+      font-family: "Poppins", sans-serif;
+      font-size: .95rem;
+      color: var(--muted);
+      direction: ltr;
+      max-width: 36ch;
+      margin: 0 auto;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 22px 0 26px; }
+    .chip {
+      padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: .95rem;
+      color: #fff; box-shadow: 0 3px 0 rgba(43,33,64,.15);
+    }
+    .c1 { background: var(--coral); } .c2 { background: var(--teal); }
+    .c3 { background: var(--violet); } .c4 { background: var(--sun); color: var(--ink); }
+    .soon {
+      display: inline-block;
+      background: var(--ink); color: var(--bg);
+      padding: 12px 26px; border-radius: 999px;
+      font-weight: 800; font-size: 1.15rem;
+      transform: rotate(-2deg);
+      box-shadow: 0 6px 0 var(--coral);
+    }
+    .soon span { font-family: "Poppins", sans-serif; font-weight: 700; font-size: .9rem; opacity: .8; margin-inline-start: 8px; }
+    footer {
+      margin-top: 40px; font-family: "Poppins", sans-serif; font-size: .85rem; color: var(--muted);
+      direction: ltr;
+    }
+    footer a { color: var(--ink); font-weight: 700; text-decoration: none; border-bottom: 2px solid var(--sun); }
+    @media (prefers-reduced-motion: reduce) { .node, .ring { animation: none; } }
+  </style>
+</head>
+<body>
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+  <svg class="map" viewBox="0 0 360 300" role="img" aria-label="خريطة أهل وربع">
+    <circle class="ring" cx="180" cy="150" r="128" stroke="#7A5CFA"/>
+    <line x1="180" y1="150" x2="90" y2="70"/>
+    <line x1="180" y1="150" x2="270" y2="70"/>
+    <line x1="180" y1="150" x2="60" y2="180"/>
+    <line x1="180" y1="150" x2="300" y2="185"/>
+    <line x1="180" y1="150" x2="180" y2="260"/>
+    <line x1="270" y1="70" x2="300" y2="185"/>
+    <line x1="90" y1="70" x2="60" y2="180"/>
+    <line x1="300" y1="185" x2="180" y2="260"/>
+    <g class="node"><circle cx="90" cy="70" r="20" fill="#FF6B4A"/><text x="90" y="77" font-size="20" text-anchor="middle">👵</text></g>
+    <g class="node"><circle cx="270" cy="70" r="20" fill="#1FB5A6"/><text x="270" y="77" font-size="20" text-anchor="middle">🤿</text></g>
+    <g class="node"><circle cx="60" cy="180" r="18" fill="#FF8FB8"/><text x="60" y="187" font-size="18" text-anchor="middle">👨‍👩‍👧</text></g>
+    <g class="node"><circle cx="300" cy="185" r="18" fill="#7A5CFA"/><text x="300" y="192" font-size="18" text-anchor="middle">💼</text></g>
+    <g class="node"><circle cx="180" cy="260" r="18" fill="#FFC23D"/><text x="180" y="267" font-size="18" text-anchor="middle">⚽</text></g>
+    <g class="node"><circle cx="180" cy="150" r="30" fill="#2B2140"/><text x="180" y="160" font-size="28" text-anchor="middle">🙋</text></g>
+  </svg>
+
+  <h1>أهلي <span class="o">و</span>ناسي</h1>
+  <div class="en-name">Ahli <span style="color:var(--coral)">o</span> Nasi</div>
+
+  <p class="tag">ارسم أهلك وربعك ودوايرك في خريطة وحدة، وشاركها ستوري ✨</p>
+  <p class="tag-en">Map your family, your friends and everyone in between, then share it as a story.</p>
+
+  <div class="chips">
+    <span class="chip c1">الأهل</span>
+    <span class="chip c2">الربع</span>
+    <span class="chip c3">الدوام</span>
+    <span class="chip c4">الهوايات</span>
+  </div>
+
+  <div class="soon">قريبًا <span>Coming soon</span></div>
+
+  <footer>ahlionasi.com · © <span id="y">2026</span></footer>
+  <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body>
+</html>
