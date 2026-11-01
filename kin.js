@@ -416,52 +416,64 @@
     return Promise.race([all, timeout]);
   }
 
+  /* The two sizes we draw: an Instagram story (9:16) and a feed post (4:5). Both are 1080 wide;
+     the post packs the same layout into less height. */
+  var FORMATS = {
+    story: { H: 1920, top: 300, lead: 46, name: 150, nameMin: 64, nameGap: 34, verb: 54, verbGap: 74,
+      rel: 104, relMin: 64, walkGap: 56, minWalk: 380, bottom: 1470, bottomMore: 1410, moreY: 1476, more: 42, sticker: 1612 },
+    post: { H: 1350, top: 178, lead: 40, name: 124, nameMin: 56, nameGap: 30, verb: 46, verbGap: 64,
+      rel: 88, relMin: 56, walkGap: 48, minWalk: 300, bottom: 1060, bottomMore: 1004, moreY: 1068, more: 38, sticker: 1220 }
+  };
+
   /* The room left for the walk drawing, between the relation text and the bottom line. */
-  function storyBox(textBottom, more) {
-    var bottom = more ? 1410 : 1470;
-    var top = Math.min(textBottom + 56, bottom - 380);
+  function storyBox(textBottom, more, F) {
+    F = F || FORMATS.story;
+    var bottom = more ? F.bottomMore : F.bottom;
+    var top = Math.min(textBottom + F.walkGap, bottom - F.minWalk);
     return { x: 70, y: top, w: 940, h: bottom - top };
   }
 
-  function makeStory(meName, themName, path) {
+  function makeStory(meName, themName, path, format) {
+    var F = FORMATS[format] || FORMATS.story;
     var subj = subject(path, themName), rel = phrase(path), more = extra(path, themName);
     return loadFonts('صلة القرابة بيني وبين ' + subj + ' ' + rel + ' ' + (meName || 'أنا') + ' ' + more).then(function () {
-      var W = 1080, H = 1920, c = document.createElement('canvas');
+      var W = 1080, H = F.H, k = H / 1920, c = document.createElement('canvas');
       c.width = W; c.height = H;
       var ctx = c.getContext('2d');
 
-      var bg = ctx.createRadialGradient(540, 620, 40, 540, 760, 1500);
+      var bg = ctx.createRadialGradient(540, 620 * k, 40, 540, 760 * k, Math.max(1100, 1500 * k));
       bg.addColorStop(0, '#16466F'); bg.addColorStop(0.55, '#0E2A47'); bg.addColorStop(1, '#0A2036');
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-      var glow = ctx.createRadialGradient(540, 520, 0, 540, 520, 720);
+      var glow = ctx.createRadialGradient(540, 520 * k, 0, 540, 520 * k, 720);
       glow.addColorStop(0, 'rgba(46, 196, 182, 0.12)'); glow.addColorStop(1, 'rgba(46, 196, 182, 0)');
       ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
       [[96, 1520, 11], [176, 400, 7], [968, 470, 12], [1012, 1250, 8], [64, 930, 6], [900, 1760, 9], [280, 1790, 6], [770, 210, 7]].forEach(function (b) {
-        ctx.beginPath(); ctx.arc(b[0], b[1], b[2], 0, Math.PI * 2);
+        var bx = b[0], by = b[1] * k, br = b[2];
+        ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.beginPath(); ctx.arc(b[0] - b[2] * 0.35, b[1] - b[2] * 0.35, b[2] * 0.3, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(bx - br * 0.35, by - br * 0.35, br * 0.3, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.fill();
       });
 
       ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
 
-      var y = 300;
-      ctx.fillStyle = '#9DB2C8'; setFont(ctx, '400', 46);
+      var y = F.top;
+      ctx.fillStyle = '#9DB2C8'; setFont(ctx, '400', F.lead);
       ctx.fillText('صلة القرابة بيني وبين', 540, y);
 
-      var ns = fit(ctx, subj, '700', 150, 940, 64);
-      y += 34 + ns * 0.98;
+      var ns = fit(ctx, subj, '700', F.name, 940, F.nameMin);
+      y += F.nameGap + ns * 0.98;
       ctx.fillStyle = '#F4EFE6'; ctx.fillText(subj, 540, y);
 
-      y += ns * 0.36 + 74;
-      ctx.fillStyle = '#9DB2C8'; setFont(ctx, '500', 54);
+      y += ns * 0.36 + F.verbGap;
+      ctx.fillStyle = '#9DB2C8'; setFont(ctx, '500', F.verb);
       ctx.fillText(verb(path), 540, y);
 
-      var rs = 104, lines;
+      var rs = F.rel, lines;
       for (;;) {
         setFont(ctx, '700', rs);
         lines = balance(ctx, rel, 940);
-        if (lines || rs <= 64) break;
+        if (lines || rs <= F.relMin) break;
         rs -= 8;
       }
       if (!lines) lines = wrap(ctx, rel, 940);
@@ -471,22 +483,22 @@
         ctx.fillText(line, 540, y);
       });
 
-      var box = storyBox(y, more);
+      var box = storyBox(y, more, F);
       drawWalk(ctx, path, meName, themName, box);
 
       if (more) {
         ctx.textAlign = 'center'; ctx.fillStyle = '#9DB2C8';
-        fit(ctx, more, '400', 42, 940, 28);
-        ctx.fillText(more, 540, 1476);
+        fit(ctx, more, '400', F.more, 940, 28);
+        ctx.fillText(more, 540, F.moreY);
       }
 
-      drawSticker(ctx, 1612);
+      drawSticker(ctx, F.sticker);
 
       return new Promise(function (res) { c.toBlob(res, 'image/png'); });
     });
   }
 
-  KIN.makeStory = makeStory; KIN.fitWalk = fitWalk; KIN.storyBox = storyBox;
+  KIN.makeStory = makeStory; KIN.fitWalk = fitWalk; KIN.storyBox = storyBox; KIN.FORMATS = FORMATS;
 
   /* ---------- Page ---------- */
 
@@ -560,6 +572,7 @@
       copy: $('kin-copy'), again: $('kin-again'), wallet: $('kin-wallet'), wCount: $('kin-w-count'),
       wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), wIn: $('kin-w-in'), modal: $('kin-modal'),
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
+      mTitle: $('kin-m-title'), seg: $('kin-seg'),
       privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
       authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close'),
       authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local'),
@@ -942,25 +955,54 @@
       return ok;
     }
 
-    ui.story.addEventListener('click', function () {
-      var n = names(), path = cur(), s = label(ui.story), was = s.textContent;
-      ui.story.disabled = true; s.textContent = 'لحظة…';
-      makeStory(n.me, n.them, path).then(function (blob) {
+    // The sheet makes the picture as a story or as a post; the toggle at its top switches between them.
+    var SIZES = {
+      story: { title: 'ستوريك جاهز', tip: 'حطها ستوري', alt: 'ستوري', file: 'shorbaka-story.png' },
+      post: { title: 'بوستك جاهز', tip: 'نزّلها بوست', alt: 'بوست', file: 'shorbaka-post.png' }
+    };
+    var segs = ui.seg ? Array.prototype.slice.call(ui.seg.querySelectorAll('button')) : [];
+
+    function showImage(format) {
+      var n = names(), path = cur(), t = SIZES[format];
+      return makeStory(n.me, n.them, path, format).then(function (blob) {
         if (!blob) throw new Error('no image');
         if (url) URL.revokeObjectURL(url);
         url = URL.createObjectURL(blob);
-        file = typeof File === 'function' ? new File([blob], 'shorbaka-story.png', { type: 'image/png' }) : null;
+        file = typeof File === 'function' ? new File([blob], t.file, { type: 'image/png' }) : null;
+        ui.img.setAttribute('height', FORMATS[format].H);
         ui.img.src = url;
-        ui.img.alt = 'ستوري: صلة القرابة بيني وبين ' + subject(path, n.them) + '. ' + sentence(path, n.them);
+        ui.img.alt = t.alt + ': صلة القرابة بيني وبين ' + subject(path, n.them) + '. ' + sentence(path, n.them);
         ui.dl.href = url;
+        ui.dl.setAttribute('download', t.file);
         ui.share.hidden = !(file && navigator.canShare && navigator.canShare({ files: [file] }));
-        ui.tip.textContent = n.them ? 'حطها ستوري، ولا تنسى تمنشن ' + n.them : 'حطها ستوري، ولا تنسى تمنشنهم';
+        if (ui.mTitle) ui.mTitle.textContent = t.title;
+        ui.tip.textContent = t.tip + '، ولا تنسى ' + (n.them ? 'تمنشن ' + n.them : 'تمنشنهم');
+        segs.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.format === format)); });
+      });
+    }
+
+    ui.story.addEventListener('click', function () {
+      var s = label(ui.story), was = s.textContent;
+      ui.story.disabled = true; s.textContent = 'لحظة…';
+      showImage('story').then(function () {
         openSheet(ui.modal, ui.story);
         s.textContent = was;
       }).catch(function () {
         s.textContent = was;
         flash(ui.story, 'ما زبطت، جرّب مرة ثانية', 2400);
       }).then(function () { ui.story.disabled = false; });
+    });
+
+    segs.forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.getAttribute('aria-pressed') === 'true') return;
+        segs.forEach(function (x) { x.disabled = true; });
+        ui.img.classList.add('is-busy');
+        showImage(b.dataset.format).catch(function () { flash(b, 'ما زبطت', 2000); }).then(function () {
+          ui.img.classList.remove('is-busy');
+          segs.forEach(function (x) { x.disabled = false; });
+        });
+      });
     });
 
     ui.close.addEventListener('click', function () { closeSheet(ui.modal); });
