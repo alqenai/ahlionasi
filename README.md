@@ -1,6 +1,6 @@
 # شرباكة | Shorbaka
 
-شنو يقرب لك؟ Type your name and someone else's, walk the family tree one step at a time, and get the relation written the way people say it («فهد يصير ولد عم أبوي»). Share it as an Instagram story, copy it, or keep it in your wallet.
+شنو يصير لك؟ Type your name and someone else's, walk the family tree one step at a time, and get the relation written the way people say it («فهد يصير ولد عم أبوي»). Share it as an Instagram story, copy it, or keep it in your wallet.
 
 Live at **[shorbaka.com](https://shorbaka.com)**. The bigger app (mapping family, friends and circles) comes later.
 

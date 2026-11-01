@@ -1,4 +1,4 @@
-/* شرباكة: "شنو يقرب لك؟"
+/* شرباكة: "شنو يصير لك؟"
    Walk the family tree one step at a time and get the relation written out,
    the way people say it ("فهد يصير ولد عم أبوي"), then turn it into a story image.
    Everything runs in the browser: the names never leave the device. */
@@ -937,7 +937,7 @@
 
     ui.copy.addEventListener('click', function () {
       var n = names();
-      var text = sentence(cur(), n.them) + '\nشوف شنو يقرب لك: shorbaka.com';
+      var text = sentence(cur(), n.them) + '\nشوف شنو يصير لك: shorbaka.com';
       var ok = function () { flash(ui.copy, 'انسخت'); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(ok, function () { if (legacyCopy(text)) ok(); });
