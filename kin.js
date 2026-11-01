@@ -555,12 +555,18 @@
       back: $('kin-back'), reset: $('kin-reset'), result: $('kin-result'), rLabel: $('kin-r-label'),
       rSentence: $('kin-r-sentence'), rExtra: $('kin-r-extra'), story: $('kin-story'), save: $('kin-save'),
       copy: $('kin-copy'), again: $('kin-again'), wallet: $('kin-wallet'), wCount: $('kin-w-count'),
-      wList: $('kin-w-list'), modal: $('kin-modal'), img: $('kin-img'), share: $('kin-share'),
-      dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip')
+      wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), modal: $('kin-modal'),
+      img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
+      acct: $('kin-acct'), privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
+      authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close')
     };
     if (!ui.path) return;
 
-    var st = { trail: [], open: false, done: false }, file = null, url = null, lastFocus = null;
+    var st = { trail: [], open: false, done: false, pending: null }, file = null, url = null;
+    var sheet = null, sheetFrom = null, wSeq = 0;
+
+    // The account system, when it is switched on and loaded; null otherwise.
+    function accounts() { return root.ACCOUNT && root.ACCOUNT.on() ? root.ACCOUNT : null; }
 
     function cur() { return st.trail.length ? st.trail[st.trail.length - 1].path : []; }
     function names() { return { me: ui.me.value.trim(), them: ui.them.value.trim() }; }
@@ -663,9 +669,29 @@
 
     function renderWallet() {
       if (!ui.wallet) return;
-      var list = loadWallet();
-      ui.wallet.hidden = !list.length;
-      ui.wCount.textContent = people(list.length);
+      var a = accounts(), seq = ++wSeq;
+      renderAccount();
+      if (a && a.user()) {
+        a.list().then(function (items) { if (seq === wSeq) drawWallet(items, true); },
+          function () { if (seq === wSeq) drawWallet(null, true); });
+      } else {
+        drawWallet(loadWallet(), false);
+      }
+    }
+
+    function drawWallet(items, inAccount) {
+      var failed = !items, list = (items || []).filter(function (it) { return replay(it.steps); });
+      ui.wallet.hidden = !inAccount && !list.length;
+      ui.wCount.textContent = list.length ? people(list.length) : '';
+      if (ui.wEmpty) {
+        ui.wEmpty.hidden = !inAccount || list.length > 0;
+        ui.wEmpty.textContent = failed ? 'ما قدرنا نجيب محفظتك الحين، جرّب بعد شوي.' : 'محفظتك فاضية. احفظ أي صلة قرابة وبتلقاها هني.';
+      }
+      if (ui.wNote) {
+        ui.wNote.textContent = inAccount ? 'محفوظة بحسابك، وتلقاها من أي جهاز تدخل منه.'
+          : accounts() ? 'محفوظة في جهازك بس. سجّل دخول وتنتقل لحسابك.'
+          : 'محفوظة في جهازك بس. أول ما يفتح تسجيل الدخول، تقدر تنقلها لحسابك.';
+      }
       ui.wList.textContent = '';
       list.forEach(function (it) {
         var trail = replay(it.steps), path = trail[trail.length - 1].path;
@@ -687,8 +713,13 @@
         del.setAttribute('aria-label', 'شيل ' + subject(path, it.them) + ' من المحفظة');
         del.addEventListener('click', function () {
           if (del.dataset.armed) {
-            storeWallet(loadWallet().filter(function (x) { return x.id !== it.id; }));
-            renderWallet();
+            if (inAccount) {
+              del.disabled = true;
+              accounts().remove(it.id).then(renderWallet, function () { del.disabled = false; flash(del, 'ما زبط', 2000); });
+            } else {
+              storeWallet(loadWallet().filter(function (x) { return x.id !== it.id; }));
+              renderWallet();
+            }
             return;
           }
           del.dataset.armed = '1';
@@ -699,6 +730,104 @@
         li.appendChild(del);
         ui.wList.appendChild(li);
       });
+    }
+
+    function renderAccount() {
+      var a = accounts();
+      if (ui.privacy) {
+        ui.privacy.textContent = a ? 'الأسماء ما تطلع من جهازك إلا اللي تحفظها بحسابك، وما يشوفها أحد غيرك.'
+          : 'الأسماء تبقى في جهازك، ما تطلع لأحد.';
+      }
+      if (!ui.acct) return;
+      ui.acct.hidden = !a;
+      ui.acct.textContent = '';
+      if (!a) return;
+      var u = a.user();
+      if (!u) {
+        ui.acct.appendChild(el('span', 'kin-acct-txt', 'تبي تحفظ صلات القرابة بحسابك؟'));
+        var signIn = el('button', 'kin-acct-in');
+        signIn.type = 'button';
+        signIn.appendChild(el('span', null, 'سجّل دخول'));
+        signIn.addEventListener('click', function () { openAuth(null, signIn); });
+        ui.acct.appendChild(signIn);
+        return;
+      }
+      ui.acct.appendChild(el('span', 'kin-acct-txt', 'داخل باسم ' + (u.first || u.email || 'حسابك')));
+      var out = el('button', 'kin-acct-link');
+      out.type = 'button';
+      out.appendChild(el('span', null, 'طلّعني'));
+      out.addEventListener('click', function () { a.signOut().then(renderWallet); });
+      var wipe = el('button', 'kin-acct-link kin-acct-danger');
+      wipe.type = 'button';
+      wipe.appendChild(el('span', null, 'امسح حسابي'));
+      wipe.addEventListener('click', function () {
+        if (wipe.dataset.armed) {
+          wipe.disabled = true;
+          a.deleteAccount().then(renderWallet, function () { wipe.disabled = false; flash(wipe, 'ما زبط، جرّب بعدين', 2400); });
+          return;
+        }
+        wipe.dataset.armed = '1';
+        flash(wipe, 'يمسح كل المحفوظ، متأكد؟', 4000);
+        setTimeout(function () { delete wipe.dataset.armed; }, 4000);
+      });
+      ui.acct.appendChild(out);
+      ui.acct.appendChild(wipe);
+    }
+
+    function openSheet(m, from) {
+      sheet = m; sheetFrom = from || null;
+      m.hidden = false;
+      document.documentElement.classList.add('kin-lock');
+      var x = m.querySelector('.kin-x');
+      if (x) x.focus();
+    }
+
+    function closeSheet(m, keepFocus) {
+      if (!m || m.hidden) return;
+      m.hidden = true;
+      document.documentElement.classList.remove('kin-lock');
+      if (sheet === m) sheet = null;
+      if (!keepFocus && sheetFrom) sheetFrom.focus();
+    }
+
+    function authError(text) {
+      ui.authErr.textContent = text;
+      ui.authErr.hidden = false;
+    }
+
+    // Sign-in sheet. pending is the relation to save once the person is in.
+    function openAuth(pending, from) {
+      var a = accounts();
+      if (!a || !ui.auth) return;
+      st.pending = pending || null;
+      ui.authTitle.textContent = pending ? 'احفظها بحسابك' : 'سجّل دخولك';
+      ui.authText.textContent = pending
+        ? 'سجّل دخولك بجوجل عشان تنحفظ صلة القرابة بمحفظتك، وتلقاها من أي جهاز.'
+        : 'سجّل دخولك بجوجل عشان تشوف محفظتك وتحفظ فيها من أي جهاز.';
+      ui.authErr.hidden = true;
+      ui.gbtn.textContent = 'لحظة…';
+      openSheet(ui.auth, from);
+      a.googleButton(ui.gbtn, function (err) {
+        if (err) { authError('ما زبط الدخول، جرّب مرة ثانية.'); return; }
+        closeSheet(ui.auth, true);
+        afterSignIn();
+      }).catch(function () {
+        ui.gbtn.textContent = '';
+        authError('ما قدرنا نفتح دخول جوجل. تأكد من النت وجرّب مرة ثانية.');
+      });
+    }
+
+    // Moves anything saved on this device into the account, then saves the relation that was waiting.
+    function afterSignIn() {
+      var a = accounts(), pending = st.pending, local = loadWallet().map(function (it) {
+        var trail = replay(it.steps);
+        return { me: it.me, them: it.them, steps: trail[trail.length - 1].path, at: it.at };
+      });
+      st.pending = null;
+      var chain = Promise.resolve();
+      if (local.length) chain = chain.then(function () { return a.save(local, true); }).then(function () { storeWallet([]); });
+      if (pending) chain = chain.then(function () { return a.save([pending]); }).then(function () { flash(ui.save, 'انحفظت'); });
+      chain.catch(function () { flash(ui.save, 'ما قدرت أحفظ، جرّب مرة ثانية', 2400); }).then(renderWallet);
     }
 
     ui.me.addEventListener('input', render);
@@ -719,13 +848,27 @@
       ui.them.value = ''; render(); ui.them.focus();
     });
 
-    if (ui.save) ui.save.addEventListener('click', function () {
-      var n = names(), path = cur();
-      var item = { id: Date.now().toString(36), me: n.me, them: n.them, steps: st.trail.map(function (s) { return s.step; }), path: path.join(''), at: Date.now() };
+    function saveHere(item) {
       var list = loadWallet().filter(function (it) { return !(it.them === item.them && it.path === item.path); });
       list.unshift(item);
       if (storeWallet(list)) { flash(ui.save, 'انحفظت بمحفظتك'); renderWallet(); }
       else flash(ui.save, 'ما قدرت أحفظ هني');
+    }
+
+    // Saving needs an account when accounts are on; without them the wallet stays on the device.
+    if (ui.save) ui.save.addEventListener('click', function () {
+      var n = names(), path = cur();
+      var item = { id: Date.now().toString(36), me: n.me, them: n.them, steps: path.slice(), path: path.join(''), at: Date.now() };
+      var waitFor = root.ACCOUNT ? root.ACCOUNT.ready : Promise.resolve(false);
+      waitFor.then(function () {
+        var a = accounts();
+        if (!a) { saveHere(item); return; }
+        if (!a.user()) { openAuth(item, ui.save); return; }
+        ui.save.disabled = true;
+        a.save([item]).then(function () { flash(ui.save, 'انحفظت'); renderWallet(); },
+          function () { flash(ui.save, 'ما قدرت أحفظ، جرّب مرة ثانية', 2400); })
+          .then(function () { ui.save.disabled = false; });
+      });
     });
 
     ui.copy.addEventListener('click', function () {
@@ -761,10 +904,7 @@
         ui.dl.href = url;
         ui.share.hidden = !(file && navigator.canShare && navigator.canShare({ files: [file] }));
         ui.tip.textContent = n.them ? 'حطها ستوري، ولا تنسى تمنشن ' + n.them : 'حطها ستوري، ولا تنسى تمنشنهم';
-        lastFocus = ui.story;
-        ui.modal.hidden = false;
-        document.documentElement.classList.add('kin-lock');
-        ui.close.focus();
+        openSheet(ui.modal, ui.story);
         s.textContent = was;
       }).catch(function () {
         s.textContent = was;
@@ -772,15 +912,13 @@
       }).then(function () { ui.story.disabled = false; });
     });
 
-    function closeModal() {
-      ui.modal.hidden = true;
-      document.documentElement.classList.remove('kin-lock');
-      if (lastFocus) lastFocus.focus();
-    }
-    ui.close.addEventListener('click', closeModal);
-    ui.modal.addEventListener('click', function (e) { if (e.target === ui.modal) closeModal(); });
+    ui.close.addEventListener('click', function () { closeSheet(ui.modal); });
+    if (ui.authClose) ui.authClose.addEventListener('click', function () { st.pending = null; closeSheet(ui.auth); });
+    [ui.modal, ui.auth].forEach(function (m) {
+      if (m) m.addEventListener('click', function (e) { if (e.target === m) { if (m === ui.auth) st.pending = null; closeSheet(m); } });
+    });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !ui.modal.hidden) closeModal();
+      if (e.key === 'Escape' && sheet) { if (sheet === ui.auth) st.pending = null; closeSheet(sheet); }
     });
     ui.share.addEventListener('click', function () {
       if (file) navigator.share({ files: [file] }).catch(function () {});
@@ -788,6 +926,10 @@
 
     render();
     renderWallet();
+    if (root.ACCOUNT) {
+      root.ACCOUNT.onChange(renderWallet);
+      root.ACCOUNT.ready.then(renderWallet);
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

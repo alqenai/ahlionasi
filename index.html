@@ -260,6 +260,24 @@
     .kin-w-del { flex: none; min-width: 52px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 12px; background: rgba(244, 239, 230, .06); color: var(--muted); font-size: .82rem; font-weight: 500; cursor: pointer; }
     .kin-w-del[data-armed] { background: rgba(255, 138, 128, .18); color: var(--coral); }
     .kin-w-note { font-size: .8rem; line-height: 1.7; color: var(--muted); margin-top: 10px; }
+    .kin-w-empty { font-size: .92rem; line-height: 1.7; color: var(--muted); margin-top: 10px; padding: 14px; border-radius: 14px; background: rgba(244, 239, 230, .04); text-align: center; }
+
+    .kin-acct { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; margin-top: 22px; font-size: .9rem; color: var(--muted); }
+    .kin-acct-txt { color: #C9D6E3; }
+    .kin-acct-in {
+      min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px; cursor: pointer;
+      background: var(--pearl); color: var(--navy); font-size: .92rem; font-weight: 700;
+    }
+    .kin-acct-in:hover { background: #FFFFFF; }
+    .kin-acct-link { min-height: 36px; padding: 0 8px; border: 0; background: none; color: var(--sand); font-size: .88rem; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+    .kin-acct-danger { color: var(--muted); }
+    .kin-acct-danger[data-armed] { color: var(--coral); }
+    .kin-acct button:disabled { opacity: .6; cursor: progress; }
+
+    .kin-auth-text { font-size: 1rem; line-height: 1.75; color: #C9D6E3; padding: 0 6px; }
+    .kin-gbtn { display: flex; justify-content: center; align-items: center; min-height: 52px; margin: 18px 0 6px; color: var(--muted); font-size: .9rem; }
+    .kin-auth-err { font-size: .9rem; line-height: 1.6; color: var(--coral); text-align: center; margin-top: 6px; }
+    .kin-auth-note { font-size: .8rem; line-height: 1.7; color: var(--muted); margin-top: 12px; padding: 0 6px; }
 
     .kin-privacy { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 18px; font-size: .82rem; color: var(--muted); }
     .kin-privacy svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
@@ -373,10 +391,12 @@
       <div class="kin-wallet" id="kin-wallet" hidden>
         <div class="kin-w-head"><h3>محفظتي</h3><span id="kin-w-count"></span></div>
         <ul class="kin-w-list" id="kin-w-list"></ul>
-        <p class="kin-w-note">محفوظة في جهازك بس. أول ما يفتح تسجيل الدخول، تقدر تنقلها لحسابك.</p>
+        <p class="kin-w-empty" id="kin-w-empty" hidden></p>
+        <p class="kin-w-note" id="kin-w-note">محفوظة في جهازك بس. أول ما يفتح تسجيل الدخول، تقدر تنقلها لحسابك.</p>
       </div>
 
-      <p class="kin-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>الأسماء تبقى في جهازك، ما تطلع لأحد.</p>
+      <p class="kin-acct" id="kin-acct" hidden></p>
+      <p class="kin-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="kin-privacy-text">الأسماء تبقى في جهازك، ما تطلع لأحد.</span></p>
     </section>
   </main>
 
@@ -397,7 +417,21 @@
     </div>
   </div>
 
+  <div class="kin-modal" id="kin-auth" role="dialog" aria-modal="true" aria-labelledby="kin-auth-title" hidden>
+    <div class="kin-sheet kin-auth-sheet">
+      <div class="kin-sheet-head">
+        <h3 id="kin-auth-title">سجّل دخولك</h3>
+        <button type="button" class="kin-x" id="kin-auth-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <p class="kin-auth-text" id="kin-auth-text"></p>
+      <div class="kin-gbtn" id="kin-gbtn"></div>
+      <p class="kin-auth-err" id="kin-auth-err" role="alert" hidden></p>
+      <p class="kin-auth-note">نحفظ بس الأسماء اللي تكتبها وصلة القرابة، وما يشوفها أحد غيرك. وتقدر تمسح حسابك وكل اللي فيه متى ما تبي.</p>
+    </div>
+  </div>
+
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/kin.js?v=1" defer></script>
+  <script src="/account.js?v=1" defer></script>
+  <script src="/kin.js?v=2" defer></script>
 </body>
 </html>

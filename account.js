@@ -1,0 +1,153 @@
+/* شرباكة: the account (Google sign-in through Supabase) and the wallet kept in it.
+   While CONFIG is empty, accounts stay off and the wallet lives on the device only. */
+(function (root) {
+  'use strict';
+
+  var CONFIG = {
+    supabaseUrl: '',     // https://<project>.supabase.co
+    supabaseKey: '',     // the project's public (anon / publishable) key, safe to ship
+    googleClientId: ''   // <id>.apps.googleusercontent.com
+  };
+
+  var SUPABASE_JS = '/vendor/supabase-2.117.3.js';
+  var GOOGLE_JS = 'https://accounts.google.com/gsi/client';
+
+  var on = !!(CONFIG.supabaseUrl && CONFIG.supabaseKey && CONFIG.googleClientId &&
+    root.crypto && root.crypto.subtle && root.TextEncoder && root.Promise);
+  var client = null, user = null, listeners = [], scripts = {};
+
+  function script(src) {
+    if (!scripts[src]) {
+      scripts[src] = new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = src; s.async = true;
+        s.onload = function () { resolve(); };
+        s.onerror = function () { delete scripts[src]; s.remove(); reject(new Error('could not load ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+    return scripts[src];
+  }
+
+  function toUser(u) {
+    if (!u) return null;
+    var m = u.user_metadata || {}, full = m.full_name || m.name || '';
+    return { id: u.id, email: u.email || '', name: full, first: m.given_name || full.split(' ')[0] || '' };
+  }
+
+  // Listeners run on a later tick: Supabase asks not to call it again from inside its own auth callback.
+  function setUser(u) {
+    var next = toUser(u), changed = (next && next.id) !== (user && user.id);
+    user = next;
+    if (changed) setTimeout(function () { listeners.forEach(function (fn) { try { fn(user); } catch (e) {} }); }, 0);
+  }
+
+  var ready = !on ? Promise.resolve(false) : script(SUPABASE_JS).then(function () {
+    client = root.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'shorbaka.auth' }
+    });
+    client.auth.onAuthStateChange(function (event, session) { setUser(session && session.user); });
+    return client.auth.getSession().then(function (r) {
+      setUser(r && r.data && r.data.session && r.data.session.user);
+      return true;
+    });
+  }).catch(function () { on = false; return false; });
+
+  function hex(buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
+
+  // Google gets the hashed nonce, Supabase the raw one, so a stolen token cannot be replayed.
+  function nonce() {
+    var raw = hex(root.crypto.getRandomValues(new Uint8Array(24)));
+    return root.crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw)).then(function (h) {
+      return { raw: raw, hashed: hex(h) };
+    });
+  }
+
+  /* Draws Google's own "Continue with Google" button into el.
+     done(error) runs after each sign-in attempt; error is null when it worked. */
+  function googleButton(el, done) {
+    return ready.then(function (ok) {
+      if (!ok) throw new Error('accounts are off');
+      return Promise.all([script(GOOGLE_JS), nonce()]);
+    }).then(function (r) {
+      var n = r[1], g = root.google && root.google.accounts && root.google.accounts.id;
+      if (!g) throw new Error('google did not load');
+      g.initialize({
+        client_id: CONFIG.googleClientId,
+        nonce: n.hashed,
+        ux_mode: 'popup',
+        callback: function (resp) {
+          client.auth.signInWithIdToken({ provider: 'google', token: resp.credential, nonce: n.raw }).then(function (res) {
+            if (res.error) throw res.error;
+            setUser(res.data && res.data.user);
+            done(null);
+          }).catch(function (e) { done(e || new Error('sign in failed')); });
+        }
+      });
+      el.textContent = '';
+      g.renderButton(el, {
+        type: 'standard', theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with',
+        logo_alignment: 'center', locale: 'ar', width: Math.max(220, Math.min(320, el.clientWidth || 300))
+      });
+    });
+  }
+
+  function signOut() {
+    try { root.google.accounts.id.disableAutoSelect(); } catch (e) {}
+    if (!client) { setUser(null); return Promise.resolve(); }
+    return client.auth.signOut({ scope: 'local' }).then(function () { setUser(null); }, function () { setUser(null); });
+  }
+
+  function rows(res) {
+    if (res.error) throw res.error;
+    return res.data || [];
+  }
+
+  function list() {
+    return client.from('relations').select('id,me,them,steps,created_at')
+      .order('created_at', { ascending: false }).limit(500).then(rows)
+      .then(function (data) {
+        return data.map(function (r) {
+          return { id: r.id, me: r.me, them: r.them, steps: r.steps.split(''), at: Date.parse(r.created_at) };
+        });
+      });
+  }
+
+  /* Saves wallet items ({me, them, steps: ['F','B',...], at}). Saving the same person with the same
+     relation again moves it to the top; keepOld leaves an existing copy as it is (used when moving
+     the device wallet into the account). */
+  function save(items, keepOld) {
+    if (!items.length) return Promise.resolve([]);
+    var data = items.map(function (it) {
+      return {
+        user_id: user.id, me: String(it.me || '').slice(0, 40), them: String(it.them || '').slice(0, 40),
+        steps: it.steps.join(''), created_at: new Date(it.at || Date.now()).toISOString()
+      };
+    });
+    return client.from('relations').upsert(data, { onConflict: 'user_id,them,steps', ignoreDuplicates: !!keepOld }).then(rows);
+  }
+
+  function remove(id) {
+    return client.from('relations').delete().eq('id', id).then(rows);
+  }
+
+  // Deletes the account and everything saved in it (the database function cascades).
+  function deleteAccount() {
+    return client.rpc('delete_my_account').then(rows).then(signOut);
+  }
+
+  root.ACCOUNT = {
+    on: function () { return on; },
+    ready: ready,
+    user: function () { return user; },
+    onChange: function (fn) { listeners.push(fn); },
+    googleButton: googleButton,
+    signOut: signOut,
+    list: list,
+    save: save,
+    remove: remove,
+    deleteAccount: deleteAccount
+  };
+})(window);
