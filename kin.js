@@ -565,7 +565,7 @@
   function init() {
     var $ = function (id) { return document.getElementById(id); };
     var ui = {
-      me: $('kin-me'), them: $('kin-them'), path: $('kin-path'), next: $('kin-next'),
+      me: $('kin-me'), them: $('kin-them'), need: $('kin-need'), path: $('kin-path'), next: $('kin-next'),
       opts: $('kin-opts'), max: $('kin-max'), actions: $('kin-actions'), done: $('kin-done'),
       back: $('kin-back'), reset: $('kin-reset'), result: $('kin-result'), rLabel: $('kin-r-label'),
       rSentence: $('kin-r-sentence'), rExtra: $('kin-r-extra'), story: $('kin-story'), save: $('kin-save'),
@@ -615,6 +615,7 @@
       b.setAttribute('aria-label', i < 0 ? main + '، دوس عشان تبدأ من عندك' : main + '، ارجع لهالخطوة');
       if (i < 0) b.setAttribute('aria-expanded', String(st.open && !st.trail.length));
       b.addEventListener('click', function () {
+        if (i < 0 && !names().them) { needThem(true); ui.them.focus(); return; }
         st.trail = i < 0 ? [] : st.trail.slice(0, i + 1);
         st.open = true; st.done = false;
         render();
@@ -960,8 +961,19 @@
       chain.catch(function () { flash(ui.save, 'ما قدرت أحفظ، جرّب مرة ثانية', 2400); }).then(renderWallet);
     }
 
+    // The walk starts from your name only once the person's name is written: until then that field turns red.
+    function needThem(on) {
+      var label = ui.them.parentNode;
+      label.classList.remove('is-missing');
+      if (on) { void label.offsetWidth; label.classList.add('is-missing'); }  // shakes again on every tap
+      ui.need.hidden = !on;
+    }
+
     ui.me.addEventListener('input', render);
-    ui.them.addEventListener('input', render);
+    ui.them.addEventListener('input', function () {
+      if (ui.them.value.trim()) needThem(false);
+      render();
+    });
     ui.done.addEventListener('click', function () {
       st.done = true; render();
       ui.result.focus({ preventScroll: true });
