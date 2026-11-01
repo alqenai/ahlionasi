@@ -278,6 +278,8 @@
     .kin-gbtn { display: flex; justify-content: center; align-items: center; min-height: 52px; margin: 18px 0 6px; color: var(--muted); font-size: .9rem; }
     .kin-auth-err { font-size: .9rem; line-height: 1.6; color: var(--coral); text-align: center; margin-top: 6px; }
     .kin-auth-note { font-size: .8rem; line-height: 1.7; color: var(--muted); margin-top: 12px; padding: 0 6px; }
+    .kin-auth-hint { font-size: .9rem; line-height: 1.75; color: var(--pearl); margin-top: 14px; padding: 10px 14px; border-radius: 14px; background: rgba(233, 196, 106, .1); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .28); }
+    .kin-auth-local { display: block; min-height: 44px; margin: 2px auto 0; padding: 0 12px; border: 0; background: none; color: var(--sand); font-size: .92rem; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
 
     .kin-privacy { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 18px; font-size: .82rem; color: var(--muted); }
     .kin-privacy svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
@@ -424,14 +426,16 @@
         <button type="button" class="kin-x" id="kin-auth-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <p class="kin-auth-text" id="kin-auth-text"></p>
+      <p class="kin-auth-hint" id="kin-auth-hint" hidden>جوجل ما يخليك تسجّل دخول من داخل التطبيقات مثل انستقرام. افتح الصفحة بسفاري أو كروم (من زر ⋯ اللي فوق) وكمّل من هناك.</p>
       <div class="kin-gbtn" id="kin-gbtn"></div>
       <p class="kin-auth-err" id="kin-auth-err" role="alert" hidden></p>
+      <button type="button" class="kin-auth-local" id="kin-auth-local" hidden><span>أو احفظها بجهازك بس</span></button>
       <p class="kin-auth-note">نحفظ بس الأسماء اللي تكتبها وصلة القرابة، وما يشوفها أحد غيرك. وتقدر تمسح حسابك وكل اللي فيه متى ما تبي.</p>
     </div>
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=1" defer></script>
-  <script src="/kin.js?v=2" defer></script>
+  <script src="/account.js?v=2" defer></script>
+  <script src="/kin.js?v=3" defer></script>
 </body>
 </html>

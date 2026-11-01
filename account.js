@@ -6,7 +6,7 @@
   var CONFIG = {
     supabaseUrl: 'https://jfvbubrhghmivdjfbcku.supabase.co',
     supabaseKey: 'sb_publishable_nom1uzSkzypbyYisBt2-dQ_psJfSZEe',  // public key, safe to ship: row-level security guards the data
-    googleClientId: ''   // <id>.apps.googleusercontent.com (accounts stay off until this is set)
+    googleClientId: '715982042873-ps3ftqgqvdskeegi0m7nksadeqae4a81.apps.googleusercontent.com'   // public too: Google only honours it on https://shorbaka.com
   };
 
   var SUPABASE_JS = '/vendor/supabase-2.117.3.js';

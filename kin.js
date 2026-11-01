@@ -558,7 +558,8 @@
       wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), modal: $('kin-modal'),
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
       acct: $('kin-acct'), privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
-      authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close')
+      authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close'),
+      authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local')
     };
     if (!ui.path) return;
 
@@ -793,18 +794,35 @@
     function authError(text) {
       ui.authErr.textContent = text;
       ui.authErr.hidden = false;
+      showLocal(true);
+    }
+
+    // Google refuses to sign in from the browsers built into apps (Instagram, Snapchat, TikTok...),
+    // which is where links in stories open.
+    function inAppBrowser() {
+      var ua = navigator.userAgent || '';
+      if (/Instagram|FBAN|FBAV|FB_IAB|Snapchat|musical_ly|Bytedance|TikTok|; wv\)/i.test(ua)) return true;
+      return /iPhone|iPad|iPod/.test(ua) && !/Safari\//.test(ua) && !navigator.standalone;
+    }
+
+    // The way out when Google sign-in can't work here: keep the relation on this device for now.
+    function showLocal(show) {
+      if (ui.authLocal) ui.authLocal.hidden = !(show && st.pending);
     }
 
     // Sign-in sheet. pending is the relation to save once the person is in.
     function openAuth(pending, from) {
       var a = accounts();
       if (!a || !ui.auth) return;
+      var stuck = inAppBrowser();
       st.pending = pending || null;
       ui.authTitle.textContent = pending ? 'احفظها بحسابك' : 'سجّل دخولك';
       ui.authText.textContent = pending
         ? 'سجّل دخولك بجوجل عشان تنحفظ صلة القرابة بمحفظتك، وتلقاها من أي جهاز.'
         : 'سجّل دخولك بجوجل عشان تشوف محفظتك وتحفظ فيها من أي جهاز.';
       ui.authErr.hidden = true;
+      if (ui.authHint) ui.authHint.hidden = !stuck;
+      showLocal(stuck);
       ui.gbtn.textContent = 'لحظة…';
       openSheet(ui.auth, from);
       a.googleButton(ui.gbtn, function (err) {
@@ -914,6 +932,12 @@
 
     ui.close.addEventListener('click', function () { closeSheet(ui.modal); });
     if (ui.authClose) ui.authClose.addEventListener('click', function () { st.pending = null; closeSheet(ui.auth); });
+    if (ui.authLocal) ui.authLocal.addEventListener('click', function () {
+      var item = st.pending;
+      st.pending = null;
+      closeSheet(ui.auth);
+      if (item) saveHere(item);
+    });
     [ui.modal, ui.auth].forEach(function (m) {
       if (m) m.addEventListener('click', function (e) { if (e.target === m) { if (m === ui.auth) st.pending = null; closeSheet(m); } });
     });
