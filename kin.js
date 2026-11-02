@@ -601,7 +601,7 @@
     };
     if (!ui.path) return;
 
-    var st = { trail: [], open: false, done: false, pending: null, added: null }, file = null, url = null;
+    var st = { trail: [], open: false, done: false, pending: null, added: null, them: ui.them.value.trim() }, file = null, url = null;
     var sheet = null, sheetFrom = null, wSeq = 0, acctReady = !root.ACCOUNT;
 
     // The account system, when it is switched on and loaded; null otherwise.
@@ -637,7 +637,7 @@
         return Object.assign({}, base, { pid: pid, main: base.main + ' (' + (doc.p[pid].n || 'بدون اسم') + ')' });
       });
       if (step !== 'F' && step !== 'M') {
-        out.push(Object.assign({}, base, { hint: STEPS[step].g === 'f' ? 'وحدة ثانية مو بشجرتك' : 'واحد ثاني مو بشجرتك' }));
+        out.push(Object.assign({}, base, { hint: STEPS[step].g === 'f' ? 'وحدة ثانية مو\u00a0بشجرتك' : 'واحد ثاني مو\u00a0بشجرتك' }));
       }
       return out;
     }
@@ -717,6 +717,7 @@
       b.appendChild(txt);
       b.setAttribute('aria-label', info.main + (info.hint ? '، ' + info.hint : ''));
       b.addEventListener('click', function () {
+        if (!names().them) { needThem(true); ui.them.focus(); return; }
         st.trail.push(info);
         st.open = true; st.done = false;
         render();
@@ -744,7 +745,7 @@
         ui.path.appendChild(node(i, s.main, s.hint, STEPS[s.step].t, i === st.trail.length - 1));
       });
 
-      var opts = st.open && !st.done ? options(path) : [], doc = opts.length ? treeDoc() : null;
+      var opts = st.open && !st.done && n.them ? options(path) : [], doc = opts.length ? treeDoc() : null;
       var idx = doc ? root.TREE.index(doc) : null, at = treeAt(doc), list = [];
       if (doc && at === doc.me) opts = opts.filter(function (s) { return s !== (doc.p[doc.me].g === 'f' ? 'W' : 'H'); });
       opts.forEach(function (s) { list = list.concat(stepChoices(path, s, doc, idx, at)); });
@@ -835,7 +836,7 @@
         open.appendChild(el('span', 'kin-w-name', subject(path, it.them)));
         open.appendChild(el('span', 'kin-w-rel', verb(path) + ' ' + phrase(path)));
         open.addEventListener('click', function () {
-          ui.me.value = it.me; ui.them.value = it.them;
+          ui.me.value = it.me; ui.them.value = it.them; st.them = ui.them.value.trim();
           st.trail = bindTrail(trail); st.open = true; st.done = true;
           render();
           ui.result.focus({ preventScroll: true });
@@ -1060,8 +1061,15 @@
     }
 
     ui.me.addEventListener('input', render);
+    /* Another name is another person: writing it or wiping it takes the walk back to the start, and
+       it goes on only once there is a name again (tapping your name asks for it). */
     ui.them.addEventListener('input', function () {
-      if (ui.them.value.trim()) needThem(false);
+      var v = ui.them.value.trim();
+      if (v) needThem(false);
+      if (v !== st.them) {
+        st.them = v;
+        if (st.open || st.trail.length || st.done) { st.trail = []; st.open = false; st.done = false; st.added = null; }
+      }
       render();
     });
     ui.done.addEventListener('click', function () {
@@ -1076,8 +1084,8 @@
       st.trail = []; st.done = false; st.open = true; st.added = null; render(); focusNext();
     });
     ui.again.addEventListener('click', function () {
-      st.trail = []; st.done = false; st.open = true; st.added = null;
-      ui.them.value = ''; render(); ui.them.focus();
+      st.trail = []; st.done = false; st.open = false; st.added = null;
+      ui.them.value = ''; st.them = ''; render(); ui.them.focus();
     });
 
     function saveHere(item) {

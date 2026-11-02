@@ -407,25 +407,25 @@
     #kin-img { transition: opacity .15s; }
     #kin-img.is-busy { opacity: .4; }
     /* a switch under the size toggle, when the picture has one (the tree: «أخفي أسامي البنات») */
-    .kin-opt {
+    .kin-toggle {
       position: relative; display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 9px 14px;
       border-radius: 16px; background: rgba(244, 239, 230, .05); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .1);
       cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
     }
-    .kin-opt-words { flex: 1; min-width: 0; display: grid; gap: 1px; }
-    .kin-opt-text { font-size: .95rem; font-weight: 500; line-height: 1.5; }
-    .kin-opt-hint { font-size: .78rem; line-height: 1.5; color: var(--muted); }
-    .kin-opt input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .kin-toggle-words { flex: 1; min-width: 0; display: grid; gap: 1px; }
+    .kin-toggle-text { font-size: .95rem; font-weight: 500; line-height: 1.5; }
+    .kin-toggle-hint { font-size: .78rem; line-height: 1.5; color: var(--muted); }
+    .kin-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
     .kin-switch { position: relative; flex: none; width: 46px; height: 28px; border-radius: 999px; background: rgba(244, 239, 230, .18); transition: background .2s; }
     .kin-switch::after {
       content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 22px; height: 22px; border-radius: 50%;
       background: var(--pearl); box-shadow: 0 2px 6px rgba(0, 0, 0, .3); transition: transform .2s;
     }
-    .kin-opt input:checked + .kin-switch { background: var(--teal); }
-    .kin-opt input:checked + .kin-switch::after { transform: translateX(-18px); }
-    .kin-opt input:focus-visible + .kin-switch { outline: 2px solid var(--teal); outline-offset: 2px; }
-    .kin-opt input:disabled + .kin-switch { opacity: .6; }
-    .kin-opt:has(input:disabled) { cursor: progress; }
+    .kin-toggle input:checked + .kin-switch { background: var(--teal); }
+    .kin-toggle input:checked + .kin-switch::after { transform: translateX(-18px); }
+    .kin-toggle input:focus-visible + .kin-switch { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .kin-toggle input:disabled + .kin-switch { opacity: .6; }
+    .kin-toggle:has(input:disabled) { cursor: progress; }
     .kin-modal.has-opt #kin-img { max-height: min(54vh, 520px); }
     .kin-sheet-btns { display: flex; gap: 8px; margin-top: 14px; }
     .kin-sheet-btns .kin-btn { flex: 1; }
@@ -779,8 +779,8 @@
         <button type="button" data-format="story" aria-pressed="true"><span>ستوري</span></button>
         <button type="button" data-format="post" aria-pressed="false"><span>بوست</span></button>
       </div>
-      <label class="kin-opt" id="kin-opt" hidden>
-        <span class="kin-opt-words"><span class="kin-opt-text" id="kin-opt-text"></span><span class="kin-opt-hint" id="kin-opt-hint"></span></span>
+      <label class="kin-toggle" id="kin-opt" hidden>
+        <span class="kin-toggle-words"><span class="kin-toggle-text" id="kin-opt-text"></span><span class="kin-toggle-hint" id="kin-opt-hint"></span></span>
         <input type="checkbox" role="switch" id="kin-opt-box">
         <span class="kin-switch" aria-hidden="true"></span>
       </label>
@@ -841,7 +841,7 @@
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
   <script src="/account.js?v=5" defer></script>
-  <script src="/kin.js?v=15" defer></script>
+  <script src="/kin.js?v=16" defer></script>
   <script src="/tree.js?v=7" defer></script>
 </body>
 </html>
