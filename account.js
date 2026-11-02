@@ -14,7 +14,7 @@
 
   var on = !!(CONFIG.supabaseUrl && CONFIG.supabaseKey && CONFIG.googleClientId &&
     root.crypto && root.crypto.subtle && root.TextEncoder && root.Promise);
-  var client = null, user = null, listeners = [], scripts = {};
+  var client = null, user = null, session = null, listeners = [], scripts = {};
 
   function script(src) {
     if (!scripts[src]) {
@@ -43,13 +43,26 @@
     if (changed) setTimeout(function () { listeners.forEach(function (fn) { try { fn(user); } catch (e) {} }); }, 0);
   }
 
+  /* A tree save can still be on its way when the page is closed or reloaded. keepalive lets it
+     finish (browsers allow up to 64 KB); if the browser refuses, it goes again as a normal request. */
+  function fetchKeep(input, init) {
+    var url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (init && init.method === 'POST' && url.indexOf('/rest/v1/family_trees') >= 0 && typeof init.body === 'string' &&
+        root.Blob && new Blob([init.body]).size < 60000) {
+      return fetch(input, Object.assign({}, init, { keepalive: true })).catch(function () { return fetch(input, init); });
+    }
+    return fetch(input, init);
+  }
+
   var ready = !on ? Promise.resolve(false) : script(SUPABASE_JS).then(function () {
     client = root.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'shorbaka.auth' }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'shorbaka.auth' },
+      global: { fetch: fetchKeep }
     });
-    client.auth.onAuthStateChange(function (event, session) { setUser(session && session.user); });
+    client.auth.onAuthStateChange(function (event, s) { session = s || null; setUser(s && s.user); });
     return client.auth.getSession().then(function (r) {
-      setUser(r && r.data && r.data.session && r.data.session.user);
+      session = (r && r.data && r.data.session) || null;
+      setUser(session && session.user);
       return true;
     });
   }).catch(function () { on = false; return false; });
@@ -134,6 +147,34 @@
     return client.from('relations').delete().eq('id', id).then(rows);
   }
 
+  // The family tree («شجرة عيلتي») is one document per account; null when there is none yet.
+  function loadTree() {
+    return client.from('family_trees').select('data').eq('user_id', user.id).maybeSingle().then(function (res) {
+      if (res.error) throw res.error;
+      return res.data ? res.data.data : null;
+    });
+  }
+
+  function saveTree(data) {
+    return client.from('family_trees')
+      .upsert({ user_id: user.id, data: data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      .then(rows);
+  }
+
+  /* The same save, sent before this function returns, for when the page is being closed: a page on its
+     way out can't wait for Supabase to look up the session first. Returns the request, or null when
+     it can't go this way (no session yet, or the tree is over the 64 KB a closing page may send). */
+  function saveTreeNow(data) {
+    if (!session || !session.access_token || !user || !root.fetch || !root.Blob) return null;
+    var body = JSON.stringify({ user_id: user.id, data: data, updated_at: new Date().toISOString() });
+    if (new Blob([body]).size >= 60000) return null;
+    return root.fetch(CONFIG.supabaseUrl + '/rest/v1/family_trees?on_conflict=user_id', {
+      method: 'POST', keepalive: true, body: body,
+      headers: { apikey: CONFIG.supabaseKey, Authorization: 'Bearer ' + session.access_token,
+        'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }
+    }).then(function (res) { if (!res.ok) throw new Error('tree not saved: ' + res.status); });
+  }
+
   // Fixes the name of a saved person. If that name with that relation is already saved, the two become one.
   function rename(id, them) {
     return client.from('relations').update({ them: String(them || '').slice(0, 40) }).eq('id', id).then(rows)
@@ -159,6 +200,9 @@
     save: save,
     remove: remove,
     rename: rename,
+    loadTree: loadTree,
+    saveTree: saveTree,
+    saveTreeNow: saveTreeNow,
     deleteAccount: deleteAccount
   };
 })(window);

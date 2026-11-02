@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>شرباكة | شنو يصير لك؟</title>
-  <meta name="description" content="اعرف شنو يصير لك أي أحد: امشِ بالشجرة خطوة خطوة ونكتب لك صلة القرابة بجملة وحدة، وشاركها ستوري. Find out exactly how you are related to anyone and share it as a story.">
+  <meta name="description" content="اعرف شنو يصير لك أي أحد بجملة وحدة، وسوّ شجرة عيلتك، وشاركها ستوري. Find out exactly how you are related to anyone, build your family tree, and share it as a story.">
   <meta name="theme-color" content="#0E2A47">
 
   <meta property="og:site_name" content="شرباكة">
   <meta property="og:title" content="شرباكة | شنو يصير لك؟">
-  <meta property="og:description" content="اعرف صلة القرابة بينك وبين أي أحد بجملة وحدة، وشاركها ستوري.">
+  <meta property="og:description" content="اعرف صلة القرابة بينك وبين أي أحد بجملة وحدة، وسوّ شجرة عيلتك، وشاركها ستوري.">
   <meta property="og:url" content="https://shorbaka.com/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ar_KW">
@@ -125,17 +125,6 @@
       margin-top: 8px;
       animation: up .8s ease-out .9s both;
     }
-    .cta {
-      display: inline-flex; align-items: center; gap: 10px;
-      margin-top: 28px; padding: 13px 30px; border-radius: 999px;
-      background: var(--pearl); color: var(--navy); text-decoration: none;
-      font-size: 1.15rem; font-weight: 700;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
-      animation: up .8s ease-out 1s both;
-    }
-    .cta:hover { background: #FFFFFF; }
-    .cta svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; animation: nudge 2.4s ease-in-out 2.4s infinite; }
-    @keyframes nudge { 0%, 100% { transform: none; } 50% { transform: translateY(3px); } }
     @keyframes up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
     [hidden] { display: none !important; }
@@ -411,6 +400,142 @@
     .kin-tip { font-size: .85rem; color: var(--muted); margin-top: 10px; }
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
+    /* The two sections under the hero: «شنو يصير لك؟» and «شجرة عيلتي». */
+    .secs {
+      position: sticky; top: calc(10px + env(safe-area-inset-top)); z-index: 15;
+      width: 100%; margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 5px;
+      border-radius: 999px; background: rgba(14, 42, 71, .8);
+      box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .16), 0 12px 30px rgba(0, 0, 0, .28);
+      -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+      animation: up .8s ease-out 1s both;
+    }
+    .sec {
+      display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 10px;
+      border-radius: 999px; color: var(--pearl); text-decoration: none; font-size: 1rem; font-weight: 500; white-space: nowrap;
+      -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s;
+    }
+    .sec svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .sec:hover { background: rgba(244, 239, 230, .08); }
+    .sec[aria-current="page"] { background: var(--pearl); color: var(--navy); font-weight: 700; }
+    .sec:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .secs ~ .kin { margin-top: 18px; }
+    main .kin { scroll-margin-top: 84px; }
+    main[data-sec="tree"] #kin, main[data-sec="tree"] #kin-wallet { display: none !important; }
+    main:not([data-sec="tree"]) #tree { display: none; }
+
+    /* «شجرة عيلتي» */
+    .tree:focus { outline: none; }
+    .tr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .tr-count { flex: none; font-size: .85rem; color: var(--muted); padding-top: 14px; }
+    .tr-msg { margin-top: 16px; padding: 14px; border-radius: 14px; background: rgba(244, 239, 230, .04); color: var(--muted); font-size: .95rem; line-height: 1.7; text-align: center; }
+    .tr-retry { display: flex; margin: 10px auto 0; }
+    .tr-start { display: grid; gap: 14px; margin-top: 18px; }
+    .tr-field > span { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+    .tr-input {
+      width: 100%; padding: 11px 14px; border: 0; border-radius: 14px;
+      background: rgba(244, 239, 230, .07); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .18);
+      color: var(--pearl); font: 500 1.05rem/28px "Readex Pro", system-ui, sans-serif;
+      outline: none; -webkit-appearance: none; appearance: none;
+    }
+    .tr-input::placeholder { color: #6F86A0; font-weight: 400; }
+    .tr-input:focus { box-shadow: inset 0 0 0 2px var(--teal); }
+    .tr-g { margin-bottom: 0; }
+    .tr-g button { min-height: 44px; font-size: 1rem; }
+    .tr-err { font-size: .9rem; color: var(--coral); }
+    .tr-start .kin-btn { width: 100%; }
+
+    .tr-bar { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+    .tr-bar:has(> :not([hidden])) { min-height: 46px; }
+    .tr-side { flex: 1; margin-bottom: 0; }
+    .tr-zoom {
+      flex: none; width: 46px; height: 46px; margin-inline-start: auto; border: 0; border-radius: 50%;
+      background: rgba(244, 239, 230, .08); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .16);
+      color: var(--pearl); display: grid; place-items: center; cursor: pointer;
+    }
+    .tr-zoom[aria-pressed="true"] { background: var(--pearl); color: var(--navy); }
+    .tr-zoom svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .tr-zoom:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .tr-scroll {
+      direction: ltr; margin: 10px -18px 0; overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+    }
+    .tr-scroll::-webkit-scrollbar { display: none; }
+    .tr-stage { position: relative; margin: 0 auto; padding: 12px 18px 8px; box-sizing: content-box; }
+    .tr-canvas { position: absolute; top: 12px; left: 18px; transform-origin: 0 0; }
+    .tr-lines { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+    .tr-lines path { fill: none; stroke: rgba(244, 239, 230, .34); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .tr-lines path.is-ghost { stroke: rgba(244, 239, 230, .24); stroke-dasharray: 3 6; }
+    .tr-node {
+      position: absolute; width: 92px; display: flex; flex-direction: column; align-items: center; padding: 0;
+      border: 0; background: none; color: var(--pearl); font-family: inherit; text-align: center; cursor: pointer;
+      direction: rtl; -webkit-tap-highlight-color: transparent;
+    }
+    .tr-av {
+      width: 54px; height: 54px; flex: none; border-radius: 50%; display: grid; place-items: center;
+      font-size: 1.3rem; font-weight: 700; line-height: 1; color: var(--pearl); background: #12385E;
+      box-shadow: 0 0 0 3px var(--ring, var(--teal)), 0 8px 18px rgba(0, 0, 0, .28); transition: transform .15s;
+    }
+    .tr-node:hover .tr-av { transform: scale(1.06); }
+    .tr-node:focus-visible { outline: none; }
+    .tr-node:focus-visible .tr-av { box-shadow: 0 0 0 3px var(--ring, var(--teal)), 0 0 0 7px rgba(46, 196, 182, .45); }
+    .tr-name { max-width: 100%; margin-top: 10px; font-size: .92rem; font-weight: 700; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tr-rel { max-width: 100%; font-size: .74rem; line-height: 1.35; color: var(--sand); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .tr-node.is-mate { --ring: var(--sky); }
+    .tr-node.is-me { --ring: var(--sand); }
+    .tr-node.is-me .tr-av { background: var(--pearl); color: var(--navy); }
+    .tr-node.is-me .tr-rel { color: var(--pearl); }
+    .tr-node.is-ghost .tr-av { background: rgba(244, 239, 230, .03); box-shadow: none; outline: 2px dashed rgba(244, 239, 230, .38); outline-offset: -2px; color: var(--muted); font-size: 1.7rem; font-weight: 400; }
+    .tr-node.is-ghost .tr-name { color: var(--muted); font-weight: 500; font-size: .82rem; }
+    .tr-node.is-ghost:hover .tr-av { color: var(--pearl); outline-color: var(--teal); }
+    .tr-node.is-new .tr-av { animation: pop-in .5s cubic-bezier(.2, .9, .3, 1.25) both; }
+    .tr-hint { font-size: .85rem; color: var(--muted); text-align: center; margin-top: 6px; }
+    .tr-actions { display: flex; margin-top: 16px; }
+    .tr-actions .kin-btn { flex: 1; }
+    .tr-note { text-align: center; }
+    .tr-link { display: block; margin: 4px auto 0; min-height: 40px; padding: 0 12px; border: 0; background: none; color: var(--sand); font-family: inherit; font-size: .9rem; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+    .tr-in { display: flex; }
+
+    /* One person's sheet */
+    .tr-p-who { display: flex; align-items: center; gap: 12px; min-width: 0; padding-inline-start: 4px; }
+    .tr-p-who .tr-av { width: 46px; height: 46px; font-size: 1.15rem; box-shadow: 0 0 0 3px var(--teal); }
+    .tr-p-who.is-me .tr-av { background: var(--pearl); color: var(--navy); box-shadow: 0 0 0 3px var(--sand); }
+    .tr-p-id { min-width: 0; }
+    .tr-p-who h3 { padding: 0; font-size: 1.15rem; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tr-p-rel { font-size: .88rem; line-height: 1.5; color: var(--sand); }
+    .tr-p-rename { display: flex; align-items: flex-end; gap: 8px; margin-top: 4px; }
+    .tr-p-rename label, .tr-p-form label { flex: 1; min-width: 0; }
+    .tr-p-rename label > span, .tr-p-form label > span { display: block; font-size: .82rem; color: var(--muted); margin: 0 4px 6px; }
+    .tr-p-rename .kin-w-ok { min-height: 50px; padding: 0 16px; border-radius: 14px; }
+    .tr-p-rename .kin-w-ok:disabled { opacity: .35; cursor: default; }
+    .tr-p-label { font-size: .85rem; color: var(--muted); margin: 18px 4px 8px; }
+    .tr-p-adds { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tr-chip {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border: 0; border-radius: 999px;
+      background: rgba(244, 239, 230, .07); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .18);
+      color: var(--pearl); font-family: inherit; font-size: .92rem; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .tr-chip::before { content: "+"; font-size: 1.1rem; font-weight: 700; color: var(--teal); }
+    .tr-chip:hover { background: rgba(244, 239, 230, .12); }
+    .tr-chip[aria-pressed="true"] { background: var(--pearl); color: var(--navy); box-shadow: none; font-weight: 700; }
+    .tr-chip[aria-pressed="true"]::before { color: var(--navy); }
+    .tr-chip-sm { min-height: 36px; padding: 0 12px; font-size: .88rem; }
+    .tr-chip-sm::before { content: none; }
+    .tr-p-form { display: grid; gap: 10px; margin-top: 12px; padding: 12px; border-radius: 18px; background: rgba(46, 196, 182, .08); box-shadow: inset 0 0 0 1px rgba(46, 196, 182, .3); }
+    .tr-p-form .kin-btn { width: 100%; min-height: 48px; }
+    .tr-p-unions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); }
+    .tr-p-done { min-height: 1.4em; margin-top: 8px; font-size: .88rem; color: var(--teal); text-align: center; }
+    .tr-p-order { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: .85rem; color: var(--muted); }
+    .tr-p-order span { flex: 1; padding-inline-start: 4px; }
+    .tr-p-order button { min-height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: rgba(244, 239, 230, .08); color: var(--pearl); font-family: inherit; font-size: .88rem; cursor: pointer; }
+    .tr-p-order button:disabled { opacity: .35; cursor: default; }
+    .tr-p-del { display: block; min-height: 44px; margin: 14px auto 0; padding: 0 14px; border: 0; background: none; color: var(--coral); font-family: inherit; font-size: .92rem; font-weight: 500; cursor: pointer; }
+    .tr-p-confirm { margin-top: 12px; padding: 12px; border-radius: 16px; background: rgba(255, 138, 128, .08); box-shadow: inset 0 0 0 1px rgba(255, 138, 128, .3); }
+    .tr-p-confirm p { font-size: .9rem; line-height: 1.7; color: #F6DCD8; }
+    .tr-p-confirm div { display: flex; gap: 8px; margin-top: 10px; }
+    .tr-p-confirm button { flex: 1; min-height: 44px; border: 0; border-radius: 12px; font-family: inherit; font-size: .92rem; font-weight: 700; cursor: pointer; }
+    .tr-p-yes { background: var(--coral); color: #3B0D08; }
+    .tr-p-no { background: rgba(244, 239, 230, .08); color: var(--pearl); }
+
     footer {
       position: relative; z-index: 1;
       margin-top: 44px;
@@ -445,11 +570,12 @@
         </div>
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-wallet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg><span>اللي يصيرون لي</span><span class="acct-count" id="acct-count"></span></button>
+        <button type="button" class="acct-item" id="acct-tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>شجرة عيلتي</span><span class="acct-count" id="acct-tree-count"></span></button>
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h10"/></svg><span>تسجيل الخروج</span></button>
         <button type="button" class="acct-item acct-danger" id="acct-del"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2M6.5 7l1 12.2a1.5 1.5 0 0 0 1.5 1.3h6a1.5 1.5 0 0 0 1.5-1.3l1-12.2M10 11v6M14 11v6"/></svg><span>حذف الحساب</span></button>
         <div class="acct-confirm" id="acct-confirm" hidden>
-          <p class="acct-warn">بينمسح حسابك وكل صلات القرابة اللي حفظتها فيه، وما تقدر ترجعها.</p>
+          <p class="acct-warn">بينمسح حسابك وكل اللي حفظته فيه: صلات القرابة وشجرة عيلتك، وما تقدر ترجعهم.</p>
           <div class="acct-confirm-btns">
             <button type="button" class="acct-yes" id="acct-yes">احذف حسابي</button>
             <button type="button" class="acct-no" id="acct-no">تراجع</button>
@@ -464,10 +590,13 @@
     <h1><svg class="wm" xmlns="http://www.w3.org/2000/svg" viewBox="-217 -84 434 116" role="img" aria-label="شرباكة"><title>شرباكة</title><defs><mask id="sbk-o1" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><circle cx="-38" cy="-50" r="14" fill="#fff"/></mask><mask id="sbk-no2" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><circle cx="-38" cy="-50" r="14" fill="#000"/></mask><mask id="sbk-x4" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><circle cx="-166" cy="-40" r="11" fill="#fff"/></mask><mask id="sbk-o5" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><circle cx="151" cy="-38" r="16" fill="#fff"/></mask><mask id="sbk-no6" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><circle cx="151" cy="-38" r="16" fill="#000"/></mask><mask id="sbk-x8" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><circle cx="-16" cy="-40" r="11" fill="#fff"/><circle cx="147" cy="-37" r="12" fill="#fff"/></mask><mask id="sbk-t9" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><g mask="url(#sbk-o1)"><path d="M200 -62 C150 -62 130 4 70 4 S-30 -62 -90 -62 S-170 -18 -205 -18" fill="none" stroke="#000" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sbk-o5)"><path d="M200 -18 C150 -18 130 -70 70 -70 S-30 4 -90 4 S-170 -62 -205 -62" fill="none" stroke="#000" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/></g></mask><mask id="sbk-m3" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><g mask="url(#sbk-no2)"><path d="M-135.25 -1.5Q-142.55 -1.5 -148.15 -3.6Q-153.75 -5.7 -156.9 -9.7Q-160.05 -13.7 -160.05 -19.3Q-160.05 -24.5 -157.3 -28.7Q-154.55 -32.9 -149.6 -36.35Q-144.65 -39.8 -137.9 -42.85Q-131.15 -45.9 -123.25 -48.8L-120.85 -33Q-127.55 -31.4 -132 -29.65Q-136.45 -27.9 -139.05 -26.15Q-141.65 -24.4 -142.8 -22.85Q-143.95 -21.3 -143.95 -20.2Q-143.95 -18.9 -142.25 -18.05Q-140.55 -17.2 -135.85 -17.2Q-134.85 -17.2 -132.95 -17.3Q-131.05 -17.4 -128.55 -17.75Q-126.05 -18.1 -123.25 -18.8L-119.55 -5.6Q-123.55 -3.7 -127.1 -2.6Q-130.65 -1.5 -135.25 -1.5ZM-110.85 0Q-117.25 0 -121.1 -1.75Q-124.95 -3.5 -126.9 -6.25Q-128.85 -9 -129.5 -12.2Q-130.15 -15.4 -130.15 -18.2V-53.4H-114.05V-22.7Q-114.05 -18.8 -112 -17.25Q-109.95 -15.7 -105.35 -15.7H-102.05V0ZM-142.75 -59 -153.25 -69.6 -143.35 -80.3 -132.85 -69.6ZM-125.15 -59 -135.65 -69.6 -125.65 -80.3 -115.15 -69.6ZM-95.65 -53.7 -67.65 -77 -57.05 -64.4 -84.45 -41.7 -81.95 -47.6Q-70.55 -44.4 -64.3 -37.7Q-58.05 -31 -56.3 -21.45Q-54.55 -11.9 -56.75 0H-102.05V-15.7H-70.55Q-71.75 -20.3 -74.95 -24.4Q-78.15 -28.5 -83.3 -31.45Q-88.45 -34.4 -95.65 -35.5ZM-102.05 -15.7H-101.05V0H-102.05Q-105.05 0 -105.05 -7.8Q-105.05 -15.7 -102.05 -15.7ZM-26.45 0Q-31.45 0 -35.05 -1Q-38.65 -2 -41 -4.15Q-43.35 -6.3 -44.5 -9.7Q-45.65 -13.1 -45.65 -17.9V-74H-29.55V-23.7Q-29.55 -21.5 -29.25 -19.95Q-28.95 -18.4 -28.15 -17.45Q-27.35 -16.5 -25.9 -16.1Q-24.45 -15.7 -22.05 -15.7H-18.15V0ZM-18.15 0V-15.7H-0.55Q-1.35 -19.2 -3.65 -23.5Q-5.95 -27.8 -9.45 -32.2L4.95 -46.9Q7.95 -41.2 10.15 -34.4Q12.35 -27.6 12.4 -19.15Q12.45 -10.7 8.75 0ZM-18.15 -15.7H-17.15V0H-18.15Q-21.15 0 -21.15 -7.8Q-21.15 -15.7 -18.15 -15.7ZM-1.15 26.9 -11.75 16.2 -1.65 5.6 8.85 16.2ZM28.95 25.6Q24.45 25.6 19 23.6Q13.55 21.6 9.15 17.9L14.15 7.8Q18.15 9 20.85 9.45Q23.55 9.9 25.95 9.9Q31.35 9.9 35.5 7.85Q39.65 5.8 42 2.3Q44.35 -1.2 44.35 -5.3Q44.35 -8.7 43.3 -11.05Q42.25 -13.4 40.6 -15.55Q38.95 -17.7 37.05 -20.5L58.55 -10.1Q58.55 -8.9 58.55 -7.7Q58.55 -6.5 58.55 -5.3Q58.55 -2.3 57.6 1.7Q56.65 5.7 54.55 9.85Q52.45 14 49 17.6Q45.55 21.2 40.6 23.4Q35.65 25.6 28.95 25.6ZM66.45 0Q62.85 0 59.7 -0.65Q56.55 -1.3 53.8 -2.7Q51.05 -4.1 48.6 -6.3Q46.15 -8.5 43.75 -11.6L30.75 -28.3L43.55 -44L56.15 -22Q57.55 -19.6 58.75 -18.2Q59.95 -16.8 61.7 -16.25Q63.45 -15.7 66.45 -15.7H67.45V0ZM134.85 0Q127.95 0 123.2 -1.35Q118.45 -2.7 115.25 -4.55Q112.05 -6.4 109.75 -8L118.65 -17.6Q120.45 -16.8 123.6 -16.25Q126.75 -15.7 130.55 -15.7H142.85Q141.65 -20.2 139.4 -24.45Q137.15 -28.7 134.25 -32.4L148.65 -47Q150.95 -42.8 152.85 -37.95Q154.75 -33.1 155.6 -27.45Q156.45 -21.8 155.75 -15Q155.05 -8.2 152.15 0ZM67.45 0V-15.7H77.05Q77.35 -17.8 77.5 -20Q77.65 -22.2 77.65 -24.7Q77.65 -27.2 77.35 -30.1L96.25 -36.6Q94.85 -29.6 93.55 -24.7Q92.25 -19.8 90.7 -16Q89.15 -12.2 87 -8.5Q84.85 -4.8 81.65 0ZM98.45 0Q90.95 0 85.75 -1.35Q80.55 -2.7 77.5 -4.45Q74.45 -6.2 73.25 -7.3L79.15 -19Q81.65 -17.4 85.35 -16.55Q89.05 -15.7 93.45 -15.7H105.55Q105.85 -17.2 106 -19.45Q106.15 -21.7 106.15 -24.45Q106.15 -27.2 105.85 -30.1L124.95 -36.6Q123.45 -29.6 122.15 -24.7Q120.85 -19.8 119.25 -16Q117.65 -12.2 115.5 -8.5Q113.35 -4.8 110.25 0ZM67.45 -15.7H68.45V0H67.45Q64.45 0 64.45 -7.8Q64.45 -15.7 67.45 -15.7ZM116.45 -56.5 105.75 -67.1 115.85 -77.8 126.35 -67.1ZM107.85 -39.8 97.35 -50.5 107.25 -61.1 117.75 -50.5ZM125.45 -39.8 114.95 -50.5 124.95 -61.1 135.45 -50.5Z" fill="#000" stroke="#000" stroke-width="5.2" stroke-linejoin="round"/></g><g mask="url(#sbk-x8)"><path d="M200 -18 C150 -18 130 -70 70 -70 S-30 4 -90 4 S-170 -62 -205 -62" fill="none" stroke="#000" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/></g></mask><mask id="sbk-m7" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><g mask="url(#sbk-no6)"><path d="M-135.25 -1.5Q-142.55 -1.5 -148.15 -3.6Q-153.75 -5.7 -156.9 -9.7Q-160.05 -13.7 -160.05 -19.3Q-160.05 -24.5 -157.3 -28.7Q-154.55 -32.9 -149.6 -36.35Q-144.65 -39.8 -137.9 -42.85Q-131.15 -45.9 -123.25 -48.8L-120.85 -33Q-127.55 -31.4 -132 -29.65Q-136.45 -27.9 -139.05 -26.15Q-141.65 -24.4 -142.8 -22.85Q-143.95 -21.3 -143.95 -20.2Q-143.95 -18.9 -142.25 -18.05Q-140.55 -17.2 -135.85 -17.2Q-134.85 -17.2 -132.95 -17.3Q-131.05 -17.4 -128.55 -17.75Q-126.05 -18.1 -123.25 -18.8L-119.55 -5.6Q-123.55 -3.7 -127.1 -2.6Q-130.65 -1.5 -135.25 -1.5ZM-110.85 0Q-117.25 0 -121.1 -1.75Q-124.95 -3.5 -126.9 -6.25Q-128.85 -9 -129.5 -12.2Q-130.15 -15.4 -130.15 -18.2V-53.4H-114.05V-22.7Q-114.05 -18.8 -112 -17.25Q-109.95 -15.7 -105.35 -15.7H-102.05V0ZM-142.75 -59 -153.25 -69.6 -143.35 -80.3 -132.85 -69.6ZM-125.15 -59 -135.65 -69.6 -125.65 -80.3 -115.15 -69.6ZM-95.65 -53.7 -67.65 -77 -57.05 -64.4 -84.45 -41.7 -81.95 -47.6Q-70.55 -44.4 -64.3 -37.7Q-58.05 -31 -56.3 -21.45Q-54.55 -11.9 -56.75 0H-102.05V-15.7H-70.55Q-71.75 -20.3 -74.95 -24.4Q-78.15 -28.5 -83.3 -31.45Q-88.45 -34.4 -95.65 -35.5ZM-102.05 -15.7H-101.05V0H-102.05Q-105.05 0 -105.05 -7.8Q-105.05 -15.7 -102.05 -15.7ZM-26.45 0Q-31.45 0 -35.05 -1Q-38.65 -2 -41 -4.15Q-43.35 -6.3 -44.5 -9.7Q-45.65 -13.1 -45.65 -17.9V-74H-29.55V-23.7Q-29.55 -21.5 -29.25 -19.95Q-28.95 -18.4 -28.15 -17.45Q-27.35 -16.5 -25.9 -16.1Q-24.45 -15.7 -22.05 -15.7H-18.15V0ZM-18.15 0V-15.7H-0.55Q-1.35 -19.2 -3.65 -23.5Q-5.95 -27.8 -9.45 -32.2L4.95 -46.9Q7.95 -41.2 10.15 -34.4Q12.35 -27.6 12.4 -19.15Q12.45 -10.7 8.75 0ZM-18.15 -15.7H-17.15V0H-18.15Q-21.15 0 -21.15 -7.8Q-21.15 -15.7 -18.15 -15.7ZM-1.15 26.9 -11.75 16.2 -1.65 5.6 8.85 16.2ZM28.95 25.6Q24.45 25.6 19 23.6Q13.55 21.6 9.15 17.9L14.15 7.8Q18.15 9 20.85 9.45Q23.55 9.9 25.95 9.9Q31.35 9.9 35.5 7.85Q39.65 5.8 42 2.3Q44.35 -1.2 44.35 -5.3Q44.35 -8.7 43.3 -11.05Q42.25 -13.4 40.6 -15.55Q38.95 -17.7 37.05 -20.5L58.55 -10.1Q58.55 -8.9 58.55 -7.7Q58.55 -6.5 58.55 -5.3Q58.55 -2.3 57.6 1.7Q56.65 5.7 54.55 9.85Q52.45 14 49 17.6Q45.55 21.2 40.6 23.4Q35.65 25.6 28.95 25.6ZM66.45 0Q62.85 0 59.7 -0.65Q56.55 -1.3 53.8 -2.7Q51.05 -4.1 48.6 -6.3Q46.15 -8.5 43.75 -11.6L30.75 -28.3L43.55 -44L56.15 -22Q57.55 -19.6 58.75 -18.2Q59.95 -16.8 61.7 -16.25Q63.45 -15.7 66.45 -15.7H67.45V0ZM134.85 0Q127.95 0 123.2 -1.35Q118.45 -2.7 115.25 -4.55Q112.05 -6.4 109.75 -8L118.65 -17.6Q120.45 -16.8 123.6 -16.25Q126.75 -15.7 130.55 -15.7H142.85Q141.65 -20.2 139.4 -24.45Q137.15 -28.7 134.25 -32.4L148.65 -47Q150.95 -42.8 152.85 -37.95Q154.75 -33.1 155.6 -27.45Q156.45 -21.8 155.75 -15Q155.05 -8.2 152.15 0ZM67.45 0V-15.7H77.05Q77.35 -17.8 77.5 -20Q77.65 -22.2 77.65 -24.7Q77.65 -27.2 77.35 -30.1L96.25 -36.6Q94.85 -29.6 93.55 -24.7Q92.25 -19.8 90.7 -16Q89.15 -12.2 87 -8.5Q84.85 -4.8 81.65 0ZM98.45 0Q90.95 0 85.75 -1.35Q80.55 -2.7 77.5 -4.45Q74.45 -6.2 73.25 -7.3L79.15 -19Q81.65 -17.4 85.35 -16.55Q89.05 -15.7 93.45 -15.7H105.55Q105.85 -17.2 106 -19.45Q106.15 -21.7 106.15 -24.45Q106.15 -27.2 105.85 -30.1L124.95 -36.6Q123.45 -29.6 122.15 -24.7Q120.85 -19.8 119.25 -16Q117.65 -12.2 115.5 -8.5Q113.35 -4.8 110.25 0ZM67.45 -15.7H68.45V0H67.45Q64.45 0 64.45 -7.8Q64.45 -15.7 67.45 -15.7ZM116.45 -56.5 105.75 -67.1 115.85 -77.8 126.35 -67.1ZM107.85 -39.8 97.35 -50.5 107.25 -61.1 117.75 -50.5ZM125.45 -39.8 114.95 -50.5 124.95 -61.1 135.45 -50.5Z" fill="#000" stroke="#000" stroke-width="5.2" stroke-linejoin="round"/></g><g mask="url(#sbk-x4)"><path d="M200 -62 C150 -62 130 4 70 4 S-30 -62 -90 -62 S-170 -18 -205 -18" fill="none" stroke="#000" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/></g></mask></defs><g class="wm-word" mask="url(#sbk-t9)"><path d="M-135.25 -1.5Q-142.55 -1.5 -148.15 -3.6Q-153.75 -5.7 -156.9 -9.7Q-160.05 -13.7 -160.05 -19.3Q-160.05 -24.5 -157.3 -28.7Q-154.55 -32.9 -149.6 -36.35Q-144.65 -39.8 -137.9 -42.85Q-131.15 -45.9 -123.25 -48.8L-120.85 -33Q-127.55 -31.4 -132 -29.65Q-136.45 -27.9 -139.05 -26.15Q-141.65 -24.4 -142.8 -22.85Q-143.95 -21.3 -143.95 -20.2Q-143.95 -18.9 -142.25 -18.05Q-140.55 -17.2 -135.85 -17.2Q-134.85 -17.2 -132.95 -17.3Q-131.05 -17.4 -128.55 -17.75Q-126.05 -18.1 -123.25 -18.8L-119.55 -5.6Q-123.55 -3.7 -127.1 -2.6Q-130.65 -1.5 -135.25 -1.5ZM-110.85 0Q-117.25 0 -121.1 -1.75Q-124.95 -3.5 -126.9 -6.25Q-128.85 -9 -129.5 -12.2Q-130.15 -15.4 -130.15 -18.2V-53.4H-114.05V-22.7Q-114.05 -18.8 -112 -17.25Q-109.95 -15.7 -105.35 -15.7H-102.05V0ZM-142.75 -59 -153.25 -69.6 -143.35 -80.3 -132.85 -69.6ZM-125.15 -59 -135.65 -69.6 -125.65 -80.3 -115.15 -69.6ZM-95.65 -53.7 -67.65 -77 -57.05 -64.4 -84.45 -41.7 -81.95 -47.6Q-70.55 -44.4 -64.3 -37.7Q-58.05 -31 -56.3 -21.45Q-54.55 -11.9 -56.75 0H-102.05V-15.7H-70.55Q-71.75 -20.3 -74.95 -24.4Q-78.15 -28.5 -83.3 -31.45Q-88.45 -34.4 -95.65 -35.5ZM-102.05 -15.7H-101.05V0H-102.05Q-105.05 0 -105.05 -7.8Q-105.05 -15.7 -102.05 -15.7ZM-26.45 0Q-31.45 0 -35.05 -1Q-38.65 -2 -41 -4.15Q-43.35 -6.3 -44.5 -9.7Q-45.65 -13.1 -45.65 -17.9V-74H-29.55V-23.7Q-29.55 -21.5 -29.25 -19.95Q-28.95 -18.4 -28.15 -17.45Q-27.35 -16.5 -25.9 -16.1Q-24.45 -15.7 -22.05 -15.7H-18.15V0ZM-18.15 0V-15.7H-0.55Q-1.35 -19.2 -3.65 -23.5Q-5.95 -27.8 -9.45 -32.2L4.95 -46.9Q7.95 -41.2 10.15 -34.4Q12.35 -27.6 12.4 -19.15Q12.45 -10.7 8.75 0ZM-18.15 -15.7H-17.15V0H-18.15Q-21.15 0 -21.15 -7.8Q-21.15 -15.7 -18.15 -15.7ZM-1.15 26.9 -11.75 16.2 -1.65 5.6 8.85 16.2ZM28.95 25.6Q24.45 25.6 19 23.6Q13.55 21.6 9.15 17.9L14.15 7.8Q18.15 9 20.85 9.45Q23.55 9.9 25.95 9.9Q31.35 9.9 35.5 7.85Q39.65 5.8 42 2.3Q44.35 -1.2 44.35 -5.3Q44.35 -8.7 43.3 -11.05Q42.25 -13.4 40.6 -15.55Q38.95 -17.7 37.05 -20.5L58.55 -10.1Q58.55 -8.9 58.55 -7.7Q58.55 -6.5 58.55 -5.3Q58.55 -2.3 57.6 1.7Q56.65 5.7 54.55 9.85Q52.45 14 49 17.6Q45.55 21.2 40.6 23.4Q35.65 25.6 28.95 25.6ZM66.45 0Q62.85 0 59.7 -0.65Q56.55 -1.3 53.8 -2.7Q51.05 -4.1 48.6 -6.3Q46.15 -8.5 43.75 -11.6L30.75 -28.3L43.55 -44L56.15 -22Q57.55 -19.6 58.75 -18.2Q59.95 -16.8 61.7 -16.25Q63.45 -15.7 66.45 -15.7H67.45V0ZM134.85 0Q127.95 0 123.2 -1.35Q118.45 -2.7 115.25 -4.55Q112.05 -6.4 109.75 -8L118.65 -17.6Q120.45 -16.8 123.6 -16.25Q126.75 -15.7 130.55 -15.7H142.85Q141.65 -20.2 139.4 -24.45Q137.15 -28.7 134.25 -32.4L148.65 -47Q150.95 -42.8 152.85 -37.95Q154.75 -33.1 155.6 -27.45Q156.45 -21.8 155.75 -15Q155.05 -8.2 152.15 0ZM67.45 0V-15.7H77.05Q77.35 -17.8 77.5 -20Q77.65 -22.2 77.65 -24.7Q77.65 -27.2 77.35 -30.1L96.25 -36.6Q94.85 -29.6 93.55 -24.7Q92.25 -19.8 90.7 -16Q89.15 -12.2 87 -8.5Q84.85 -4.8 81.65 0ZM98.45 0Q90.95 0 85.75 -1.35Q80.55 -2.7 77.5 -4.45Q74.45 -6.2 73.25 -7.3L79.15 -19Q81.65 -17.4 85.35 -16.55Q89.05 -15.7 93.45 -15.7H105.55Q105.85 -17.2 106 -19.45Q106.15 -21.7 106.15 -24.45Q106.15 -27.2 105.85 -30.1L124.95 -36.6Q123.45 -29.6 122.15 -24.7Q120.85 -19.8 119.25 -16Q117.65 -12.2 115.5 -8.5Q113.35 -4.8 110.25 0ZM67.45 -15.7H68.45V0H67.45Q64.45 0 64.45 -7.8Q64.45 -15.7 67.45 -15.7ZM116.45 -56.5 105.75 -67.1 115.85 -77.8 126.35 -67.1ZM107.85 -39.8 97.35 -50.5 107.25 -61.1 117.75 -50.5ZM125.45 -39.8 114.95 -50.5 124.95 -61.1 135.45 -50.5Z" fill="#F4EFE6"/></g><g mask="url(#sbk-m3)"><path class="th th-a" pathLength="1" d="M200 -62 C150 -62 130 4 70 4 S-30 -62 -90 -62 S-170 -18 -205 -18" fill="none" stroke="#2EC4B6" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sbk-m7)"><path class="th th-b" pathLength="1" d="M200 -18 C150 -18 130 -70 70 -70 S-30 4 -90 4 S-170 -62 -205 -62" fill="none" stroke="#FF8A80" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></g><defs><radialGradient id="sbk-p10" cx="0.36" cy="0.3" r="0.78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F4EFE6"/><stop offset="1" stop-color="#D3C08F"/></radialGradient></defs><circle class="pl pl-s" cx="200" cy="-62" r="7.2" fill="url(#sbk-p10)"/><defs><radialGradient id="sbk-p11" cx="0.36" cy="0.3" r="0.78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F4EFE6"/><stop offset="1" stop-color="#D3C08F"/></radialGradient></defs><circle class="pl pl-e" cx="200" cy="-18" r="7.2" fill="url(#sbk-p11)"/><defs><radialGradient id="sbk-p12" cx="0.36" cy="0.3" r="0.78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F4EFE6"/><stop offset="1" stop-color="#D3C08F"/></radialGradient></defs><circle class="pl pl-e" cx="-205" cy="-18" r="7.2" fill="url(#sbk-p12)"/><defs><radialGradient id="sbk-p13" cx="0.36" cy="0.3" r="0.78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F4EFE6"/><stop offset="1" stop-color="#D3C08F"/></radialGradient></defs><circle class="pl pl-s" cx="-205" cy="-62" r="7.2" fill="url(#sbk-p13)"/></svg></h1>
     <div class="latin" lang="en">shorbaka</div>
 
-    <p class="tag">اعرف شنو يصير لك أي أحد<br>بجملة وحدة، وشاركها ستوري</p>
-    <p class="tag-en" lang="en">Find out exactly how you are related to anyone, then share it as a story.</p>
+    <p class="tag">اعرف شنو يصير لك أي أحد<br>وسوّ شجرة عيلتك، وشاركها ستوري</p>
+    <p class="tag-en" lang="en">Find out how you are related to anyone, build your family tree, and share it as a story.</p>
 
-    <a class="cta" href="#kin">ابدأ<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6.5 13.5L12 19l5.5-5.5"/></svg></a>
+    <nav class="secs" aria-label="أقسام شرباكة">
+      <a class="sec" href="#kin" data-sec="kin" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="7.5" r="3"/><circle cx="17.5" cy="16.5" r="3"/><path d="M9 9.6l6 4.8"/></svg><span>شنو يصير لك؟</span></a>
+      <a class="sec" href="#tree" data-sec="tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>شجرة عيلتي</span></a>
+    </nav>
 
     <section class="kin" id="kin" aria-labelledby="kin-title">
       <h2 id="kin-title">شنو يصير لك؟</h2>
@@ -519,6 +648,52 @@
       <p class="kin-w-note" id="kin-w-note"></p>
       <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>خصوصيتك كاملة.</b> اللي تحفظه هني لك بروحك، ما ينشر بالموقع ولا نشاركه مع أحد. وإنت اللي تقرر إذا تبي تشاركه، وتقدر تمسحه متى ما تبي.</span></p>
     </section>
+
+    <section class="kin tree" id="tree" tabindex="-1" aria-labelledby="tree-title">
+      <div class="tr-head">
+        <div>
+          <h2 id="tree-title">شجرة عيلتي</h2>
+          <p class="kin-en" lang="en">My family tree</p>
+        </div>
+        <span class="tr-count" id="tr-count"></span>
+      </div>
+      <p class="kin-sub">ابدأ بنفسك وضيف أهلك واحد واحد، وتحت كل اسم نكتب لك شنو يصير لك.</p>
+
+      <p class="tr-msg" id="tr-msg" role="status" hidden></p>
+      <button type="button" class="kin-btn tr-retry" id="tr-retry" hidden><span>جرّب مرة ثانية</span></button>
+
+      <form class="tr-start" id="tr-start" novalidate hidden>
+        <label class="tr-field"><span>اسمك</span><input class="tr-input" id="tr-me" type="text" maxlength="40" autocomplete="given-name" placeholder="مثال: علي" enterkeyhint="done"></label>
+        <div class="tr-field">
+          <span id="tr-g-label">إنت</span>
+          <div class="kin-seg tr-g" id="tr-g" role="group" aria-labelledby="tr-g-label">
+            <button type="button" data-g="m" aria-pressed="false">ولد</button>
+            <button type="button" data-g="f" aria-pressed="false">بنت</button>
+          </div>
+        </div>
+        <p class="tr-err" id="tr-start-err" role="alert" hidden></p>
+        <button type="submit" class="kin-btn kin-primary" id="tr-go"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>ابدأ شجرتي</span></button>
+      </form>
+
+      <div class="tr-wrap" id="tr-wrap" hidden>
+        <div class="tr-bar">
+          <div class="kin-seg tr-side" id="tr-side" role="group" aria-label="جهة الشجرة" hidden>
+            <button type="button" data-side="F" aria-pressed="true">أهل أبوي</button>
+            <button type="button" data-side="M" aria-pressed="false">أهل أمي</button>
+          </div>
+          <button type="button" class="tr-zoom" id="tr-zoom" aria-pressed="false" hidden></button>
+        </div>
+        <div class="tr-scroll" id="tr-scroll"><div class="tr-stage" id="tr-stage"><div class="tr-canvas" id="tr-canvas"></div></div></div>
+        <p class="tr-hint">دوس على أي اسم عشان تضيف أهله أو تعدّله.</p>
+        <div class="tr-actions">
+          <button type="button" class="kin-btn kin-primary" id="tr-share"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شاركها ستوري</span></button>
+        </div>
+        <p class="kin-w-note tr-note" id="tr-note"></p>
+        <button type="button" class="tr-link" id="tr-save-retry" hidden>جرّب مرة ثانية</button>
+        <button type="button" class="kin-w-in tr-in" id="tr-in" hidden>سجّل دخول عشان تنحفظ بحسابك</button>
+      </div>
+      <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>شجرتك لك بروحك.</b> ما تنشر بالموقع ولا نشاركها مع أحد، وإنت اللي تقرر إذا تبي تشاركها صورة. وتقدر تمسح أي أحد منها متى ما تبي.</span></p>
+    </section>
   </main>
 
   <footer>© <span id="y">2026</span> SHORBAKA.COM</footer>
@@ -557,8 +732,40 @@
     </div>
   </div>
 
+  <div class="kin-modal" id="tr-sheet" role="dialog" aria-modal="true" aria-labelledby="tr-p-title" hidden>
+    <div class="kin-sheet tr-psheet">
+      <div class="kin-sheet-head">
+        <div class="tr-p-who"><span class="tr-av" id="tr-p-av"></span><div class="tr-p-id"><h3 id="tr-p-title"></h3><p class="tr-p-rel" id="tr-p-rel"></p></div></div>
+        <button type="button" class="kin-x" id="tr-p-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <form class="tr-p-rename" id="tr-p-rename">
+        <label><span>الاسم</span><input class="tr-input" id="tr-p-name" type="text" maxlength="40" autocomplete="off" enterkeyhint="done"></label>
+        <button type="submit" class="kin-w-ok" id="tr-p-save" disabled><span>حفظ</span></button>
+      </form>
+      <p class="tr-p-label" id="tr-p-label"></p>
+      <div class="tr-p-adds" id="tr-p-adds"></div>
+      <form class="tr-p-form" id="tr-p-form" hidden>
+        <div class="tr-p-unions" id="tr-p-unions" role="group" hidden></div>
+        <label><span id="tr-p-form-label"></span><input class="tr-input" id="tr-p-new" type="text" maxlength="40" autocomplete="off" enterkeyhint="done"></label>
+        <button type="submit" class="kin-btn kin-primary" id="tr-p-add"><span>ضيف</span></button>
+      </form>
+      <p class="tr-p-done" id="tr-p-done" role="status"></p>
+      <div class="tr-p-order" id="tr-p-order" hidden>
+        <span></span>
+        <button type="button" id="tr-p-up">أكبر</button>
+        <button type="button" id="tr-p-down">أصغر</button>
+      </div>
+      <button type="button" class="tr-p-del" id="tr-p-del"><span></span></button>
+      <div class="tr-p-confirm" id="tr-p-confirm" hidden>
+        <p id="tr-p-warn"></p>
+        <div><button type="button" class="tr-p-yes" id="tr-p-yes">امسح</button><button type="button" class="tr-p-no" id="tr-p-no">تراجع</button></div>
+      </div>
+    </div>
+  </div>
+
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=4" defer></script>
-  <script src="/kin.js?v=12" defer></script>
+  <script src="/account.js?v=5" defer></script>
+  <script src="/kin.js?v=13" defer></script>
+  <script src="/tree.js?v=1" defer></script>
 </body>
 </html>

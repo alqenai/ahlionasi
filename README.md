@@ -1,6 +1,9 @@
 # شرباكة | Shorbaka
 
-شنو يصير لك؟ Type your name and someone else's, walk the family tree one step at a time, and get the relation written the way people say it («فهد يصير ولد عم أبوي»). Share it as an Instagram story, copy it, or keep it in your wallet.
+Two sections, picked under the hero:
+
+- **شنو يصير لك؟** Type your name and someone else's, walk the family tree one step at a time, and get the relation written the way people say it («فهد يصير ولد عم أبوي»). Share it as an Instagram story or post, copy it, or keep it in «اللي يصيرون لي».
+- **شجرة عيلتي** (`#tree`). Start from yourself and add relatives one by one; under every name it says what they are to you («ولد عمي»). See it from your father's side or your mother's side, and share it as a story or post. Saved in your account when signed in, otherwise on the device.
 
 Live at **[shorbaka.com](https://shorbaka.com)**. The bigger app (mapping family, friends and circles) comes later.
 
@@ -10,9 +13,10 @@ Static files, no build step, served by GitHub Pages from `main`:
 
 - `index.html`: the page and its styles.
 - `kin.js`: the kinship engine (relations, wording, story image) and the page logic.
-- `account.js`: Google sign-in and the wallet saved in the account, through Supabase. Accounts stay off while its `CONFIG` is empty; the wallet then lives on the device only.
+- `tree.js`: the family tree: its data (one JSON document per person), layout, the picture to share, and the section's page logic.
+- `account.js`: Google sign-in and what is saved in the account (saved relations and the family tree), through Supabase. Accounts stay off while its `CONFIG` is empty; everything then lives on the device only.
 - `vendor/supabase-2.117.3.js`: the Supabase browser client (from npm `@supabase/supabase-js`, MIT).
-- `supabase/migrations/`: the database table and its row-level security (each account sees only its own rows).
+- `supabase/migrations/`: the database tables and their row-level security (each account sees only its own rows). Run each file once in the Supabase SQL Editor.
 
 ## Hosting
 
@@ -25,7 +29,7 @@ Static files, no build step, served by GitHub Pages from `main`:
 
 ## Accounts (Google sign-in)
 
-1. Supabase project with the migration in `supabase/migrations/` applied.
+1. Supabase project with the migrations in `supabase/migrations/` applied.
 2. Google Cloud → Google Auth Platform → a *Web application* client with `https://shorbaka.com` under Authorized JavaScript origins.
 3. Supabase → Authentication → Sign In / Providers → Google: enabled, with that client ID under *Client IDs*.
 4. Fill `CONFIG` in `account.js` with the project URL, its public (anon) key and the Google client ID.

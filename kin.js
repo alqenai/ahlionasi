@@ -433,27 +433,32 @@
     return { x: 70, y: top, w: 940, h: bottom - top };
   }
 
+  /* The sea behind every picture: deep navy, a teal glow and a few pearls of air. k = height / 1920. */
+  function background(ctx, W, H) {
+    var k = H / 1920;
+    var bg = ctx.createRadialGradient(540, 620 * k, 40, 540, 760 * k, Math.max(1100, 1500 * k));
+    bg.addColorStop(0, '#16466F'); bg.addColorStop(0.55, '#0E2A47'); bg.addColorStop(1, '#0A2036');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    var glow = ctx.createRadialGradient(540, 520 * k, 0, 540, 520 * k, 720);
+    glow.addColorStop(0, 'rgba(46, 196, 182, 0.12)'); glow.addColorStop(1, 'rgba(46, 196, 182, 0)');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+    [[96, 1520, 11], [176, 400, 7], [968, 470, 12], [1012, 1250, 8], [64, 930, 6], [900, 1760, 9], [280, 1790, 6], [770, 210, 7]].forEach(function (b) {
+      var bx = b[0], by = b[1] * k, br = b[2];
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(bx - br * 0.35, by - br * 0.35, br * 0.3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.fill();
+    });
+  }
+
   function makeStory(meName, themName, path, format) {
     var F = FORMATS[format] || FORMATS.story;
     var subj = subject(path, themName), rel = phrase(path), more = extra(path, themName);
     return loadFonts('صلة القرابة بيني وبين ' + subj + ' ' + rel + ' ' + (meName || 'أنا') + ' ' + more).then(function () {
-      var W = 1080, H = F.H, k = H / 1920, c = document.createElement('canvas');
+      var W = 1080, H = F.H, c = document.createElement('canvas');
       c.width = W; c.height = H;
       var ctx = c.getContext('2d');
-
-      var bg = ctx.createRadialGradient(540, 620 * k, 40, 540, 760 * k, Math.max(1100, 1500 * k));
-      bg.addColorStop(0, '#16466F'); bg.addColorStop(0.55, '#0E2A47'); bg.addColorStop(1, '#0A2036');
-      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-      var glow = ctx.createRadialGradient(540, 520 * k, 0, 540, 520 * k, 720);
-      glow.addColorStop(0, 'rgba(46, 196, 182, 0.12)'); glow.addColorStop(1, 'rgba(46, 196, 182, 0)');
-      ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-      [[96, 1520, 11], [176, 400, 7], [968, 470, 12], [1012, 1250, 8], [64, 930, 6], [900, 1760, 9], [280, 1790, 6], [770, 210, 7]].forEach(function (b) {
-        var bx = b[0], by = b[1] * k, br = b[2];
-        ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.beginPath(); ctx.arc(bx - br * 0.35, by - br * 0.35, br * 0.3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.fill();
-      });
+      background(ctx, W, H);
 
       ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
 
@@ -499,6 +504,9 @@
   }
 
   KIN.makeStory = makeStory; KIN.fitWalk = fitWalk; KIN.storyBox = storyBox; KIN.FORMATS = FORMATS;
+  // For the family tree picture (tree.js), so both pictures look like one family.
+  KIN.draw = { FONT: FONT, setFont: setFont, fit: fit, roundRect: roundRect, drawMark: drawMark, pearl: pearl,
+    drawSticker: drawSticker, loadFonts: loadFonts, background: background };
 
   /* ---------- Page ---------- */
 
@@ -534,6 +542,8 @@
     if (n <= 10) return arNum(n) + ' أشخاص';
     return arNum(n) + ' شخص';
   }
+
+  KIN.people = people; KIN.arNum = arNum;
 
   // Rebuild the walk from the steps that were tapped; null if anything is off.
   function replay(steps) {
@@ -923,14 +933,15 @@
       if (ui.authLocal) ui.authLocal.hidden = !(show && st.pending);
     }
 
-    // Sign-in sheet. pending is the relation to save once the person is in.
-    function openAuth(pending, from) {
+    // Sign-in sheet. pending is the relation to save once the person is in; copy ({title, text}) lets
+    // another section (the family tree) say why it asks.
+    function openAuth(pending, from, copy) {
       var a = accounts();
       if (!a || !ui.auth) return;
       var stuck = inAppBrowser();
       st.pending = pending || null;
-      ui.authTitle.textContent = pending ? 'احفظها بحسابك' : 'سجّل دخولك';
-      ui.authText.textContent = pending
+      ui.authTitle.textContent = copy ? copy.title : pending ? 'احفظها بحسابك' : 'سجّل دخولك';
+      ui.authText.textContent = copy ? copy.text : pending
         ? 'سجّل دخولك بجوجل عشان تنحفظ صلة القرابة بحسابك، وتلقاها من أي جهاز.'
         : 'سجّل دخولك بجوجل عشان تشوف اللي حفظتهم، وتحفظ من أي جهاز.';
       ui.authErr.hidden = true;
@@ -1040,36 +1051,54 @@
     };
     var segs = ui.seg ? Array.prototype.slice.call(ui.seg.querySelectorAll('button')) : [];
 
+    /* What the sheet is showing. A picture source is { file, make(format) -> Promise<Blob>, alt, mention }:
+       the finder's relation here, or the family tree from tree.js. */
+    var pic = null;
+
+    function finderPicture() {
+      var n = names(), path = cur();
+      return {
+        file: 'shorbaka',
+        make: function (format) { return makeStory(n.me, n.them, path, format); },
+        alt: 'صلة القرابة بيني وبين ' + subject(path, n.them) + '. ' + sentence(path, n.them),
+        mention: n.them ? 'تمنشن ' + n.them : 'تمنشنهم'
+      };
+    }
+
     function showImage(format) {
-      var n = names(), path = cur(), t = SIZES[format];
-      return makeStory(n.me, n.them, path, format).then(function (blob) {
+      var t = SIZES[format], p = pic, name = p.file + '-' + format + '.png';
+      return p.make(format).then(function (blob) {
         if (!blob) throw new Error('no image');
         if (url) URL.revokeObjectURL(url);
         url = URL.createObjectURL(blob);
-        file = typeof File === 'function' ? new File([blob], t.file, { type: 'image/png' }) : null;
+        file = typeof File === 'function' ? new File([blob], name, { type: 'image/png' }) : null;
         ui.img.setAttribute('height', FORMATS[format].H);
         ui.img.src = url;
-        ui.img.alt = t.alt + ': صلة القرابة بيني وبين ' + subject(path, n.them) + '. ' + sentence(path, n.them);
+        ui.img.alt = t.alt + ': ' + p.alt;
         ui.dl.href = url;
-        ui.dl.setAttribute('download', t.file);
+        ui.dl.setAttribute('download', name);
         ui.share.hidden = !(file && navigator.canShare && navigator.canShare({ files: [file] }));
         if (ui.mTitle) ui.mTitle.textContent = t.title;
-        ui.tip.textContent = t.tip + '، ولا تنسى ' + (n.them ? 'تمنشن ' + n.them : 'تمنشنهم');
+        ui.tip.textContent = t.tip + '، ولا تنسى ' + p.mention;
         segs.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.format === format)); });
       });
     }
 
-    ui.story.addEventListener('click', function () {
-      var s = label(ui.story), was = s.textContent;
-      ui.story.disabled = true; s.textContent = 'لحظة…';
-      showImage('story').then(function () {
-        openSheet(ui.modal, ui.story);
+    // Opens the sheet with a story first; the button shows «لحظة…» while the picture is drawn.
+    function openShare(source, from) {
+      var s = label(from), was = s.textContent;
+      pic = source;
+      from.disabled = true; s.textContent = 'لحظة…';
+      return showImage('story').then(function () {
+        openSheet(ui.modal, from);
         s.textContent = was;
       }).catch(function () {
         s.textContent = was;
-        flash(ui.story, 'ما زبطت، جرّب مرة ثانية', 2400);
-      }).then(function () { ui.story.disabled = false; });
-    });
+        flash(from, 'ما زبطت، جرّب مرة ثانية', 2400);
+      }).then(function () { from.disabled = false; });
+    }
+
+    ui.story.addEventListener('click', function () { openShare(finderPicture(), ui.story); });
 
     segs.forEach(function (b) {
       b.addEventListener('click', function () {
@@ -1109,6 +1138,7 @@
       });
       ui.acctWallet.addEventListener('click', function () {
         closeMenu();
+        if (KIN.showSection) KIN.showSection('kin');
         ui.wallet.scrollIntoView({ block: 'start', behavior: 'smooth' });
         ui.wallet.focus({ preventScroll: true });
       });
@@ -1137,6 +1167,44 @@
     ui.share.addEventListener('click', function () {
       if (file) navigator.share({ files: [file] }).catch(function () {});
     });
+
+    /* Two sections share the page under the hero: «شنو يصير لك؟» (with the saved list) and
+       «شجرة عيلتي» (tree.js). The switcher under the hero picks one; #tree in the address opens the tree. */
+    var mainEl = document.querySelector('main');
+    var secLinks = Array.prototype.slice.call(document.querySelectorAll('.sec'));
+    function showSection(name, scroll) {
+      if (!mainEl) return;
+      name = name === 'tree' && $('tree') ? 'tree' : 'kin';
+      mainEl.setAttribute('data-sec', name);
+      secLinks.forEach(function (a) {
+        if (a.dataset.sec === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      });
+      if (root.TREE && root.TREE.shown) root.TREE.shown(name === 'tree');
+      if (scroll) $(name).scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+    secLinks.forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (history.replaceState) history.replaceState(null, '', a.dataset.sec === 'tree' ? '#tree' : '#kin');
+        showSection(a.dataset.sec, true);
+      });
+    });
+    window.addEventListener('hashchange', function () {
+      showSection(location.hash === '#tree' ? 'tree' : 'kin', location.hash === '#tree');
+    });
+    showSection(location.hash === '#tree' ? 'tree' : 'kin', false);
+    if (location.hash === '#tree') setTimeout(function () { $('tree').scrollIntoView({ block: 'start' }); }, 0);
+    var acctTree = $('acct-tree');
+    if (acctTree) acctTree.addEventListener('click', function () {
+      closeMenu();
+      if (history.replaceState) history.replaceState(null, '', '#tree');
+      showSection('tree', true);
+      $('tree').focus({ preventScroll: true });
+    });
+
+    KIN.openShare = openShare;
+    KIN.openAuth = function (copy, from) { openAuth(null, from, copy); };
+    KIN.showSection = showSection;
 
     render();
     renderWallet();
