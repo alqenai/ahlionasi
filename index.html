@@ -603,11 +603,40 @@
     .tr-sg-item { padding: 12px; border-radius: 18px; background: rgba(244, 239, 230, .05); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .12); }
     .tr-sg-from { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 4px 8px; font-weight: 700; }
     .tr-sg-from small { font-size: .78rem; font-weight: 400; color: var(--muted); }
-    .tr-sg-op { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 6px; border-radius: 12px; cursor: pointer; }
+    .tr-sg-op { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 6px; border-radius: 12px; }
+    .tr-sg-op label { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
     .tr-sg-op input { width: 20px; height: 20px; flex: none; accent-color: var(--teal); }
     .tr-sg-op b { font-weight: 700; }
-    .tr-sg-op span { color: var(--sand); font-size: .85rem; }
-    .tr-sg-op.is-off { opacity: .55; cursor: default; }
+    .tr-sg-rel { color: var(--sand); font-size: .85rem; }
+    .tr-sg-via { display: block; margin-top: 2px; font-size: .78rem; color: var(--muted); line-height: 1.5; }
+    .tr-sg-op.is-off { opacity: .55; }
+    .tr-sg-op.is-off label { cursor: default; }
+    .tr-sg-see {
+      flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 14px; cursor: pointer;
+      background: rgba(233, 196, 106, .12); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .4);
+    }
+    .tr-sg-see svg { width: 22px; height: 22px; fill: none; stroke: var(--sand); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    /* one suggestion on the tree: the new people blink, the left-out ones fade; the bar stays at the bottom */
+    .tr-node.is-sugg .tr-av { outline: 2px dashed var(--sand); outline-offset: 4px; animation: sg-blink 1.1s ease-in-out infinite; }
+    .tr-node.is-sugg .tr-rel::before { content: "جديد · "; color: var(--sand); }
+    .tr-node.is-skip { opacity: .38; }
+    .tr-node.is-skip .tr-av { outline: 2px dashed rgba(244, 239, 230, .5); outline-offset: 4px; }
+    @keyframes sg-blink { 50% { outline-color: transparent; box-shadow: 0 0 0 7px rgba(233, 196, 106, .28); } }
+    @media (prefers-reduced-motion: reduce) { .tr-node.is-sugg .tr-av { animation: none; } }
+    .tr-wrap.is-sgview > .tr-fam, .tr-wrap.is-sgview > .tr-hint, .tr-wrap.is-sgview > .tr-actions, .tr-wrap.is-sgview > .tr-note,
+    .tr-wrap.is-sgview > #tr-save-retry, .tr-wrap.is-sgview > #tr-in { display: none !important; }
+    .tr-wrap.is-sgview { padding-bottom: 170px; }
+    .tr-sgv {
+      position: fixed; z-index: 60; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); max-width: 484px !important; margin: 0 auto;
+      padding: 12px; border-radius: 20px; background: rgba(22, 36, 61, .96); box-shadow: 0 10px 40px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(233, 196, 106, .45);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: pop-in .3s ease-out both;
+    }
+    .tr-sgv p { margin: 0 4px 10px; font-size: .9rem; line-height: 1.6; }
+    .tr-sgview-on footer { visibility: hidden; }
+    .tr-sgv-btns { display: flex; gap: 8px; }
+    .tr-sgv-btns .kin-btn { flex: 1; min-height: 46px; padding-inline: 10px; }
+    .tr-sgv-btns .kin-btn:first-child { flex: 2; }
+    .tr-sgv-btns .kin-btn:disabled { opacity: .5; }
     .tr-sg-btns { display: flex; gap: 8px; margin-top: 10px; }
     .tr-sg-btns .kin-btn { flex: 1; min-height: 46px; }
     .tr-sg-btns .kin-btn:first-child { flex: 2; }
@@ -842,6 +871,14 @@
         </div>
         <div class="tr-scroll" id="tr-scroll"><div class="tr-stage" id="tr-stage"><div class="tr-canvas" id="tr-canvas"></div></div></div>
         <p class="tr-hint">دوس على أي اسم عشان تضيف أهله أو تعدّله.</p>
+        <div class="tr-sgv" id="tr-sgv" role="region" aria-label="اقتراح على شجرتك" hidden>
+          <p id="tr-sgv-text" aria-live="polite"></p>
+          <div class="tr-sgv-btns">
+            <button type="button" class="kin-btn kin-primary" id="tr-sgv-add">ضيف المختار</button>
+            <button type="button" class="kin-btn" id="tr-sgv-no">لا، شكرًا</button>
+            <button type="button" class="kin-btn" id="tr-sgv-back">رجوع</button>
+          </div>
+        </div>
         <div class="tr-actions">
           <button type="button" class="kin-btn kin-primary" id="tr-share"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شاركها ستوري</span></button>
           <button type="button" class="kin-btn" id="tr-pdf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="8" rx="2"/><path d="M7 14.5h10V21H7z"/></svg><span>PDF للطباعة</span></button>
@@ -1025,7 +1062,7 @@
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
   <script src="/account.js?v=10" defer></script>
   <script src="/kin.js?v=20" defer></script>
-  <script src="/tree.js?v=15" defer></script>
+  <script src="/tree.js?v=16" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
