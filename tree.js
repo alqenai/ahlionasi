@@ -40,7 +40,8 @@
     return /^(ال)?(عائلة|عايلة)$/.test(x) ? '' : x;
   }
 
-  // «ساعدوني بإتمام هذه الشجرة»: up to 30 names, each once, in the order they helped.
+  // Whose suggestions the owner added (doc.h): up to 30 names, each once, in the order they helped.
+  // Kept with the tree but shown nowhere: Ali dropped «… ساعدوني بإتمام هذه الشجرة» from the PDF (2026-11-02).
   var MAXH = 30;
   function helpers(list) {
     var out = [];
@@ -1128,7 +1129,7 @@
     allHeads: allHeads, canAdd: canAdd, kinOf: kinOf, addWalk: addWalk, fitLayout: fitLayout, linkLines: linkLines, rowsOf: rowsOf,
     canMarry: canMarry, wivesOf: wivesOf, wifeIn: wifeIn, moveWife: moveWife, relLabel: relLabel, marriageOf: marriageOf,
     spreadRow: spreadRow, exMark: exMark, rip: rip, cleanName: cleanName, helpers: helpers,
-    cleanSteps: cleanSteps, stepNeeds: stepNeeds, replay: replay, describeSteps: describeSteps, pickStep: pickStep, thanksLine: thanksLine
+    cleanSteps: cleanSteps, stepNeeds: stepNeeds, replay: replay, describeSteps: describeSteps, pickStep: pickStep
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = TREE;
   root.TREE = TREE;
@@ -1388,14 +1389,6 @@
   var STICKER_LABEL = 'shorbaka.com';
   var QR_ASK = 'وعندك إضافة؟ اقترحها';
 
-  // «خالد وسارة ساعدوني بإتمام هذه الشجرة», or '' when nobody's suggestions were added.
-  function thanksLine(doc) {
-    var h = (doc && doc.h) || [];
-    if (!h.length) return '';
-    var names = h.length === 1 ? h[0] : h.slice(0, -1).join('، ') + ' و' + h[h.length - 1];
-    return names + (h.length === 1 ? ' ساعدني' : ' ساعدوني') + ' بإتمام هذه الشجرة';
-  }
-
   // The panel's sizes and place in a format: a link without a password has no line under the QR.
   function qrZone(F, pwText) {
     if (pwText) return F.qr;
@@ -1533,8 +1526,8 @@
     var qrLib = link ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
     var pwText = opts && opts.qrOpen ? '' : pwFrom(doc, hideF);
     // a link with a password takes suggestions: the QR also asks for them
-    var askText = link && pwText ? QR_ASK : '', thanks = thanksLine(doc);
-    var more = [foot, thanks].concat(link ? [QR_WORDS.join(' '), pwText, askText] : []).filter(Boolean).join(' ');
+    var askText = link && pwText ? QR_ASK : '';
+    var more = [foot].concat(link ? [QR_WORDS.join(' '), pwText, askText] : []).filter(Boolean).join(' ');
     return Promise.all([D.loadFonts(fontSample(doc, rels, more)), qrLib]).then(function (got) {
       var qrcode = got[1];
       var W = P.w * k, H = P.h * k, c = document.createElement('canvas');
@@ -1553,7 +1546,7 @@
       ctx.fillText(title, W / 2, titleY);
 
       // with the QR in the corner, the tree stops above it
-      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? (pwText ? 128 : 116) : 74) * k - (thanks ? 16 * k : 0);
+      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? (pwText ? 128 : 116) : 74) * k;
       var pl = pictureLayout(doc, idx, view, boxW, boxH, true, PDF_MIN, PDF_MAX), L = pl.L, s = pl.s;
       ctx.fillStyle = '#A3801F';
       D.setFont(ctx, '500', 11 * k);
@@ -1569,14 +1562,6 @@
       ctx.fillStyle = '#4A607A';
       ctx.fillText(foot, right - tw / 2, fy + 3.5 * k);
       D.drawMark(ctx, left + markW / 2, fy, markH, true);
-
-      // «خالد وسارة ساعدوني بإتمام هذه الشجرة»: whose suggestions the owner added, over the sign-off
-      if (thanks) {
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#A3801F';
-        D.fit(ctx, thanks, '500', 10 * k, W - 2 * (qrcode ? 210 : 60) * k, 7 * k);
-        ctx.fillText(thanks, W / 2, fy - 18 * k);
-      }
 
       // the QR to the whole tree in the bottom left corner, «امسح الكود» / «وشوف الشجرة كاملة» beside
       // it, and under it in small print who to take the password from
@@ -2669,7 +2654,7 @@
         showSuggBar();
         fillSugg();
         sgSay(!pick.length ? 'تمام، ما انضاف شي من اقتراح ' + sg.from + '.' :
-          added ? 'انضاف ' + (added === 1 ? 'شخص واحد' : added === 2 ? 'شخصين' : added + ' أشخاص') + ' من اقتراح ' + sg.from + '، وانكتب اسم ' + sg.from + ' مع اللي ساعدوا.' :
+          added ? 'انضاف ' + (added === 1 ? 'شخص واحد' : added === 2 ? 'شخصين' : added + ' أشخاص') + ' من اقتراح ' + sg.from + '.' :
           'ما قدرنا نضيفهم، الشجرة تغيّرت.', pick.length && !added);
         if (!sugg.list.length) setTimeout(closeSugg, 1600);
       }, function () {

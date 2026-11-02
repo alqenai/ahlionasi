@@ -44,7 +44,7 @@
     var st = { on: false, from: '', ops: [], doc: base, person: null, adding: null, union: null, back: null };
 
     ui.askText.textContent = 'تعرف أحد مو موجود بالشجرة؟ ولد، بنت، زوجة… ضيفه واقترحه على ' + owner + '.';
-    ui.whoNote.textContent = 'يوصل اسمك مع اقتراحك لـ' + owner + '، وإذا وافق ينكتب اسمك مع اللي ساعدوا بإتمام الشجرة.';
+    ui.whoNote.textContent = 'يوصل اسمك مع اقتراحك لـ' + owner + '.';
     ui.send.querySelector('span').textContent = 'أرسلها لـ' + owner;
     ui.box.hidden = false;
 
