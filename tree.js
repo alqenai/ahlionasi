@@ -129,12 +129,13 @@
     if (fn) doc.fn = fn;
     var h = helpers(raw.h);
     if (h.length) doc.h = h;
-    // settings: o.hideF hides girls' and women's names in the shared picture, o.tidy lays it out with «ترتيب»,
+    // settings: o.hideF hides girls' and women's names in the shared picture, o.tidy lays it out with «ترتيب»
+    // (true, or 2 and 3 when it was pressed again to gather the tree more),
     // o.pdfNoQr leaves the «رابط الشجرة كاملة» QR out of the PDF
     if (raw.o && typeof raw.o === 'object') {
       var o = {};
       if (raw.o.hideF === true) o.hideF = true;
-      if (raw.o.tidy === true) o.tidy = true;
+      if (raw.o.tidy === true || raw.o.tidy === 2 || raw.o.tidy === 3) o.tidy = raw.o.tidy;
       if (raw.o.pdfNoQr === true) o.pdfNoQr = true;
       if (Object.keys(o).length) doc.o = o;
     }
@@ -829,22 +830,68 @@
     return out;
   }
 
-  /* The tidy layout that shows a view biggest in a boxW x boxH box, no bigger than maxS: rows are
-     tried narrower and narrower and the best kept (the widest of the equals, so a tree that already
-     fits stays as it is). Returns { L, s }. */
-  function fitLayout(doc, idx, view, M, opts, boxW, boxH, maxS) {
+  // A view's tidy layouts with rows narrower and narrower: one row per family first, then each row at
+  // most 0.9 as wide as before, down to rows about a person and a half wide.
+  function tidySweep(doc, idx, view, M, opts) {
     var o = {}, k;
     for (k in opts) o[k] = opts[k];
     o.wrap = Infinity;
-    var L = layout(doc, idx, view, M, o), best = { L: L, s: Math.min(boxW / L.W, boxH / L.H, maxS) }, lim = L.W;
+    var L = layout(doc, idx, view, M, o), all = [L], lim = L.W;
     for (var i = 0; i < 48 && lim > M.NW * 1.5; i++) {
       lim *= 0.9;
       o.wrap = lim;
-      L = layout(doc, idx, view, M, o);
-      var s = Math.min(boxW / L.W, boxH / L.H, maxS);
-      if (s > best.s * 1.0001) best = { L: L, s: s };
+      all.push(layout(doc, idx, view, M, o));
     }
+    return all;
+  }
+
+  // Of those, the one shown biggest in a boxW x boxH box, no bigger than maxS (the widest of the
+  // equals, so a tree that already fits stays as it is). Returns { L, s }.
+  function bestIn(all, boxW, boxH, maxS) {
+    var best = null;
+    all.forEach(function (L) {
+      var s = Math.min(boxW / L.W, boxH / L.H, maxS);
+      if (!best || s > best.s * 1.0001) best = { L: L, s: s };
+    });
     return best;
+  }
+
+  // The tidy layout that shows a view biggest in a boxW x boxH box. Returns { L, s }.
+  function fitLayout(doc, idx, view, M, opts, boxW, boxH, maxS) {
+    return bestIn(tidySweep(doc, idx, view, M, opts), boxW, boxH, maxS);
+  }
+
+  /* «ترتيب» pressed again gathers the tree more, for another shape to choose from. Level 1 is the tidy
+     layout that fits the box best (fitLayout); each next level is the first of the sweep (the fewest
+     rows) at least TIDY_STEP narrower than the level before, so taller, up to TIDY_LEVELS; a small
+     tree may have one level only. Returns [{ L, s }], level 1 first, s for the box. */
+  var TIDY_LEVELS = 3, TIDY_STEP = 0.85;
+  function tidyShapes(doc, idx, view, M, opts, boxW, boxH, maxS) {
+    var all = tidySweep(doc, idx, view, M, opts), out = [bestIn(all, boxW, boxH, maxS)];
+    while (out.length < TIDY_LEVELS) {
+      var lim = out[out.length - 1].L.W * TIDY_STEP, next = null;
+      for (var i = 0; i < all.length && !next; i++) if (all[i].W <= lim) next = all[i];
+      if (!next) break;
+      out.push({ L: next, s: Math.min(boxW / next.W, boxH / next.H, maxS) });
+    }
+    return out;
+  }
+
+  // The «ترتيب» kept with the tree (o.tidy): 0 by generations, 1 (true), or the level 2 or 3.
+  function tidyLevel(doc) {
+    var t = doc && doc.o && doc.o.tidy;
+    return t === true ? 1 : t === 2 || t === 3 ? t : 0;
+  }
+
+  // The next press: one level more, and after the last of the view's shapes back to generations.
+  function nextTidy(level, count) { return level >= count ? 0 : level + 1; }
+
+  // The button shows the level from 2 on («ترتيب 2»), and its label says what the next press does.
+  function tidyButton(btn, level, count) {
+    var t = btn.querySelector('span'), name = level > 1 ? 'ترتيب ' + level : 'ترتيب';
+    if (t) t.textContent = name;
+    btn.setAttribute('aria-pressed', String(level > 0));
+    btn.setAttribute('aria-label', !level ? 'رتّب الشجرة على قد الشاشة' : name + (level < count ? '، اضغط تلمّها أكثر' : '، اضغط ترجع الشجرة بالأجيال'));
   }
 
   // Who can be added to a person, so that everyone added still shows on one of the views.
@@ -1381,7 +1428,8 @@
   }
   TREE.plainPw = plainPw;
 
-  /* opts.hideF: as in drawTree. opts.tidy: laid out with «ترتيب». opts.qr: the «رابط الشجرة كاملة»; when
+  /* opts.hideF: as in drawTree. opts.tidy: laid out with «ترتيب» (at any of its levels the picture takes the
+     shape that fits it best). opts.qr: the «رابط الشجرة كاملة»; when
      the picture leaves people out (families folded into «+3 عياله», or the other side of the family),
      a QR to it goes at the foot. opts.qrOpen: the link needs no password (no «خذ الباسورد من …»). */
   function makePicture(doc, viewKey, format, opts) {
@@ -1699,7 +1747,7 @@
   function viewer(els, doc, vopts) {
     vopts = vopts || {};
     var idx = index(doc), vs = views(doc, idx), hideF = !!(doc.o && doc.o.hideF);
-    var st = { view: vs[0].key, tidy: !!(doc.o && doc.o.tidy), zl: 0, z: 1, L: null, boxW: 0, boxH: 0, center: true, fitNext: false };
+    var st = { view: vs[0].key, tidy: tidyLevel(doc), shapes: 1, zl: 0, z: 1, L: null, boxW: 0, boxH: 0, center: true, fitNext: false };
     var sideBtns = Array.prototype.slice.call(els.side.querySelectorAll('button'));
 
     function room() {
@@ -1712,11 +1760,11 @@
       els.side.hidden = vs.length < 2;
       sideBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.side === view.key)); });
       var base = { ghosts: false, mates: 'all' }, L = layout(doc, idx, view, SCREEN, base), box = room();
-      var canTidy = L.W > box.w + 1;
+      var canTidy = L.W > box.w + 1, shapes = st.tidy && canTidy ? tidyShapes(doc, idx, view, SCREEN, base, box.w, box.h, 1) : null;
+      st.shapes = shapes ? shapes.length : 1;
+      if (shapes) L = shapes[Math.min(st.tidy, shapes.length) - 1].L;
       els.tidy.hidden = !canTidy;
-      els.tidy.setAttribute('aria-pressed', String(st.tidy));
-      els.tidy.setAttribute('aria-label', st.tidy ? 'رجّع الشجرة بالأجيال' : 'رتّب الشجرة على قد الشاشة');
-      if (st.tidy && canTidy) L = fitLayout(doc, idx, view, SCREEN, base, box.w, box.h, 1).L;
+      tidyButton(els.tidy, shapes ? Math.min(st.tidy, shapes.length) : 0, st.shapes);
       st.L = L;
       paint(els.canvas, L, doc, { hideF: hideF, tap: vopts.tap, marked: vopts.marked, fresh: st.fresh });
       st.fresh = null;
@@ -1753,7 +1801,7 @@
       });
     });
     els.tidy.addEventListener('click', function () {
-      st.tidy = !st.tidy; st.zl = 0; st.fitNext = st.tidy; st.center = true;
+      st.tidy = nextTidy(st.tidy, st.shapes); st.zl = 0; st.fitNext = !!st.tidy; st.center = true;
       draw();
     });
     els.zoom.addEventListener('click', function () {
@@ -2005,11 +2053,11 @@
       return { w: w, h: st.boxH };
     }
 
-    // A setting kept with the tree (o.hideF, o.tidy).
+    // A setting kept with the tree (o.hideF, o.tidy: true, or «ترتيب»'s level 2 or 3).
     function setOpt(key, on) {
       if (!st.doc) return;
       var o = st.doc.o || {};
-      if (on) o[key] = true; else delete o[key];
+      if (on) o[key] = on === true || typeof on !== 'number' ? true : on; else delete o[key];
       if (Object.keys(o).length) st.doc.o = o; else delete st.doc.o;
     }
 
@@ -2022,13 +2070,13 @@
 
       // «ترتيب» shows once the tree is wider than the screen: then it can gather it to the screen's shape
       var base = { ghosts: !pv, mates: 'all' }, L = layout(doc, idx, view, SCREEN, base), box = screenBox();
-      var tidy = !!(doc.o && doc.o.tidy), canTidy = L.W > box.w + 1;
+      var tidy = tidyLevel(doc), canTidy = L.W > box.w + 1, shapes = tidy && canTidy ? tidyShapes(doc, idx, view, SCREEN, base, box.w, box.h, 1) : null;
+      st.shapes = shapes ? shapes.length : 1;
+      if (shapes) L = shapes[Math.min(tidy, shapes.length) - 1].L;
       if (ui.tidy) {
         ui.tidy.hidden = !canTidy;
-        ui.tidy.setAttribute('aria-pressed', String(tidy));
-        ui.tidy.setAttribute('aria-label', tidy ? 'رجّع الشجرة بالأجيال' : 'رتّب الشجرة على قد الشاشة');
+        tidyButton(ui.tidy, shapes ? Math.min(tidy, shapes.length) : 0, st.shapes);
       }
-      if (tidy && canTidy) L = fitLayout(doc, idx, view, SCREEN, base, box.w, box.h, 1).L;
       st.L = L;
       paint(ui.canvas, L, doc, pv ? { marked: pv.on, skipped: pv.off, tap: function (n) { tapSugg(n.pid); } } : {
         fresh: st.lastAdded,
@@ -2438,7 +2486,7 @@
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
       // with a «رابط الشجرة كاملة», a picture that leaves people out carries its QR, and the sheet can copy it
       var link = st.link && signedIn() ? linkUrl(st.link) : null, open = !!(link && st.linkOpen);
-      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), tidy: !!(st.doc.o && st.doc.o.tidy), qr: link, qrOpen: open };
+      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), tidy: tidyLevel(st.doc) > 0, qr: link, qrOpen: open };
       KIN.openShare({
         file: 'shorbaka-tree',
         make: function (format) { return makePicture(doc, key, format, opts); },
@@ -2932,12 +2980,13 @@
       });
     }
 
-    // «ترتيب»: gathers a wide tree into the shape of the screen (and of the pictures), or back to generations.
+    /* «ترتيب»: gathers a wide tree into the shape of the screen (and of the pictures); pressed again it
+       gathers it more, for another shape («ترتيب 2», «ترتيب 3»), and after the last back to generations. */
     if (ui.tidy) ui.tidy.addEventListener('click', function () {
       if (!st.doc) return;
-      var on = !(st.doc.o && st.doc.o.tidy);
-      setOpt('tidy', on);
-      st.zl = 0; st.fitNext = on; st.center = true;
+      var level = nextTidy(Math.min(tidyLevel(st.doc), st.shapes || 1), st.shapes || 1);
+      setOpt('tidy', level === 1 ? true : level);
+      st.zl = 0; st.fitNext = !!level; st.center = true;
       changed();
     });
     var resizeT = null;

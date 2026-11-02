@@ -651,14 +651,19 @@
     .tr-p-id { min-width: 0; }
     .tr-p-who h3 { padding: 0; font-size: 1.15rem; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tr-p-rel { font-size: .88rem; line-height: 1.5; color: var(--sand); }
-    /* «سوّها ستوري»: what this person is to me, as a story; the story sheet (#kin-modal) opens over this one */
+    /* What this person is to me, and beside it the phone: tapped, it makes that a story («سوّها ستوري»),
+       in the story sheet (#kin-modal) over this one. Just the icon (Ali: less text); its word shows
+       only while the picture is drawn («لحظة…»). */
+    .tr-p-relrow { display: flex; align-items: center; gap: 8px; }
     .tr-p-story {
-      display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 8px; padding: 0 14px 0 12px; border: 0; border-radius: 999px;
-      background: rgba(46, 196, 182, .14); box-shadow: inset 0 0 0 1px rgba(46, 196, 182, .5);
-      color: var(--pearl); font-family: inherit; font-size: .86rem; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent;
+      flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 38px; height: 38px; padding: 0 9px;
+      border: 0; border-radius: 999px; background: rgba(46, 196, 182, .14); box-shadow: inset 0 0 0 1px rgba(46, 196, 182, .5);
+      color: var(--pearl); font-family: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
-    .tr-p-story svg { width: 17px; height: 17px; flex: none; fill: none; stroke: var(--teal); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .tr-p-story svg { width: 19px; height: 19px; flex: none; fill: none; stroke: var(--teal); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .tr-p-story span:empty { display: none; }
     .tr-p-story:hover { background: rgba(46, 196, 182, .22); }
+    .tr-p-story:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
     .tr-p-story:disabled { opacity: .6; cursor: default; }
     #kin-modal { z-index: 51; }
     .tr-p-rename { display: flex; align-items: flex-end; gap: 8px; margin-top: 4px; }
@@ -966,7 +971,7 @@
   <div class="kin-modal" id="tr-sheet" role="dialog" aria-modal="true" aria-labelledby="tr-p-title" hidden>
     <div class="kin-sheet tr-psheet">
       <div class="kin-sheet-head">
-        <div class="tr-p-who"><span class="tr-av" id="tr-p-av"></span><div class="tr-p-id"><h3 id="tr-p-title"></h3><p class="tr-p-rel" id="tr-p-rel"></p><button type="button" class="tr-p-story" id="tr-p-story" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>سوّها ستوري</span></button></div></div>
+        <div class="tr-p-who"><span class="tr-av" id="tr-p-av"></span><div class="tr-p-id"><h3 id="tr-p-title"></h3><div class="tr-p-relrow"><p class="tr-p-rel" id="tr-p-rel"></p><button type="button" class="tr-p-story" id="tr-p-story" aria-label="سوّها ستوري" title="سوّها ستوري" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span></span></button></div></div></div>
         <button type="button" class="kin-x" id="tr-p-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <form class="tr-p-rename" id="tr-p-rename">
@@ -1073,7 +1078,7 @@
   <script src="/account.js?v=10" defer></script>
   <script src="/flags.js?v=1" defer></script>
   <script src="/kin.js?v=21" defer></script>
-  <script src="/tree.js?v=18" defer></script>
+  <script src="/tree.js?v=19" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
