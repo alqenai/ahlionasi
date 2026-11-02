@@ -3,7 +3,7 @@
 Two sections, picked under the hero:
 
 - **شنو يصير لك؟** Type your name and someone else's, walk the family tree one step at a time, and get the relation written the way people say it («فهد يصير ولد عم أبوي»). Share it as an Instagram story or post, copy it, or keep it in «اللي يصيرون لي».
-- **شجرة عيلتي** (`#tree`). Start from yourself and add relatives one by one; under every name it says what they are to you («ولد عمي»). See it from your father's side or your mother's side, and share it as a story or post. Saved in your account when signed in, otherwise on the device.
+- **شجرة عائلتي** (`#tree`). Start from yourself and add relatives one by one; under every name it says what they are to you («ولد عمي»). See it from your father's side or your mother's side, and share it as a story or post. Saved in your account when signed in, otherwise on the device.
 
 Live at **[shorbaka.com](https://shorbaka.com)**. The bigger app (mapping family, friends and circles) comes later.
 

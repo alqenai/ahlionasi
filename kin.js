@@ -1169,7 +1169,7 @@
     });
 
     /* Two sections share the page under the hero: «شنو يصير لك؟» (with the saved list) and
-       «شجرة عيلتي» (tree.js). The switcher under the hero picks one; #tree in the address opens the tree. */
+       «شجرة عائلتي» (tree.js). The switcher under the hero picks one; #tree in the address opens the tree. */
     var mainEl = document.querySelector('main');
     var secLinks = Array.prototype.slice.call(document.querySelectorAll('.sec'));
     function showSection(name, scroll) {

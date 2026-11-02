@@ -147,7 +147,7 @@
     return client.from('relations').delete().eq('id', id).then(rows);
   }
 
-  // The family tree («شجرة عيلتي») is one document per account; null when there is none yet.
+  // The family tree («شجرة عائلتي») is one document per account; null when there is none yet.
   function loadTree() {
     return client.from('family_trees').select('data').eq('user_id', user.id).maybeSingle().then(function (res) {
       if (res.error) throw res.error;

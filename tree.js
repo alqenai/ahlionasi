@@ -1,4 +1,4 @@
-/* شرباكة: «شجرة عيلتي».
+/* شرباكة: «شجرة عائلتي».
    Start from yourself and add your family one person at a time. Under every name the tree writes what
    that person is to you («عمي»، «بنت خالي»), with the same engine as «شنو يصير لك؟». The tree is drawn
    from your father's side or your mother's side, kept in your account (or on this device), and shared
@@ -454,10 +454,29 @@
     return out;
   }
 
+  /* The line from parents down to each child, turning with round corners instead of square ones:
+     a list of ['M', x, y], ['L', x, y] and ['Q', cx, cy, x, y] steps (the screen draws it as SVG, the
+     picture on a canvas). All the children's lines are one path, so where they overlap the line
+     isn't drawn darker. ky is where each child's line stops; R is the size of the turns. */
+  function kidLines(ax, ay, busY, kids, ky, R) {
+    var out = [];
+    kids.forEach(function (kx) {
+      var dx = kx - ax, s = dx < 0 ? -1 : 1, half = Math.abs(dx) / 2;
+      out.push(['M', ax, ay]);
+      if (half < 0.5) { out.push(['L', ax, ky]); return; }
+      var r1 = Math.max(0, Math.min(R, busY - ay, half)), r2 = Math.max(0, Math.min(R, ky - busY, half));
+      if (r1 > 0) out.push(['L', ax, busY - r1], ['Q', ax, busY, ax + s * r1, busY]);
+      out.push(['L', kx - s * r2, busY]);
+      if (r2 > 0) out.push(['Q', kx, busY, kx, busY + r2]);
+      out.push(['L', kx, ky]);
+    });
+    return out;
+  }
+
   var TREE = {
     blank: blank, clean: clean, copy: copy, index: index, count: count, addRelative: addRelative, rename: rename,
     removePerson: removePerson, move: move, relations: relations, relName: relName, views: views, climb: climb,
-    lineSet: lineSet, lineUnions: lineUnions, layout: layout, choices: choices, SCREEN: SCREEN
+    lineSet: lineSet, lineUnions: lineUnions, layout: layout, choices: choices, kidLines: kidLines, SCREEN: SCREEN
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = TREE;
   root.TREE = TREE;
@@ -520,7 +539,7 @@
     var D = KIN.draw, F = PICFMT[format] || PICFMT.story, H = KIN.FORMATS[format === 'post' ? 'post' : 'story'].H;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
-    var sample = 'شجرة عيلتي أهل أبوي أمي عياله عيالها ' + GENS.join(' ') + ' ' + Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relName(rels[id]); }).join(' ');
+    var sample = 'شجرة عائلتي أهل أبوي أمي عياله عيالها +0123456789 ' + GENS.join(' ') + ' ' + Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relName(rels[id]); }).join(' ');
     return D.loadFonts(sample).then(function () {
       var c = document.createElement('canvas');
       c.width = 1080; c.height = H;
@@ -530,8 +549,8 @@
 
       var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH), L = pl.L, s = pl.s;
       ctx.fillStyle = '#F4EFE6';
-      D.fit(ctx, 'شجرة عيلتي', '700', F.title, 960, 60);
-      ctx.fillText('شجرة عيلتي', 540, F.titleY);
+      D.fit(ctx, 'شجرة عائلتي', '700', F.title, 960, 60);
+      ctx.fillText('شجرة عائلتي', 540, F.titleY);
       ctx.fillStyle = '#E9C46A';
       D.setFont(ctx, '500', F.sub);
       ctx.fillText((view.label ? view.label + ' · ' : '') + gens(L.levels), 540, F.subY);
@@ -549,28 +568,32 @@
         if (l.t === 'pair') {
           ctx.moveTo(X(l.x1) + r + ring, Y(l.y)); ctx.lineTo(X(l.x2) - r - ring, Y(l.y));
         } else {
-          var xs = l.kids.concat(l.ax), lo = Math.min.apply(null, xs), hi = Math.max.apply(null, xs);
-          ctx.moveTo(X(l.ax), Y(l.ay)); ctx.lineTo(X(l.ax), Y(l.busY));
-          if (hi > lo) { ctx.moveTo(X(lo), Y(l.busY)); ctx.lineTo(X(hi), Y(l.busY)); }
-          l.kids.forEach(function (kx) { ctx.moveTo(X(kx), Y(l.busY)); ctx.lineTo(X(kx), Y(l.ky) - ring); });
+          kidLines(X(l.ax), Y(l.ay), Y(l.busY), l.kids.map(X), Y(l.ky) - ring, 24 * s).forEach(function (c) {
+            if (c[0] === 'M') ctx.moveTo(c[1], c[2]);
+            else if (c[0] === 'L') ctx.lineTo(c[1], c[2]);
+            else ctx.quadraticCurveTo(c[1], c[2], c[3], c[4]);
+          });
         }
         ctx.stroke();
       });
 
       L.nodes.forEach(function (n) {
         var cx = X(n.x), cy = Y(n.y) + r, isMe = n.pid === doc.me;
-        var col = isMe ? '#E9C46A' : n.more ? 'rgba(244, 239, 230, 0.45)' : n.kind === 'mate' ? '#8FB8DE' : '#2EC4B6';
+        // me in sand, girls and women in coral, boys and men in teal
+        var col = isMe ? '#E9C46A' : n.more ? 'rgba(244, 239, 230, 0.45)' : doc.p[n.pid].g === 'f' ? '#FF8A80' : '#2EC4B6';
         ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fillStyle = isMe ? '#F4EFE6' : '#12385E'; ctx.fill();
         ctx.lineWidth = ring; ctx.strokeStyle = col;
         if (n.more) ctx.setLineDash([ring * 1.6, ring * 1.4]);
         ctx.stroke();
         ctx.setLineDash([]);
-        var top = n.more ? '+' + KIN.arNum(n.more) : initial(doc.p[n.pid].n);
+        var top = n.more ? '+' + n.more : initial(doc.p[n.pid].n);
         ctx.fillStyle = isMe ? '#0E2A47' : '#F4EFE6';
         D.setFont(ctx, '700', Math.round(M.AV * (n.more ? 0.36 : 0.42)));
         var m = ctx.measureText(top), ink = (m.actualBoundingBoxAscent || M.AV * 0.3) - (m.actualBoundingBoxDescent || 0);
+        ctx.direction = n.more ? 'ltr' : 'rtl';  // «+3», not «3+»
         ctx.fillText(top, cx, cy + ink / 2);
+        ctx.direction = 'rtl';
 
         var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : doc.p[n.pid].n;
         var ny = Y(n.y) + M.AV + 22 * s + 34 * s;
@@ -841,9 +864,9 @@
         var d;
         if (l.t === 'pair') d = 'M' + (l.x1 + r) + ' ' + l.y + 'H' + (l.x2 - r);
         else {
-          var xs = l.kids.concat(l.ax), lo = Math.min.apply(null, xs), hi = Math.max.apply(null, xs);
-          d = 'M' + l.ax + ' ' + l.ay + 'V' + l.busY + (hi > lo ? 'M' + lo + ' ' + l.busY + 'H' + hi : '');
-          l.kids.forEach(function (kx) { d += 'M' + kx + ' ' + l.busY + 'V' + (l.ky - 4); });
+          d = kidLines(l.ax, l.ay, l.busY, l.kids, l.ky - 4, 14).map(function (c) {
+            return c[0] + c.slice(1).map(function (v) { return Math.round(v * 10) / 10; }).join(' ');
+          }).join('');
         }
         var p = document.createElementNS(NS, 'path');
         p.setAttribute('d', d);
@@ -875,6 +898,7 @@
       }
       var p = doc.p[n.pid], isMe = n.pid === doc.me, rel = relName(rels[n.pid]);
       b.classList.add(isMe ? 'is-me' : n.kind === 'mate' ? 'is-mate' : 'is-blood');
+      if (!isMe && p.g === 'f') b.classList.add('is-f');
       if (n.pid === st.lastAdded) b.classList.add('is-new');
       b.dataset.pid = n.pid;
       b.appendChild(el('span', 'tr-av', initial(p.n)));
@@ -942,7 +966,7 @@
       if (!p) { closePerson(); return; }
       var idx = index(doc), rels = relations(doc, idx), isMe = pid === doc.me;
       ui.pAv.textContent = initial(p.n);
-      ui.pAv.parentNode.className = 'tr-p-who' + (isMe ? ' is-me' : '');
+      ui.pAv.parentNode.className = 'tr-p-who' + (isMe ? ' is-me' : p.g === 'f' ? ' is-f' : '');
       ui.pTitle.textContent = p.n || '…';
       ui.pRel.textContent = isMe ? 'هذا إنت' : KIN.verb(rels[pid]) + ' ' + relName(rels[pid]);
       ui.pSave.disabled = !cleanName(ui.pName.value) || cleanName(ui.pName.value) === p.n;
@@ -1135,7 +1159,7 @@
       KIN.openShare({
         file: 'shorbaka-tree',
         make: function (format) { return makePicture(doc, key, format); },
-        alt: 'شجرة عيلتي' + (view.label ? '، ' + view.label : ''),
+        alt: 'شجرة عائلتي' + (view.label ? '، ' + view.label : ''),
         mention: 'تمنشن أهلك'
       }, ui.share);
     });
