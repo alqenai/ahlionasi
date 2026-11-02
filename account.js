@@ -1,4 +1,5 @@
-/* شرباكة: the account (Google sign-in through Supabase) and the wallet kept in it.
+/* شرباكة: the account (Google sign-in through Supabase) and what is kept in it: the saved relations, the
+   family tree, the work tree and «ربعي».
    While CONFIG is empty, accounts stay off and the wallet lives on the device only. */
 (function (root) {
   'use strict';
@@ -50,7 +51,7 @@
      finish (browsers allow up to 64 KB); if the browser refuses, it goes again as a normal request. */
   function fetchKeep(input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || '';
-    if (init && init.method === 'POST' && /\/rest\/v1\/(family|work)_trees/.test(url) && typeof init.body === 'string' &&
+    if (init && init.method === 'POST' && /\/rest\/v1\/(family_trees|work_trees|friend_maps)/.test(url) && typeof init.body === 'string' &&
         root.Blob && new Blob([init.body]).size < 60000) {
       return fetch(input, Object.assign({}, init, { keepalive: true })).catch(function () { return fetch(input, init); });
     }
@@ -217,6 +218,20 @@
   }
   function saveWorkTreeNow(data) { return saveTreeNow(data, 'work_trees'); }
 
+  // «ربعي» (friends.js): my friends and their groups, one document per account in its own table.
+  function loadFriends() {
+    return client.from('friend_maps').select('data').eq('user_id', user.id).maybeSingle().then(function (res) {
+      if (res.error) throw res.error;
+      return res.data ? res.data.data : null;
+    });
+  }
+  function saveFriends(data) {
+    return client.from('friend_maps')
+      .upsert({ user_id: user.id, data: data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      .then(rows);
+  }
+  function saveFriendsNow(data) { return saveTreeNow(data, 'friend_maps'); }
+
   // Fixes the name of a saved person. If that name with that relation is already saved, the two become one.
   function rename(id, them) {
     return client.from('relations').update({ them: String(them || '').slice(0, 40) }).eq('id', id).then(rows)
@@ -257,6 +272,11 @@
   // The link stops opening; a link made later gets a new code.
   function stopWorkLink() { return client.rpc('stop_work_link').then(one); }
 
+  /* «رابط ربعي»: all my friends and groups at shorbaka.com/f/#code, with no password (as the trees). */
+  function friendsLink() { return client.rpc('my_friends_link').then(one); }
+  function makeFriendsLink() { return client.rpc('make_friends_link').then(one); }
+  function stopFriendsLink() { return client.rpc('stop_friends_link').then(one); }
+
   /* «اقتراحات على شجرتك»: additions suggested through my tree's link. [{ id, from, at, ops }], oldest
      first; [] when the database doesn't have them yet. */
   function treeSuggestions() {
@@ -293,6 +313,9 @@
     loadWorkTree: loadWorkTree,
     saveWorkTree: saveWorkTree,
     saveWorkTreeNow: saveWorkTreeNow,
+    loadFriends: loadFriends,
+    saveFriends: saveFriends,
+    saveFriendsNow: saveFriendsNow,
     treeLink: treeLink,
     setTreeLink: setTreeLink,
     stopTreeLink: stopTreeLink,
@@ -301,6 +324,9 @@
     workLink: workLink,
     makeWorkLink: makeWorkLink,
     stopWorkLink: stopWorkLink,
+    friendsLink: friendsLink,
+    makeFriendsLink: makeFriendsLink,
+    stopFriendsLink: stopFriendsLink,
     treeSuggestions: treeSuggestions,
     dropTreeSuggestion: dropTreeSuggestion,
     deleteAccount: deleteAccount
