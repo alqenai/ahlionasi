@@ -5,10 +5,10 @@
    - The site's own files: kept. Those whose names change with each version (?v=, /vendor/) are
      fetched once; the rest are refreshed in the background.
    - Google Fonts: kept, so the letters stay right offline.
-   - Everything else is left alone: Supabase, Google sign-in, other sites, and /admin/. */
+   - Everything else is left alone: Supabase, Google sign-in, other sites, and the dashboard (/dash/). */
 'use strict';
 
-var VERSION = 1;
+var VERSION = 2;
 var SITE = 'shorbaka-site-' + VERSION, FONTS = 'shorbaka-fonts-' + VERSION;
 var PAGE_WAIT = 4000;  // ms before a slow network gives way to the kept copy of a page
 var FONTS_MAX = 40;
@@ -30,7 +30,7 @@ self.addEventListener('fetch', function (event) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin === self.location.origin) {
-    if (/^\/admin(\/|$)/.test(url.pathname) || url.pathname === '/sw.js') return;
+    if (/^\/dash(\/|$)/.test(url.pathname) || url.pathname === '/sw.js') return;
     event.respondWith(req.mode === 'navigate' ? page(event, url) : file(event, req, url));
   } else if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith(font(event, req));
@@ -71,7 +71,7 @@ function keepFile(cache, path, follow) {
 // The site's own files a page or script names: "/kin.js?v=20", "/vendor/supabase-2.117.3.js", icons...
 function named(text) {
   var out = [], re = /["'](\/(?!\/)[^"'\s#<>]*?\.(?:js|png|svg|ico|webmanifest)(?:\?[^"'\s#<>]*)?)["']/g, m;
-  while ((m = re.exec(text))) if (out.indexOf(m[1]) < 0 && !/^\/admin\//.test(m[1])) out.push(m[1]);
+  while ((m = re.exec(text))) if (out.indexOf(m[1]) < 0 && !/^\/dash\//.test(m[1])) out.push(m[1]);
   return out;
 }
 
