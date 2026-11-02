@@ -6,12 +6,14 @@
 
    The whole tree is one small document:
      { v: 1, me: 'p1', n: 7,
-       p: { p1: { n: 'علي', g: 'm' }, ... },                  people: name, m or f
+       p: { p1: { n: 'علي', g: 'm' }, ... },                  people: name, m or f (d: true, passed away)
        f: { f2: { a: 'p3', b: 'p4', k: ['p1', 'p5'] }, ... },   families: husband, wife, children eldest first
+                                                               (x: true, divorced)
        fn: 'القناعي',                                          the family name (left out when not given)
        o: { hideF: true } }                                    settings (left out when none is on)
    A family can be missing its husband or wife (not added yet). Brothers and sisters whose parents
-   aren't added yet share a family with neither. */
+   aren't added yet share a family with neither. A man can have up to four wives: his families are in
+   the order he married them (their ids' order). */
 (function (root) {
   'use strict';
 
@@ -74,6 +76,7 @@
         var x = doc.f[fid];
         if (x.a && !doc.p[x.a]) x.a = null;
         if (x.b && !doc.p[x.b]) x.b = null;
+        if (!x.a || !x.b) delete x.x;
         x.k = x.k.filter(function (c) { return !!doc.p[c]; });
       });
       if (!dropped) break;
@@ -89,6 +92,7 @@
       var x = raw.p[id];
       if (!/^p\d{1,6}$/.test(id) || !x || typeof x !== 'object' || Object.keys(p).length >= MAXP) return;
       p[id] = { n: cleanName(x.n), g: x.g === 'f' ? 'f' : 'm' };
+      if (x.d === true) p[id].d = true;
       n = Math.max(n, num(id));
     });
     if (!p[raw.me]) return null;
@@ -104,6 +108,7 @@
         return true;
       });
       f[id] = { a: a, b: b, k: k };
+      if (x.x === true && a && b) f[id].x = true;
       n = Math.max(n, num(id));
     });
     var doc = { v: 1, me: raw.me, n: Math.max(n, Math.floor(+raw.n) || 0), p: p, f: f };
@@ -190,6 +195,7 @@
       var x = doc.f[fid];
       if (x.a === pid) x.a = null;
       if (x.b === pid) x.b = null;
+      if (!x.a || !x.b) delete x.x;
       x.k = x.k.filter(function (c) { return c !== pid; });
     });
     return prune(doc);
@@ -202,6 +208,44 @@
     var k = doc.f[fid].k, i = k.indexOf(pid), j = i + dir;
     if (j < 0 || j >= k.length) return false;
     k[i] = k[j]; k[j] = pid;
+    return true;
+  }
+
+  /* ---------- Marriages ---------- */
+
+  var MAX_WIVES = 4;
+  var ORD = ['', 'الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة', 'التاسعة', 'العاشرة'];
+
+  // A man's families with his wives, in the order he married them.
+  function wivesOf(doc, idx, pid) {
+    return (idx.unions[pid] || []).filter(function (fid) { var x = doc.f[fid]; return x.a === pid && !!x.b; });
+  }
+
+  // A man can have up to four wives at a time and a woman one husband: a divorce frees the place.
+  function canMarry(doc, idx, pid) {
+    var p = doc.p[pid];
+    if (!p) return false;
+    var now = (idx.unions[pid] || []).filter(function (fid) { var x = doc.f[fid]; return x.a && x.b && !x.x; }).length;
+    return now < (p.g === 'f' ? 1 : MAX_WIVES);
+  }
+
+  // The family that makes her a wife among his wives (the one with the most wives when she has had two husbands).
+  function wifeIn(doc, idx, pid) {
+    var best = null, most = 0;
+    (idx.unions[pid] || []).forEach(function (fid) {
+      var x = doc.f[fid], n = x.b === pid && x.a ? wivesOf(doc, idx, x.a).length : 0;
+      if (n > most) { most = n; best = fid; }
+    });
+    return best;
+  }
+
+  // Moves a wife one place among his wives. dir -1 = married earlier. (The two families swap their ids.)
+  function moveWife(doc, fid, dir) {
+    var x = doc.f[fid];
+    if (!x || !x.a || !x.b) return false;
+    var ws = wivesOf(doc, index(doc), x.a), i = ws.indexOf(fid), j = i + dir;
+    if (i < 0 || j < 0 || j >= ws.length) return false;
+    doc.f[fid] = doc.f[ws[j]]; doc.f[ws[j]] = x;
     return true;
   }
 
@@ -242,6 +286,33 @@
     return KIN.phrase(path);
   }
 
+  // When what pid is to me ends in a marriage («زوجة عمي»), that family: the one with the person before them.
+  function marriageOf(doc, idx, rels, pid) {
+    var path = rels[pid], t = path && path[path.length - 1];
+    if (t !== 'W' && t !== 'H') return null;
+    var before = path.slice(0, -1).join('');
+    return (idx.unions[pid] || []).filter(function (fid) {
+      var x = doc.f[fid], mate = x.a === pid ? x.b : x.a;
+      return !!mate && !!rels[mate] && rels[mate].join('') === before;
+    })[0] || null;
+  }
+
+  /* What pid is to me, as the tree writes it under their name: relName, and for a husband or wife also
+     a divorce («طليقة أخوي», «طليقي») and which wife she is when he has more than one («زوجة عمي الثانية»). */
+  function relLabel(doc, idx, rels, pid) {
+    var path = rels[pid], fid = path ? marriageOf(doc, idx, rels, pid) : null;
+    if (!fid) return relName(path);
+    var x = doc.f[fid], wife = path[path.length - 1] === 'W', of = path.slice(0, -1), his = of.length ? ' ' + relName(of) : '';
+    if (x.x) return wife ? (his ? 'طليقة' + his : 'طليقتي') : (his ? 'طليق' + his : 'طليقي');
+    var ws = wife ? wivesOf(doc, idx, x.a) : [];
+    if (ws.length < 2) return relName(path);
+    var n = ws.indexOf(fid) + 1;
+    return (his ? 'زوجة' + his : 'زوجتي') + ' ' + (ORD[n] || String(n));
+  }
+
+  // «الله يرحمه» under the name of someone who has passed away.
+  function rip(p) { return p.g === 'f' ? 'الله يرحمها' : 'الله يرحمه'; }
+
   /* ---------- Views: from my father's side or my mother's ---------- */
 
   // From a person up through fathers (mothers where no father is added) to the top family.
@@ -277,6 +348,7 @@
   }
 
   // The marriages on my line (mine, my parents', theirs...): the picture keeps husbands and wives only there.
+  // All of theirs: my father's other wife is the mother of my brothers and sisters.
   function lineUnions(doc, idx) {
     var set = {}, seen = {}, queue = [doc.me];
     (idx.unions[doc.me] || []).forEach(function (fid) { set[fid] = 1; });
@@ -284,8 +356,11 @@
       var pid = queue.shift(), up = idx.parent[pid];
       if (!up || seen[up]) continue;
       seen[up] = set[up] = 1;
-      if (doc.f[up].a) queue.push(doc.f[up].a);
-      if (doc.f[up].b) queue.push(doc.f[up].b);
+      [doc.f[up].a, doc.f[up].b].forEach(function (q) {
+        if (!q) return;
+        (idx.unions[q] || []).forEach(function (fid) { set[fid] = 1; });
+        queue.push(q);
+      });
     }
     return set;
   }
@@ -301,8 +376,9 @@
   /* ---------- Layout ---------- */
 
   /* Sizes in px. NW: one person's box, AV: the circle, NH: circle + name + relation,
-     CG: husband to wife, SG: brother to brother, GG: between families, RH: one generation. */
-  var SCREEN = { NW: 92, AV: 54, NH: 112, CG: 14, SG: 10, GG: 26, RH: 158 };
+     CG: husband to wife, SG: brother to brother, GG: between families, RH: one generation,
+     RIP: the line «الله يرحمه» under the relation. */
+  var SCREEN = { NW: 92, AV: 54, NH: 112, CG: 14, SG: 10, GG: 26, RH: 158, RIP: 16 };
 
   /* Builds the blocks of one view. Every block is a row of people (a blood relative with their
      husband or wife beside them) and groups of children under each marriage.
@@ -316,22 +392,28 @@
       var unions = idx.unions[pid] || [], parts = [];
       unions.forEach(function (fid) {
         var x = doc.f[fid], mate = x.a === pid ? x.b : x.a, slot = null;
-        if (mate && (!line || line[fid])) slot = { pid: mate, kind: 'mate' };
+        if (mate && (!line || line[fid])) slot = { pid: mate, kind: 'mate', ex: !!x.x, d: !!doc.p[mate].d };
         else if (!mate && opts.ghosts && fid === myParents) slot = { ghost: { of: me, t: x.a ? 'M' : 'F' } };
         parts.push({ fid: fid, slot: slot });
       });
+      // own: whose family each group of children is when it is drawn under its mother (or father)
       var row = [], pIdx = 0, groups = [];
+      var self = { pid: pid, kind: 'blood', d: !!doc.p[pid].d };
       if (parts.length <= 1) {
-        row.push({ pid: pid, kind: 'blood' });
+        row.push(self);
         if (parts[0] && parts[0].slot) row.push(parts[0].slot);
-        if (parts[0]) groups.push({ from: parts[0].slot ? [0, 1] : [0], fid: parts[0].fid });
+        if (parts[0]) groups.push({ from: parts[0].slot ? [0, 1] : [0], own: 0, fid: parts[0].fid });
       } else {
+        // the first wife on one side of him, the others on his other side in the order he married them
         if (parts[0].slot) { row.push(parts[0].slot); pIdx = 1; }
-        row.push({ pid: pid, kind: 'blood' });
-        groups.push({ from: parts[0].slot ? [0, 1] : [pIdx], fid: parts[0].fid });
+        row.push(self);
+        groups.push({ from: parts[0].slot ? [0, 1] : [pIdx], own: parts[0].slot && !parts[0].slot.ghost ? 0 : pIdx, fid: parts[0].fid });
         parts.slice(1).forEach(function (part) {
-          if (part.slot) { row.push(part.slot); groups.push({ from: [pIdx, row.length - 1], fid: part.fid }); }
-          else groups.push({ from: [pIdx], fid: part.fid });
+          if (!part.slot) { groups.push({ from: [pIdx], own: pIdx, fid: part.fid }); return; }
+          row.push(part.slot);
+          var i = row.length - 1;
+          // a third or fourth wife stands past the second: her children's line starts under her
+          groups.push({ from: i - pIdx > 1 ? [i] : [pIdx, i], own: part.slot.ghost ? pIdx : i, fid: part.fid });
         });
       }
       var hidden = 0;
@@ -341,16 +423,31 @@
         else g.kids = kids.map(person);
       });
       if (hidden) {
-        groups = [{ from: groups[0].from, kids: [], more: hidden, g: doc.p[pid].g }];
+        var had = groups.filter(function (g) { return doc.f[g.fid].k.length; });
+        groups = [{ from: had.length === 1 ? had[0].from : [pIdx], kids: [], more: hidden, g: doc.p[pid].g }];
       }
-      return { pid: pid, row: row, head: pIdx, groups: groups.filter(function (g) { return g.kids.length || g.more; }) };
+      groups = groups.filter(function (g) { return g.kids.length || g.more; });
+      var spread = false;
+      if (groups.length > 1) {
+        var owners = {};
+        groups.forEach(function (g) { owners[g.own] = 1; });
+        if (Object.keys(owners).length > 1) {
+          // children of more than one wife: each family hangs under its own mother, spread out under them
+          spread = true;
+          groups.forEach(function (g) { g.from = [g.own]; });
+        } else {
+          // their mothers aren't drawn (the picture keeps only the marriages on my line): one family under him
+          groups = [{ from: [pIdx], own: pIdx, kids: [].concat.apply([], groups.map(function (g) { return g.kids; })) }];
+        }
+      }
+      return { pid: pid, row: row, head: pIdx, groups: groups, spread: spread };
     }
 
     var r = view.root, top = [], kids;
     if (r.fam) {
       var R = doc.f[r.fam];
-      if (R.a) top.push({ pid: R.a, kind: 'top' }); else if (opts.ghosts) top.push({ ghost: { of: r.via, t: 'F' } });
-      if (R.b) top.push({ pid: R.b, kind: 'top' }); else if (opts.ghosts) top.push({ ghost: { of: r.via, t: 'M' } });
+      if (R.a) top.push({ pid: R.a, kind: 'top', d: !!doc.p[R.a].d }); else if (opts.ghosts) top.push({ ghost: { of: r.via, t: 'F' } });
+      if (R.b) top.push({ pid: R.b, kind: 'top', ex: !!(R.x && R.a), d: !!doc.p[R.b].d }); else if (opts.ghosts) top.push({ ghost: { of: r.via, t: 'M' } });
       kids = R.k.map(person);
     } else {
       if (opts.ghosts) top.push({ ghost: { of: r.kid, t: 'F' } }, { ghost: { of: r.kid, t: 'M' } });
@@ -362,6 +459,37 @@
     return { root: rootBlock, heads: heads };
   }
 
+  /* Where the people of a row stand when their children are spread out under them: each one as near
+     as they can be to want[i] (where their own children's middle is, or undefined when they have none),
+     in order and never closer than D. With y = x - i D the places only have to keep their order: the
+     best fit pools the neighbours that are out of order at their average. The ones with no children
+     of their own stand evenly between their neighbours. */
+  function spreadRow(n, want, D) {
+    var pools = [], y = [], i;
+    for (i = 0; i < n; i++) {
+      if (want[i] == null) continue;
+      var p = { v: want[i] - i * D, w: 1, at: [i] };
+      while (pools.length && pools[pools.length - 1].v > p.v) {
+        var q = pools.pop();
+        p = { v: (q.v * q.w + p.v * p.w) / (q.w + p.w), w: q.w + p.w, at: q.at.concat(p.at) };
+      }
+      pools.push(p);
+    }
+    pools.forEach(function (p) { p.at.forEach(function (k) { y[k] = p.v; }); });
+    var known = [];
+    for (i = 0; i < n; i++) if (y[i] != null) known.push(i);
+    for (i = 0; i < n; i++) {
+      if (y[i] != null) continue;
+      var a = null, b = null;
+      known.forEach(function (k) { if (k < i) a = k; else if (b === null) b = k; });
+      y[i] = a === null ? (b === null ? 0 : y[b]) : b === null ? y[a] : y[a] + (y[b] - y[a]) * (i - a) / (b - a);
+    }
+    return y.map(function (v, k) { return v + k * D; });
+  }
+
+  /* Sizes a block: its width W, where its children start (kx) and where its own person stands (hx).
+     A block with the children of more than one wife (spread) also keeps where each one in its row
+     stands (sx), everyone from the block's left edge. */
   function measure(b, M) {
     b.rowW = b.row.length ? b.row.length * M.NW + (b.row.length - 1) * M.CG : 0;
     var kidsW = 0, n = 0;
@@ -374,14 +502,58 @@
     });
     b.kidsW = kidsW;
     b.W = Math.max(b.rowW, kidsW);
+    b.kx = (b.W - kidsW) / 2;
+    // the middle of each group's children
+    var x = b.kx;
+    b.groups.forEach(function (g) {
+      var hs = [];
+      g.kids.forEach(function (k, i) { if (i) x += M.SG; hs.push(x + k.hx); x += k.W; });
+      if (g.more) { if (g.kids.length) x += M.SG; hs.push(x + M.NW / 2); x += M.NW; }
+      g.mid = (hs[0] + hs[hs.length - 1]) / 2;
+      x += M.GG;
+    });
+    var slot = function (i) { return M.NW / 2 + i * (M.NW + M.CG); };
+    if (!b.row.length) b.hx = b.W / 2;
+    else if (b.spread) {
+      var want = [];
+      b.groups.forEach(function (g) { want[g.from[0]] = g.mid; });
+      var sx = spreadRow(b.row.length, want, M.NW + M.CG), left = sx[0] - M.NW / 2, right = sx[sx.length - 1] + M.NW / 2;
+      if (left < 0) {
+        sx = sx.map(function (v) { return v - left; });
+        b.kx -= left; b.W -= left; right -= left;
+      }
+      b.W = Math.max(b.W, right);
+      b.sx = sx;
+      b.hx = sx[b.head];
+    } else {
+      var rx = (b.W - b.rowW) / 2;
+      if (b.groups.length === 1) {
+        // as place puts it: the parents right above the middle of their children
+        var off = 0, from = b.groups[0].from;
+        from.forEach(function (i) { off += slot(i); });
+        off /= from.length || 1;
+        rx = Math.max(0, Math.min(b.W - b.rowW, b.groups[0].mid - off));
+      }
+      b.hx = rx + slot(b.head);
+    }
     return b.W;
+  }
+
+  /* The marriage lines of a block's row: husband and wife side by side, a second wife on his other
+     side, and a third or fourth past her, each joined to the one before her. ex: they are divorced. */
+  function pairs(b, at, y, out) {
+    b.row.forEach(function (s, i) {
+      if (i === b.head) return;
+      var j = i < b.head ? i + 1 : i - 1;
+      out.links.push({ t: 'pair', x1: at(Math.min(i, j)), x2: at(Math.max(i, j)), y: y, ghost: !!(s.ghost || b.row[b.head].ghost), ex: !!s.ex });
+    });
   }
 
   /* Places a block with its left edge at x0 and its row at y (reading order runs left to right here;
      the drawing mirrors it so the eldest ends up on the right). Fills out.nodes and out.links. */
   function place(b, x0, y, M, out, depth) {
     var flat = !b.row.length, ky = flat ? y : y + M.RH, kdepth = flat ? depth : depth + 1;
-    var kx = x0 + (b.W - b.kidsW) / 2;
+    var kx = x0 + b.kx;
     out.depth = Math.max(out.depth, depth);
     b.groups.forEach(function (g) {
       var hs = [];
@@ -415,7 +587,7 @@
 
     var slotX = function (rx, i) { return rx + M.NW / 2 + i * (M.NW + M.CG); };
     var rx = x0 + (b.W - b.rowW) / 2;
-    if (b.groups.length === 1 && b.groups[0].heads.length) {
+    if (!b.spread && b.groups.length === 1 && b.groups[0].heads.length) {
       // put the parents right above the middle of their children
       var hs0 = b.groups[0].heads, mid = (hs0[0] + hs0[hs0.length - 1]) / 2;
       var from = b.groups[0].from, off = 0;
@@ -423,24 +595,21 @@
       off /= from.length || 1;
       rx = Math.max(x0, Math.min(x0 + b.W - b.rowW, mid - off));
     }
+    // a block with the children of more than one wife: each one above her own children (as measured)
+    var at = b.spread ? function (i) { return x0 + b.sx[i]; } : function (i) { return slotX(rx, i); };
     b.row.forEach(function (s, i) {
-      out.nodes.push({ pid: s.pid || null, kind: s.ghost ? 'ghost' : s.kind, ghost: s.ghost || null, x: slotX(rx, i), y: y });
+      out.nodes.push({ pid: s.pid || null, kind: s.ghost ? 'ghost' : s.kind, ghost: s.ghost || null, x: at(i), y: y });
     });
-    b.headX = slotX(rx, b.head);
-    // husband and wife side by side (a second wife sits on the other side)
-    b.row.forEach(function (s, i) {
-      if (i === b.head) return;
-      var ghost = !!(s.ghost || b.row[b.head].ghost);
-      out.links.push({ t: 'pair', x1: slotX(rx, Math.min(i, b.head)), x2: slotX(rx, Math.max(i, b.head)), y: y + M.AV / 2, ghost: ghost });
-    });
+    b.headX = at(b.head);
+    pairs(b, at, y + M.AV / 2, out);
     // and a line down to their children: from between the two of them, or from under one parent's name
     b.groups.forEach(function (g) {
       if (!g.heads.length) return;
       var ax = 0;
-      g.from.forEach(function (i) { ax += slotX(rx, i); });
+      g.from.forEach(function (i) { ax += at(i); });
       ax /= g.from.length || 1;
       var ghostTop = g.from.length > 0 && g.from.every(function (i) { return b.row[i].ghost; });
-      out.links.push({ t: 'kids', ax: ax, ay: y + (g.from.length === 2 ? M.AV / 2 : M.NH + 2), busY: y + M.NH + (M.RH - M.NH) / 2,
+      out.links.push({ t: 'kids', ax: ax, ay: y + (g.from.length === 2 ? M.AV / 2 : M.NH + 2 + (b.row[g.from[0]].d ? M.RIP || 0 : 0)), busY: y + M.NH + (M.RH - M.NH) / 2,
         kids: g.heads, ky: ky, ghost: ghostTop });
     });
   }
@@ -534,33 +703,40 @@
       var left = Math.max(flat ? 0 : a, g.L), right = Math.max(flat ? 0 : b.rowW - a, g.R);
       b.W = left + right; b.rx = left - a; b.spines.push(left);
     } else {
-      // more than one marriage with children: their children side by side, the row over the middle
-      var kidsW = 0;
+      // the children of more than one wife: their families side by side, each mother right above her
+      // own family's spine (as in measure)
+      var kidsW = 0, want = [];
       b.groups.forEach(function (g2, n) { kidsW += g2.W + (n ? M.GG : 0); });
       b.W = Math.max(b.rowW, kidsW); b.rx = (b.W - b.rowW) / 2;
       var gx = (b.W - kidsW) / 2;
-      b.groups.forEach(function (g2) { b.spines.push(gx + g2.L); gx += g2.W + M.GG; });
+      b.groups.forEach(function (g2) { b.spines.push(gx + g2.L); want[g2.from[0]] = gx + g2.L; gx += g2.W + M.GG; });
+      if (b.spread) {
+        var sx = spreadRow(b.row.length, want, M.NW + M.CG), lo = sx[0] - M.NW / 2, hi = sx[sx.length - 1] + M.NW / 2;
+        if (lo < 0) {
+          sx = sx.map(function (v) { return v - lo; });
+          b.spines = b.spines.map(function (v) { return v - lo; });
+          b.W -= lo; hi -= lo;
+        }
+        b.W = Math.max(b.W, hi);
+        b.sx = sx;
+      }
     }
     var kidsH = 0;
     b.groups.forEach(function (g2) { kidsH = Math.max(kidsH, g2.H); });
     b.H = flat ? kidsH : b.groups.length ? M.RH + kidsH : M.NH;
-    b.hx = flat ? b.W / 2 : b.rx + slot(b.head);
+    b.hx = flat ? b.W / 2 : b.sx ? b.sx[b.head] : b.rx + slot(b.head);
     return b.W;
   }
 
   // Places a block measured by measureTidy with its left edge at x0 and its row at y.
   function placeTidy(b, x0, y, M, out, depth) {
     var flat = !b.row.length, ky = flat ? y : y + M.RH, kdepth = flat ? depth : depth + 1, gapY = M.RH - M.NH;
-    var slotX = function (i) { return x0 + b.rx + M.NW / 2 + i * (M.NW + M.CG); };
+    var slotX = b.sx ? function (i) { return x0 + b.sx[i]; } : function (i) { return x0 + b.rx + M.NW / 2 + i * (M.NW + M.CG); };
     out.depth = Math.max(out.depth, depth);
     b.row.forEach(function (s, i) {
       out.nodes.push({ pid: s.pid || null, kind: s.ghost ? 'ghost' : s.kind, ghost: s.ghost || null, x: slotX(i), y: y });
     });
-    b.row.forEach(function (s, i) {
-      if (i === b.head) return;
-      var ghost = !!(s.ghost || b.row[b.head].ghost);
-      out.links.push({ t: 'pair', x1: slotX(Math.min(i, b.head)), x2: slotX(Math.max(i, b.head)), y: y + M.AV / 2, ghost: ghost });
-    });
+    pairs(b, slotX, y + M.AV / 2, out);
     b.groups.forEach(function (g, gi) {
       var sx = x0 + b.spines[gi], ty = ky, rows = [], count = 0;
       g.rows.forEach(function (r) {
@@ -583,7 +759,7 @@
         ax = 0;
         g.from.forEach(function (i) { ax += slotX(i); });
         ax /= g.from.length || 1;
-        ay = y + (g.from.length === 2 ? M.AV / 2 : M.NH + 2);
+        ay = y + (g.from.length === 2 ? M.AV / 2 : M.NH + 2 + (b.row[g.from[0]].d ? M.RIP || 0 : 0));
       }
       var ghostTop = !flat && g.from.length > 0 && g.from.every(function (i) { return b.row[i].ghost; });
       out.links.push({ t: 'kids', ax: ax, ay: ay, sx: sx, rows: rows, busY: rows[0].busY, kids: rows[0].kids, ky: rows[0].ky, ghost: ghostTop });
@@ -643,7 +819,7 @@
     if (fam ? !fam.a : line[pid]) out.push('F');
     if (fam ? !fam.b : line[pid]) out.push('M');
     if ((heads[pid] || line[pid]) && (fam || line[pid])) out.push('B', 'Z');
-    if (heads[pid]) out.push(p.g === 'f' ? 'H' : 'W');
+    if (heads[pid] && canMarry(doc, idx, pid)) out.push(p.g === 'f' ? 'H' : 'W');
     out.push('S', 'D');
     return out;
   }
@@ -773,11 +949,20 @@
     return out;
   }
 
+  /* The two short strokes across the line between a divorced husband and wife, at its middle:
+     [[x1, y1, x2, y2], ...]. h is half their height. */
+  function exMark(x1, x2, y, h) {
+    var cx = (x1 + x2) / 2, d = h * 0.45;
+    return [-1, 1].map(function (k) { var x = cx + k * h * 0.42; return [x - d, y + h, x + d, y - h]; });
+  }
+
   var TREE = {
     blank: blank, clean: clean, cleanFam: cleanFam, famTitle: famTitle, copy: copy, index: index, count: count, addRelative: addRelative, rename: rename,
     removePerson: removePerson, move: move, relations: relations, relName: relName, views: views, climb: climb,
     lineSet: lineSet, lineUnions: lineUnions, layout: layout, choices: choices, kidLines: kidLines, SCREEN: SCREEN,
-    allHeads: allHeads, canAdd: canAdd, kinOf: kinOf, addWalk: addWalk, fitLayout: fitLayout, linkLines: linkLines, rowsOf: rowsOf
+    allHeads: allHeads, canAdd: canAdd, kinOf: kinOf, addWalk: addWalk, fitLayout: fitLayout, linkLines: linkLines, rowsOf: rowsOf,
+    canMarry: canMarry, wivesOf: wivesOf, wifeIn: wifeIn, moveWife: moveWife, relLabel: relLabel, marriageOf: marriageOf,
+    spreadRow: spreadRow, exMark: exMark, rip: rip
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = TREE;
   root.TREE = TREE;
@@ -785,7 +970,7 @@
 
   /* ---------- Picture (story 1080 x 1920, post 1080 x 1350) and the A4 page ---------- */
 
-  var PIC = { NW: 150, AV: 96, NH: 196, CG: 18, SG: 16, GG: 40, RH: 270 };
+  var PIC = { NW: 150, AV: 96, NH: 196, CG: 18, SG: 16, GG: 40, RH: 270, RIP: 32 };
   var PICFMT = {
     story: { title: 120, titleY: 300, sub: 46, subY: 384, boxY: 470, boxH: 1000, boxW: 960 },
     post: { title: 92, titleY: 168, sub: 38, subY: 232, boxY: 292, boxH: 812, boxW: 960 }
@@ -863,17 +1048,17 @@
   var INK = {
     sea: { line: 'rgba(244, 239, 230, 0.4)', boy: '#2EC4B6', girl: '#FF8A80', me: '#E9C46A', more: 'rgba(244, 239, 230, 0.45)',
       fill: '#12385E', meFill: '#F4EFE6', letter: '#F4EFE6', meLetter: '#0E2A47', name: '#F4EFE6', moreName: '#9DB2C8',
-      rel: '#E9C46A', meRel: '#F4EFE6', relSize: 25, min: { line: 2.5, ring: 4, name: 22, rel: 18, gap: 26, fitName: 16, fitRel: 14 } },
+      rel: '#E9C46A', meRel: '#F4EFE6', rip: 'rgba(244, 239, 230, 0.66)', relSize: 25, min: { line: 2.5, ring: 4, name: 22, rel: 18, gap: 26, fitName: 16, fitRel: 14 } },
     paper: { line: '#BFCAD6', boy: '#1FAFA2', girl: '#F0796D', me: '#D9AE45', more: '#A9B7C6',
       fill: '#FFFFFF', meFill: '#0E2A47', letter: '#0E2A47', meLetter: '#FFFFFF', name: '#0E2A47', moreName: '#6C8096',
-      rel: '#A3801F', meRel: '#0E2A47', relSize: 27, min: { line: 0, ring: 0, name: 0, rel: 0, gap: 0, fitName: 0, fitRel: 0 } }
+      rel: '#A3801F', meRel: '#0E2A47', rip: '#6C8096', relSize: 27, min: { line: 0, ring: 0, name: 0, rel: 0, gap: 0, fitName: 0, fitRel: 0 } }
   };
 
   /* Draws the people and lines of L, a layout at the picture's sizes: X and Y place it, s is its scale.
      hideF: girls and women show what they are to me («أختي») instead of their name, and a pearl
-     instead of their first letter. */
+     instead of their first letter. Under someone who has passed away: «الله يرحمه». */
   function drawTree(ctx, doc, rels, L, X, Y, s, ink, hideF) {
-    var D = KIN.draw, m = ink.min, AV = PIC.AV * s, NW = PIC.NW * s, r = AV / 2, ring = Math.max(m.ring, 6 * s);
+    var D = KIN.draw, m = ink.min, AV = PIC.AV * s, NW = PIC.NW * s, r = AV / 2, ring = Math.max(m.ring, 6 * s), idx = index(doc);
     ctx.save();
     ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -882,6 +1067,7 @@
       ctx.beginPath();
       if (l.t === 'pair') {
         ctx.moveTo(X(l.x1) + r + ring, Y(l.y)); ctx.lineTo(X(l.x2) - r - ring, Y(l.y));
+        if (l.ex) exMark(X(l.x1), X(l.x2), Y(l.y), Math.max(m.ring * 1.6, 11 * s)).forEach(function (q) { ctx.moveTo(q[0], q[1]); ctx.lineTo(q[2], q[3]); });
       } else {
         linkLines(l, 24 * s, ring, X, Y).forEach(function (c) {
           if (c[0] === 'M') ctx.moveTo(c[1], c[2]);
@@ -914,24 +1100,31 @@
         ctx.direction = 'rtl';
       }
 
-      var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : hidden || nameless ? relName(rels[n.pid]) : doc.p[n.pid].n;
-      var ny = Y(n.y) + AV + 22 * s + 34 * s;
+      var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : hidden || nameless ? relLabel(doc, idx, rels, n.pid) : doc.p[n.pid].n;
+      var ny = Y(n.y) + AV + 22 * s + 34 * s, gap = Math.max(m.gap, 36 * s);
       ctx.fillStyle = n.more ? ink.moreName : ink.name;
       D.fit(ctx, name, n.more ? '500' : '700', Math.round(Math.max(m.name, 34 * s)), NW + 6, m.fitName || 17 * s);
       ctx.fillText(name, cx, ny);
       if (!n.more && !hidden && !nameless) {
-        var rel = relName(rels[n.pid]);
+        var rel = relLabel(doc, idx, rels, n.pid);
+        ny += gap;
         ctx.fillStyle = isMe ? ink.meRel : ink.rel;
         D.fit(ctx, rel, '500', Math.round(Math.max(m.rel, ink.relSize * s)), NW + 6, m.fitRel || ink.relSize * s * 0.55);
-        ctx.fillText(rel, cx, ny + Math.max(m.gap, 36 * s));
+        ctx.fillText(rel, cx, ny);
+      }
+      if (!n.more && doc.p[n.pid].d) {
+        ctx.fillStyle = ink.rip;
+        D.fit(ctx, rip(doc.p[n.pid]), '500', Math.round(Math.max(m.rel * 0.9, ink.relSize * s * 0.84)), NW + 6, m.fitRel || ink.relSize * s * 0.5);
+        ctx.fillText(rip(doc.p[n.pid]), cx, ny + gap * 0.86);
       }
     });
     ctx.restore();
   }
 
   function fontSample(doc, rels, more) {
-    return famTitle(doc) + ' أهل أبوي أمي عياله عيالها +0123456789 ' + GENS.join(' ') + ' ' + (more || '') + ' ' +
-      Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relName(rels[id]); }).join(' ');
+    var idx = index(doc);
+    return famTitle(doc) + ' أهل أبوي أمي عياله عيالها الله يرحمه يرحمها +0123456789 ' + GENS.join(' ') + ' ' + (more || '') + ' ' +
+      Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relLabel(doc, idx, rels, id); }).join(' ');
   }
 
   /* opts.hideF: as in drawTree. opts.tidy: laid out with «ترتيب». */
@@ -1116,6 +1309,7 @@
       pRename: $('tr-p-rename'), pName: $('tr-p-name'), pSave: $('tr-p-save'), pLabel: $('tr-p-label'), pAdds: $('tr-p-adds'),
       pForm: $('tr-p-form'), pFormLabel: $('tr-p-form-label'), pNew: $('tr-p-new'), pUnions: $('tr-p-unions'), pAdd: $('tr-p-add'),
       pDone: $('tr-p-done'), pOrder: $('tr-p-order'), pUp: $('tr-p-up'), pDown: $('tr-p-down'), pDel: $('tr-p-del'),
+      pWives: $('tr-p-wives'), pBefore: $('tr-p-before'), pAfter: $('tr-p-after'), pMarks: $('tr-p-marks'),
       pConfirm: $('tr-p-confirm'), pWarn: $('tr-p-warn'), pYes: $('tr-p-yes'), pNo: $('tr-p-no'),
       acctCount: $('acct-tree-count'),
       famStart: $('tr-fam-start'), famBtn: $('tr-fam-btn'), famText: $('tr-fam-text'), famForm: $('tr-fam-form'), famName: $('tr-fam-name')
@@ -1337,8 +1531,10 @@
       var r = SCREEN.AV / 2 + 3;
       L.links.forEach(function (l) {
         var d;
-        if (l.t === 'pair') d = 'M' + (l.x1 + r) + ' ' + l.y + 'H' + (l.x2 - r);
-        else {
+        if (l.t === 'pair') {
+          d = 'M' + (l.x1 + r) + ' ' + l.y + 'H' + (l.x2 - r);
+          if (l.ex) exMark(l.x1, l.x2, l.y, 6).forEach(function (q) { d += 'M' + q.slice(0, 2).join(' ') + 'L' + q.slice(2).join(' '); });
+        } else {
           d = linkLines(l, 14, 4).map(function (c) {
             return c[0] + c.slice(1).map(function (v) { return Math.round(v * 10) / 10; }).join(' ');
           }).join('');
@@ -1349,7 +1545,7 @@
         svg.appendChild(p);
       });
       ui.canvas.appendChild(svg);
-      L.nodes.forEach(function (n) { ui.canvas.appendChild(nodeEl(n, doc, rels)); });
+      L.nodes.forEach(function (n) { ui.canvas.appendChild(nodeEl(n, doc, idx, rels)); });
       sizeStage();
       if (st.center && shown()) {
         st.center = false;
@@ -1358,7 +1554,7 @@
       }
     }
 
-    function nodeEl(n, doc, rels) {
+    function nodeEl(n, doc, idx, rels) {
       var b = el('button', 'tr-node');
       b.type = 'button';
       b.style.left = (n.x - SCREEN.NW / 2) + 'px';
@@ -1372,7 +1568,7 @@
         b.addEventListener('click', function () { openPerson(n.ghost.of, n.ghost.t, b); });
         return b;
       }
-      var p = doc.p[n.pid], isMe = n.pid === doc.me, rel = relName(rels[n.pid]);
+      var p = doc.p[n.pid], isMe = n.pid === doc.me, rel = relLabel(doc, idx, rels, n.pid);
       b.classList.add(isMe ? 'is-me' : n.kind === 'mate' ? 'is-mate' : 'is-blood');
       if (!isMe && p.g === 'f') b.classList.add('is-f');
       if (n.pid === st.lastAdded) b.classList.add('is-new');
@@ -1381,7 +1577,8 @@
       // someone added from «شنو يصير لك؟» on the way to a relative may have no name yet
       b.appendChild(el('span', 'tr-name' + (p.n ? '' : ' is-noname'), p.n || 'بدون اسم'));
       b.appendChild(el('span', 'tr-rel', rel));
-      b.setAttribute('aria-label', isMe ? p.n + '، هذا إنت' : (p.n || 'بدون اسم') + '، ' + KIN.verb(rels[n.pid]) + ' ' + rel);
+      if (p.d) b.appendChild(el('span', 'tr-rip', rip(p)));
+      b.setAttribute('aria-label', isMe ? p.n + '، هذا إنت' : (p.n || 'بدون اسم') + '، ' + KIN.verb(rels[n.pid]) + ' ' + rel + (p.d ? '، ' + rip(p) : ''));
       b.addEventListener('click', function () { openPerson(n.pid, null, b); });
       return b;
     }
@@ -1425,8 +1622,8 @@
 
     // What the new person would be to me, by trying the change on a copy.
     function preview(pid, t, fid) {
-      var d = copy(st.doc), id = addRelative(d, pid, t, '…', fid);
-      return id ? relName(relations(d, index(d))[id]) : '';
+      var d = copy(st.doc), id = addRelative(d, pid, t, '…', fid), i = index(d);
+      return id ? relLabel(d, i, relations(d, i), id) : '';
     }
 
     function openPerson(pid, preset, from) {
@@ -1458,7 +1655,7 @@
       ui.pAv.parentNode.className = 'tr-p-who' + (isMe ? ' is-me' : p.g === 'f' ? ' is-f' : '');
       ui.pTitle.textContent = p.n || 'بدون اسم';
       ui.pName.placeholder = p.g === 'f' ? 'اكتب اسمها' : 'اكتب اسمه';
-      ui.pRel.textContent = isMe ? 'هذا إنت' : KIN.verb(rels[pid]) + ' ' + relName(rels[pid]);
+      ui.pRel.textContent = isMe ? 'هذا إنت' : KIN.verb(rels[pid]) + ' ' + relLabel(doc, idx, rels, pid) + (p.d ? '، ' + rip(p) : '');
       ui.pSave.disabled = !cleanName(ui.pName.value) || cleanName(ui.pName.value) === p.n;
 
       var list = choices(doc, idx, pid, lineSet(doc, idx), allHeads(doc, idx));
@@ -1479,6 +1676,39 @@
       ui.pUp.disabled = at <= 0;
       ui.pDown.disabled = at < 0 || at >= sibs.length - 1;
       ui.pOrder.querySelector('span').textContent = p.g === 'f' ? 'ترتيبها بين إخوانها' : 'ترتيبه بين إخوانه';
+
+      // a wife among his wives: which one she is («زوجة عمي الثانية»)
+      var wf = p.g === 'f' ? wifeIn(doc, idx, pid) : null, ws = wf ? wivesOf(doc, idx, doc.f[wf].a) : [], wi = ws.indexOf(wf);
+      st.wife = ws.length > 1 ? wf : null;
+      ui.pWives.hidden = ws.length < 2;
+      ui.pBefore.disabled = wi <= 0;
+      ui.pAfter.disabled = wi < 0 || wi >= ws.length - 1;
+
+      // passed away, divorced: only here, never asked when adding someone
+      var marks = [];
+      if (!isMe) marks.push({ key: 'd', text: p.g === 'f' ? 'متوفية' : 'متوفي', hint: (p.g === 'f' ? 'ونكتب تحت اسمها ' : 'ونكتب تحت اسمه ') + '«' + rip(p) + '»', on: !!p.d,
+        set: function (on) { if (on) p.d = true; else delete p.d; } });
+      if (p.g === 'f') {
+        var hs = (idx.unions[pid] || []).filter(function (fid) { return doc.f[fid].b === pid && doc.f[fid].a; });
+        hs.forEach(function (fid) {
+          var x = doc.f[fid];
+          marks.push({ key: fid, text: hs.length > 1 ? 'مطلقة من ' + (doc.p[x.a].n || 'زوجها') : 'مطلقة', on: !!x.x,
+            set: function (on) { if (on) x.x = true; else delete x.x; } });
+        });
+      }
+      var keys = marks.map(function (m) { return m.key + ':' + m.text; }).join('|');
+      if (ui.pMarks.dataset.keys !== keys || ui.pMarks.dataset.pid !== pid) {
+        ui.pMarks.textContent = '';
+        marks.forEach(function (m) { ui.pMarks.appendChild(markEl(m)); });
+        ui.pMarks.dataset.keys = keys; ui.pMarks.dataset.pid = pid;
+      } else {
+        marks.forEach(function (m, i) {
+          var box = ui.pMarks.children[i].querySelector('input');
+          box.checked = m.on;
+          box._set = m.set;
+        });
+      }
+      ui.pMarks.hidden = !marks.length;
 
       ui.pDel.hidden = isMe;
       ui.pDel.querySelector('span').textContent = 'امسح ' + (p.n || 'هالشخص') + ' من الشجرة';
@@ -1526,6 +1756,21 @@
       Array.prototype.forEach.call(ui.pAdds.children, function (c) { c.setAttribute('aria-pressed', 'false'); });
     }
 
+    // One switch in the person's sheet («متوفي», «مطلقة»): { text, hint, on, set(on) }.
+    function markEl(m) {
+      var l = el('label', 'kin-toggle'), words = el('span', 'kin-toggle-words'), box = el('input'), sw = el('span', 'kin-switch');
+      words.appendChild(el('span', 'kin-toggle-text', m.text));
+      if (m.hint) words.appendChild(el('span', 'kin-toggle-hint', m.hint));
+      box.type = 'checkbox';
+      box.setAttribute('role', 'switch');
+      box.checked = m.on;
+      box._set = m.set;
+      box.addEventListener('change', function () { box._set(box.checked); changed(); });
+      sw.setAttribute('aria-hidden', 'true');
+      l.appendChild(words); l.appendChild(box); l.appendChild(sw);
+      return l;
+    }
+
     // After adding someone, show the side of the family they are on.
     function ensureVisible(pid) {
       var doc = st.doc, idx = index(doc), vs = views(doc, idx), has = function (v) {
@@ -1569,6 +1814,9 @@
 
     ui.pUp.addEventListener('click', function () { if (move(st.doc, st.person, -1)) changed(); });
     ui.pDown.addEventListener('click', function () { if (move(st.doc, st.person, 1)) changed(); });
+    // the two families swap ids, so a child being added picks their mother again
+    ui.pBefore.addEventListener('click', function () { if (st.wife && moveWife(st.doc, st.wife, -1)) { stopAdd(); changed(); } });
+    ui.pAfter.addEventListener('click', function () { if (st.wife && moveWife(st.doc, st.wife, 1)) { stopAdd(); changed(); } });
 
     ui.pDel.addEventListener('click', function () {
       var p = st.doc.p[st.person], gone = removePerson(copy(st.doc), st.person) || [], f = p.g === 'f';

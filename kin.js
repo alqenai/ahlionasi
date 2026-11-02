@@ -636,7 +636,9 @@
       var out = kin.map(function (pid) {
         return Object.assign({}, base, { pid: pid, main: base.main + ' (' + (doc.p[pid].n || 'بدون اسم') + ')' });
       });
-      if (step !== 'F' && step !== 'M') {
+      // (a husband who has four wives, or a wife who has a husband, can't have another one not in the tree)
+      var full = (step === 'W' || step === 'H') && root.TREE.canMarry && !root.TREE.canMarry(doc, idx, at);
+      if (step !== 'F' && step !== 'M' && !full) {
         out.push(Object.assign({}, base, { hint: STEPS[step].g === 'f' ? 'وحدة ثانية مو\u00a0بشجرتك' : 'واحد ثاني مو\u00a0بشجرتك' }));
       }
       return out;
