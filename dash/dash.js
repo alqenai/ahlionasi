@@ -273,8 +273,47 @@
     'admin:block': ['حظرت', 'var(--coral)'],
     'admin:unblock': ['فكيت الحظر عن', 'var(--coral)'],
     'admin:stop_link': ['وقفت رابط شجرة', 'var(--coral)'],
-    'admin:delete': ['مسحت حساب', 'var(--coral)']
+    'admin:delete': ['مسحت حساب', 'var(--coral)'],
+    'admin:flag_on': ['شغّلت ميزة', 'var(--teal)'],
+    'admin:flag_off': ['طفّيت ميزة', 'var(--sand)']
   };
+
+  /* --- «المزايا»: parts of the site to turn on or off. Off only hides it; what people saved stays. --- */
+
+  var FLAGS = [
+    { key: 'divorce', name: 'مطلقة', text: 'مفتاح «مطلقة» في صفحة الشخص بالشجرة، وكلمة «طليقة» والخطين على خط الزواج. لو طفّيتها تختفي من الموقع، واللي انحفظ يبقى بالداتابيس ويرجع إذا شغّلتها.' }
+  ];
+  var FLAG_NAMES = {};
+  FLAGS.forEach(function (f) { FLAG_NAMES[f.key] = f.name; });
+
+  function flags(now) {
+    var box = $('flags');
+    box.textContent = '';
+    FLAGS.forEach(function (f) {
+      var row = el('label', 'flag'), words = el('span', 'fw'), sw = el('input');
+      words.appendChild(el('b', null, f.name));
+      words.appendChild(el('small', null, f.text));
+      sw.type = 'checkbox';
+      sw.setAttribute('role', 'switch');
+      sw.checked = !!now[f.key];
+      sw.onchange = function () {
+        var on = sw.checked;
+        sw.disabled = true;
+        rpc('admin_set_flag', { flag: f.key, turn_on: on }).then(function () {
+          sw.disabled = false;
+          toast((on ? 'شغّلت ' : 'طفّيت ') + '«' + f.name + '». تبين للناس أول ما يفتحون الموقع.');
+          state.loaded.activity = false;
+        }).catch(function (e) {
+          sw.disabled = false;
+          sw.checked = !on;
+          toast(missing(e) ? 'شغّل ملف 20261102_site_flags.sql بـ Supabase أول.' : 'ما تغيّرت: ' + e.message);
+        });
+      };
+      row.appendChild(words);
+      row.appendChild(sw);
+      box.appendChild(row);
+    });
+  }
 
   function feed(list) {
     var ul = $('feed');
@@ -286,7 +325,7 @@
       dot.style.setProperty('--c', k[1]);
       var txt = el('span', 'txt');
       txt.appendChild(document.createTextNode(k[0] + (e.kind === 'tree' && e.n ? ' (' + people(e.n) + ')' : '') + ' '));
-      txt.appendChild(el('bdi', null, e.email || ''));
+      txt.appendChild(el('bdi', null, /^admin:flag_/.test(e.kind) ? '«' + (FLAG_NAMES[e.email] || e.email) + '»' : e.email || ''));
       var t = el('time', null, ago(e.at));
       t.dateTime = e.at; t.title = tf.format(new Date(e.at));
       li.appendChild(dot); li.appendChild(txt); li.appendChild(t);
@@ -300,6 +339,11 @@
     if (!force && state.loaded[tab]) return Promise.resolve();
     var p = tab === 'overview' ? rpc('admin_overview').then(overview)
       : tab === 'users' ? loadUsers(false)
+      : tab === 'flags' ? rpc('site_flags').then(flags).catch(function (e) {
+        if (!missing(e)) throw e;
+        $('flags').textContent = '';
+        $('flags').appendChild(el('p', 'note', 'المزايا تحتاج ملف 20261102_site_flags.sql ينشغل بـ Supabase (SQL Editor) مرة وحدة.'));
+      })
       : rpc('admin_activity', { lim: 100 }).then(feed);
     return p.then(function () {
       state.loaded[tab] = true;
@@ -310,7 +354,7 @@
   function show(tab) {
     state.tab = tab;
     document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
-    ['overview', 'users', 'activity'].forEach(function (t) { $('p-' + t).hidden = t !== tab; });
+    ['overview', 'users', 'activity', 'flags'].forEach(function (t) { $('p-' + t).hidden = t !== tab; });
     try { history.replaceState(null, '', '#' + tab); } catch (e) {}
     load(tab);
   }
@@ -340,7 +384,7 @@
       }
       gate('dash');
       var t = (location.hash || '').replace('#', '');
-      show(['overview', 'users', 'activity'].indexOf(t) >= 0 ? t : 'overview');
+      show(['overview', 'users', 'activity', 'flags'].indexOf(t) >= 0 ? t : 'overview');
     }).catch(function (e) {
       if (missing(e)) { gate('g-setup'); return; }
       $('g-fail-msg').textContent = e.message;

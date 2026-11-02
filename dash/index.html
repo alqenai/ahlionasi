@@ -48,6 +48,18 @@
     .btn.small { min-height: 34px; padding: 4px 12px; font-size: .82rem; }
     .btn:disabled { opacity: .5; cursor: default; }
 
+    @media (max-width: 440px) { .tab { padding: 8px 9px; font-size: .88rem; } }
+    .note { color: var(--muted); font-size: .88rem; line-height: 1.7; margin: 0 0 12px; }
+    .flags { display: grid; gap: 10px; }
+    .flag { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
+    .flag .fw { flex: 1; display: grid; gap: 4px; }
+    .flag small { color: var(--muted); font-size: .82rem; line-height: 1.6; }
+    .flag input { appearance: none; -webkit-appearance: none; flex: none; width: 50px; height: 30px; border-radius: 999px; background: rgba(244, 239, 230, .18); position: relative; cursor: pointer; transition: background .2s; margin: 0; }
+    .flag input::after { content: ""; position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--pearl); transition: transform .2s; }
+    .flag input:checked { background: var(--teal); }
+    .flag input:checked::after { transform: translateX(-20px); }
+    .flag input:disabled { opacity: .5; }
+    .flag input:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
     .card { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 20px; padding: 18px; }
     .gate { max-width: 440px; margin: 48px auto 0; text-align: center; }
     .gate h2 { font-size: 1.3rem; margin-bottom: 6px; }
@@ -188,6 +200,7 @@
         <button class="tab" role="tab" aria-selected="true" data-tab="overview">نظرة عامة</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="users">المستخدمين</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="activity">آخر الأحداث</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="flags">المزايا</button>
         </div>
         <div class="rf"><span class="stamp" id="stamp"></span><button class="btn small" id="refresh" type="button">تحديث</button></div>
       </nav>
@@ -224,6 +237,12 @@
         <div class="more"><button class="btn" id="u-more" type="button" hidden>اعرض أكثر</button></div>
       </section>
 
+      <section id="p-flags" role="tabpanel" hidden>
+        <div class="card">
+          <p class="note">شغّل أو طفّي أجزاء من الموقع. اللي تطفيه يختفي عن الناس بس، وبياناته تبقى محفوظة.</p>
+          <div class="flags" id="flags"></div>
+        </div>
+      </section>
       <section id="p-activity" role="tabpanel" hidden>
         <div class="card"><ul class="feed" id="feed"></ul></div>
       </section>
@@ -232,6 +251,6 @@
   <div class="toast" id="toast" role="status" hidden></div>
 
   <script src="/account.js?v=10"></script>
-  <script src="/dash/dash.js?v=1"></script>
+  <script src="/dash/dash.js?v=2"></script>
 </body>
 </html>
