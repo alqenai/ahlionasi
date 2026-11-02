@@ -114,11 +114,13 @@
     var doc = { v: 1, me: raw.me, n: Math.max(n, Math.floor(+raw.n) || 0), p: p, f: f };
     var fn = typeof raw.fn === 'string' ? cleanFam(raw.fn) : '';
     if (fn) doc.fn = fn;
-    // settings: o.hideF hides girls' and women's names in the shared picture, o.tidy lays it out with «ترتيب»
+    // settings: o.hideF hides girls' and women's names in the shared picture, o.tidy lays it out with «ترتيب»,
+    // o.pdfNoQr leaves the «رابط الشجرة كاملة» QR out of the PDF
     if (raw.o && typeof raw.o === 'object') {
       var o = {};
       if (raw.o.hideF === true) o.hideF = true;
       if (raw.o.tidy === true) o.tidy = true;
+      if (raw.o.pdfNoQr === true) o.pdfNoQr = true;
       if (Object.keys(o).length) doc.o = o;
     }
     prune(doc);
@@ -980,10 +982,13 @@
 
   var PIC = { NW: 150, AV: 96, NH: 196, CG: 18, SG: 16, GG: 40, RH: 270, RIP: 32 };
   /* qr: when the picture leaves people out and the tree has a «رابط الشجرة كاملة», the box gets shorter
-     (boxH), and a QR card w wide stands beside the shorbaka.com sticker, the two of them around y. */
+     (boxH) and one panel takes the sticker's place, its middle at y: the code (qr wide) on its left, and
+     «امسح الكود» / «وشوف الشجرة كاملة» over the shorbaka.com mark on its right (see drawQrPanel). */
   var PICFMT = {
-    story: { title: 120, titleY: 300, sub: 46, subY: 384, boxY: 470, boxH: 1000, boxW: 960, qr: { boxH: 920, w: 236, y: 1560 } },
-    post: { title: 92, titleY: 168, sub: 38, subY: 232, boxY: 292, boxH: 812, boxW: 960, qr: { boxH: 792, w: 184, y: 1214 } }
+    story: { title: 120, titleY: 300, sub: 46, subY: 384, boxY: 470, boxH: 1000, boxW: 960,
+      qr: { boxH: 940, y: 1580, qr: 214, pad: 24, gap: 34, r: 40, t1: 46, t2: 36, t3: 34, mark: 46 } },
+    post: { title: 92, titleY: 168, sub: 38, subY: 232, boxY: 292, boxH: 812, boxW: 960,
+      qr: { boxH: 770, y: 1196, qr: 172, pad: 20, gap: 28, r: 34, t1: 38, t2: 30, t3: 28, mark: 38 } }
   };
   var MIN_SCALE = 0.72, MAX_SCALE = 1.25;
 
@@ -1139,7 +1144,7 @@
 
   /* ---------- QR codes: the «رابط الشجرة كاملة» in the pictures and on the page ---------- */
 
-  var QR_JS = '/vendor/qrcode-generator-2.0.4.js', QR_CAPTION = 'الشجرة كاملة', qrLoading = null;
+  var QR_JS = '/vendor/qrcode-generator-2.0.4.js', qrLoading = null;
   function loadQr() {
     if (root.qrcode) return Promise.resolve(root.qrcode);
     if (!qrLoading) {
@@ -1169,21 +1174,49 @@
     return '<svg xmlns="' + NS + '" viewBox="0 0 ' + q.n + ' ' + q.n + '" shape-rendering="crispEdges" role="img" aria-label="QR"><path fill="#0E2A47" d="' + d + '"/></svg>';
   }
 
-  /* A pearl card w wide at x, its middle at y: the code in navy with a quiet edge of two squares, and
-     «الشجرة كاملة» under it. */
-  function drawQrCard(ctx, q, x, y, w) {
-    var D = KIN.draw, cap = Math.round(w * 0.2), h = w + cap, top = y - h / 2, cell = Math.floor(w / (q.n + 4)), size = cell * q.n;
-    var qx = Math.round(x + (w - size) / 2), qy = Math.round(top + (w - size) / 2);
+  // The squares of the code in navy, size wide at (x, y), leaving a quiet edge inside it.
+  function drawQrCode(ctx, q, x, y, size, ink) {
+    var cell = Math.floor(size / (q.n + 4)), w = cell * q.n, x0 = Math.round(x + (size - w) / 2), y0 = Math.round(y + (size - w) / 2);
+    ctx.fillStyle = ink || '#0E2A47';
+    for (var r = 0; r < q.n; r++) for (var c = 0; c < q.n; c++) if (q.dark(r, c)) ctx.fillRect(x0 + c * cell, y0 + r * cell, cell, cell);
+  }
+
+  /* The foot of a story or post that leaves people out: one see-through panel like the shorbaka.com
+     sticker, its middle at (540, Z.y). The code sits on its left on a soft pearl (not white, so it
+     doesn't glare on the navy), and on its right «امسح الكود» / «وشوف الشجرة كاملة» over the mark
+     and shorbaka.com. */
+  var QR_WORDS = ['امسح الكود', 'وشوف الشجرة كاملة'], QR_BG = '#D9D1C1';
+  function drawQrPanel(ctx, q, Z) {
+    var D = KIN.draw, k = Z.qr / 214, mw = Z.mark * 102 / 72, mg = Math.round(12 * k);
     ctx.save();
-    D.roundRect(ctx, x, top, w, h, Math.round(w * 0.1));
-    ctx.fillStyle = '#F4EFE6'; ctx.fill();
-    ctx.fillStyle = '#0E2A47';
-    for (var r = 0; r < q.n; r++) for (var c = 0; c < q.n; c++) if (q.dark(r, c)) ctx.fillRect(qx + c * cell, qy + r * cell, cell, cell);
-    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    D.fit(ctx, QR_CAPTION, '700', Math.round(w * 0.115), w - 20, 14);
-    ctx.fillText(QR_CAPTION, x + w / 2, top + w + cap * 0.42);
+    ctx.direction = 'rtl';
+    D.setFont(ctx, '700', Z.t1); var w1 = ctx.measureText(QR_WORDS[0]).width;
+    D.setFont(ctx, '500', Z.t2); var w2 = ctx.measureText(QR_WORDS[1]).width;
+    ctx.direction = 'ltr';
+    D.setFont(ctx, '500', Z.t3); var m3 = ctx.measureText(STICKER_LABEL), w3 = mw + mg + m3.width;
+    var tw = Math.max(w1, w2, w3), W = Math.round(Z.pad + Z.qr + Z.gap + tw + Z.pad * 1.4), H = Z.qr + 2 * Z.pad;
+    var x0 = Math.round(540 - W / 2), y0 = Math.round(Z.y - H / 2), right = x0 + W - Z.pad * 1.4;
+    D.roundRect(ctx, x0, y0, W, H, Z.r);
+    ctx.fillStyle = 'rgba(244, 239, 230, 0.07)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.2)'; ctx.stroke();
+
+    D.roundRect(ctx, x0 + Z.pad, y0 + Z.pad, Z.qr, Z.qr, Math.round(Z.qr * 0.1));
+    ctx.fillStyle = QR_BG; ctx.fill();
+    drawQrCode(ctx, q, x0 + Z.pad, y0 + Z.pad, Z.qr);
+
+    ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#F4EFE6'; D.setFont(ctx, '700', Z.t1);
+    ctx.fillText(QR_WORDS[0], right, Z.y - 50 * k);
+    ctx.fillStyle = '#E9C46A'; D.setFont(ctx, '500', Z.t2);
+    ctx.fillText(QR_WORDS[1], right, Z.y + 6 * k);
+    // the mark and the address, lined up with the words' right edge
+    var my = Z.y + 70 * k, ink = (m3.actualBoundingBoxAscent || Z.t3 * 0.72) - (m3.actualBoundingBoxDescent || 0), ux = right - w3;
+    D.drawMark(ctx, ux + mw / 2, my, Z.mark, false);
+    ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.fillStyle = '#F4EFE6'; D.setFont(ctx, '500', Z.t3);
+    ctx.fillText(STICKER_LABEL, ux + mw + mg, my + ink / 2);
     ctx.restore();
   }
+  var STICKER_LABEL = 'shorbaka.com';
 
   TREE.loadQr = loadQr;
   TREE.qrOf = qrOf;
@@ -1212,7 +1245,7 @@
     var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH, tidy), boxH = F.boxH;
     // the QR goes on when the picture leaves people out: families folded into «+3», or the other side
     var qrLib = link && (pl.folded || vs.length > 1) ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
-    return Promise.all([D.loadFonts(fontSample(doc, rels, QR_CAPTION)), qrLib]).then(function (got) {
+    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? QR_WORDS.join(' ') : '')), qrLib]).then(function (got) {
       var qrcode = got[1];
       if (qrcode) { boxH = F.qr.boxH; pl = pictureLayout(doc, idx, view, F.boxW, boxH, tidy); }
       var c = document.createElement('canvas');
@@ -1232,13 +1265,8 @@
       var ox = 540 - L.W * s / 2, oy = F.boxY + Math.max(0, (boxH - L.H * s) / 2);
       drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.sea, hideF);
 
-      var stickerY = KIN.FORMATS[format === 'post' ? 'post' : 'story'].sticker;
-      if (qrcode) {
-        // the sticker on the right, the QR card on its left, the two in the middle together
-        var q = F.qr, gap = 40, sw = D.stickerWidth(ctx), x0 = 540 - (sw + gap + q.w) / 2;
-        D.drawSticker(ctx, q.y, x0 + q.w + gap + sw / 2);
-        drawQrCard(ctx, qrOf(qrcode, link), x0, q.y, q.w);
-      } else D.drawSticker(ctx, stickerY);
+      if (qrcode) drawQrPanel(ctx, qrOf(qrcode, link), F.qr);
+      else D.drawSticker(ctx, KIN.FORMATS[format === 'post' ? 'post' : 'story'].sticker);
       return new Promise(function (res) { c.toBlob(res, 'image/png'); });
     });
   }
@@ -1260,9 +1288,10 @@
     });
   }
 
-  /* A one-page PDF that is the picture of the page (a JPEG), with a link over the address at its foot.
-     page: { w, h } in points; px: { w, h } of the JPEG; link: { rect: [x1, y1, x2, y2] in points, uri }. */
-  function pdfOf(jpeg, px, page, title, link) {
+  /* A one-page PDF that is the picture of the page (a JPEG), with links over parts of it (the address at
+     its foot, the QR). page: { w, h } in points; px: { w, h } of the JPEG; links: [{ rect: [x1, y1, x2, y2]
+     in points, uri }]. */
+  function pdfOf(jpeg, px, page, title, links) {
     var enc = new TextEncoder(), parts = [], at = 0, offs = [];
     var put = function (x) { var b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); at += b.length; };
     var obj = function (n, body) { offs[n] = at; put(n + ' 0 obj\n' + body + '\nendobj\n'); };
@@ -1275,7 +1304,9 @@
     put('%PDF-1.4\n'); put(new Uint8Array([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
     obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
     obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-    obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + page.w + ' ' + page.h + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R /Annots [6 0 R] >>');
+    // the links are objects 6.., the document's Info comes last
+    var annots = links.map(function (l, i) { return (6 + i) + ' 0 R'; }).join(' '), info = 6 + links.length, last = info;
+    obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + page.w + ' ' + page.h + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R /Annots [' + annots + '] >>');
     offs[4] = at;
     put('4 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + px.w + ' /Height ' + px.h +
       ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpeg.length + ' >>\nstream\n');
@@ -1283,22 +1314,27 @@
     put('\nendstream\nendobj\n');
     var paint = 'q ' + page.w + ' 0 0 ' + page.h + ' 0 0 cm /Im0 Do Q';
     obj(5, '<< /Length ' + paint.length + ' >>\nstream\n' + paint + '\nendstream');
-    obj(6, '<< /Type /Annot /Subtype /Link /Rect [' + link.rect.map(num).join(' ') + '] /Border [0 0 0] /A << /S /URI /URI (' + link.uri + ') >> >>');
-    obj(7, '<< /Title ' + text(title) + ' /Creator (shorbaka.com) /Producer (shorbaka.com) >>');
+    links.forEach(function (l, i) {
+      obj(6 + i, '<< /Type /Annot /Subtype /Link /Rect [' + l.rect.map(num).join(' ') + '] /Border [0 0 0] /A << /S /URI /URI (' + l.uri + ') >> >>');
+    });
+    obj(info, '<< /Title ' + text(title) + ' /Creator (shorbaka.com) /Producer (shorbaka.com) >>');
     var xref = at;
-    put('xref\n0 8\n0000000000 65535 f \n' + offs.slice(1, 8).map(function (o) { return ('000000000' + o).slice(-10) + ' 00000 n \n'; }).join(''));
-    put('trailer\n<< /Size 8 /Root 1 0 R /Info 7 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+    put('xref\n0 ' + (last + 1) + '\n0000000000 65535 f \n' + offs.slice(1, last + 1).map(function (o) { return ('000000000' + o).slice(-10) + ' 00000 n \n'; }).join(''));
+    put('trailer\n<< /Size ' + (last + 1) + ' /Root 1 0 R /Info ' + info + ' 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
     return new Blob(parts, { type: 'application/pdf' });
   }
 
   /* The tree on a white A4 page, always laid out with «ترتيب», ready to print: orient is 'land' or
-     'port'. Resolves { file: the PDF, name, type, preview: a PNG of the page, w, h }. */
+     'port'. opts.hideF as in drawTree; opts.qr: the «رابط الشجرة كاملة», as a QR in the corner at the
+     foot (a link in the PDF too). Resolves { file: the PDF, name, type, preview: a PNG of the page, w, h }. */
   function makePdf(doc, viewKey, orient, opts) {
-    var hideF = !!(opts && opts.hideF), D = KIN.draw, P = PAGE[orient] || PAGE.land, k = PK;
+    var hideF = !!(opts && opts.hideF), link = opts && opts.qr, D = KIN.draw, P = PAGE[orient] || PAGE.land, k = PK;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
     var title = famTitle(doc), foot = 'سوّ شجرة عائلتك على shorbaka.com';
-    return D.loadFonts(fontSample(doc, rels, foot)).then(function () {
+    var qrLib = link ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
+    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? foot + ' ' + QR_WORDS.join(' ') : foot)), qrLib]).then(function (got) {
+      var qrcode = got[1];
       var W = P.w * k, H = P.h * k, c = document.createElement('canvas');
       c.width = W; c.height = H;
       var ctx = c.getContext('2d');
@@ -1314,7 +1350,8 @@
       D.fit(ctx, title, '700', 26 * k, W - 120 * k, 14 * k);
       ctx.fillText(title, W / 2, titleY);
 
-      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - 74 * k;
+      // with the QR in the corner, the tree stops above it
+      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? 116 : 74) * k;
       var pl = pictureLayout(doc, idx, view, boxW, boxH, true, PDF_MIN, PDF_MAX), L = pl.L, s = pl.s;
       ctx.fillStyle = '#A3801F';
       D.setFont(ctx, '500', 11 * k);
@@ -1331,13 +1368,25 @@
       ctx.fillText(foot, right - tw / 2, fy + 3.5 * k);
       D.drawMark(ctx, left + markW / 2, fy, markH, true);
 
+      // the QR to the whole tree in the bottom left corner, «امسح الكود» / «وشوف الشجرة كاملة» beside it
+      var qrSide = 68 * k, qx = 34 * k, qy = H - 34 * k - qrSide;
+      if (qrcode) {
+        drawQrCode(ctx, qrOf(qrcode, link), qx, qy, qrSide);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0E2A47'; D.setFont(ctx, '700', 9.5 * k);
+        ctx.fillText(QR_WORDS[0], qx + qrSide + 6 * k, qy + qrSide / 2 - 2 * k);
+        ctx.fillStyle = '#4A607A'; D.setFont(ctx, '500', 8.5 * k);
+        ctx.fillText(QR_WORDS[1], qx + qrSide + 6 * k, qy + qrSide / 2 + 11 * k);
+      }
+
       var preview = document.createElement('canvas'), pw = 1100, ph = Math.round(1100 * H / W);
       preview.width = pw; preview.height = ph;
       preview.getContext('2d').drawImage(c, 0, 0, pw, ph);
       var blob = function (cv, type, q) { return new Promise(function (res, rej) { cv.toBlob(function (b) { if (b) res(b); else rej(new Error('no picture')); }, type, q); }); };
       return Promise.all([blob(c, 'image/jpeg', 0.92).then(bytesOf), blob(preview, 'image/png')]).then(function (r) {
-        var rect = [left / k - 4, (H - fy) / k - 10, right / k + 4, (H - fy) / k + 12];
-        var pdf = pdfOf(r[0], { w: W, h: H }, P, title, { rect: rect, uri: PDF_LINK });
+        var links = [{ rect: [left / k - 4, (H - fy) / k - 10, right / k + 4, (H - fy) / k + 12], uri: PDF_LINK }];
+        if (qrcode) links.push({ rect: [qx / k, (H - qy - qrSide) / k, (qx + qrSide) / k, (H - qy) / k], uri: link });
+        var pdf = pdfOf(r[0], { w: W, h: H }, P, title, links);
         c.width = c.height = 0;  // let the big canvas go
         return { file: pdf, name: 'shorbaka-family-tree.pdf', type: 'application/pdf', preview: r[1], w: pw, h: ph };
       });
@@ -2128,7 +2177,7 @@
     ui.retry.addEventListener('click', function () { sync(true); });
     ui.saveRetry.addEventListener('click', function () { save(); });
     ui.signIn.addEventListener('click', function () {
-      if (KIN.openAuth) KIN.openAuth({ title: 'احفظ شجرتك بحسابك', text: 'سجّل دخولك بجوجل عشان تنحفظ شجرتك بحسابك، وتلقاها من أي جهاز.' }, ui.signIn);
+      if (KIN.openAuth) KIN.openAuth({ title: 'احفظ شجرتك بحسابك', text: 'سجّل دخولك عشان تنحفظ شجرتك بحسابك، وتلقاها من أي جهاز.' }, ui.signIn);
     });
     ui.share.addEventListener('click', function () {
       if (!st.doc || !KIN.openShare) return;
@@ -2162,12 +2211,22 @@
       };
     }
 
+    // With a «رابط الشجرة كاملة», the PDF can carry its QR in the corner, or not.
+    function pdfQrOption(link, opts) {
+      return !link ? null : {
+        label: 'حط كيو آر الشجرة كاملة', hint: 'اللي يمسحه يشوف الشجرة كاملة بالباسورد', on: !!opts.qr,
+        set: function (on) { opts.qr = on ? link : null; if (st.doc) { setOpt('pdfNoQr', !on); changed(); } }
+      };
+    }
+
     // The tree on an A4 page to print, across or up and down; always gathered with «ترتيب».
     if (ui.pdf) ui.pdf.addEventListener('click', function () {
       if (!st.doc || !KIN.openShare) return;
       var doc = copy(st.doc), key = st.view, vs = views(doc, index(doc));
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
-      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF) };
+      // the QR to the whole tree goes in the corner unless it was switched off (remembered with the tree)
+      var link = st.link && signedIn() ? linkUrl(st.link) : null;
+      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), qr: link && !(st.doc.o && st.doc.o.pdfNoQr) ? link : null };
       var size = function (label, alt) {
         return { label: label, title: 'جاهزة للطباعة', alt: alt, dl: 'حمّل ملف PDF', tip: '' };
       };
@@ -2179,7 +2238,7 @@
         alt: famTitle(doc) + (view.label ? '، ' + view.label : ''),
         tips: { land: 'اطبعها على ورقة A4، أو أرسلها بقروب العائلة', port: 'اطبعها على ورقة A4، أو أرسلها بقروب العائلة' },
         text: 'شجرة عائلتي من شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
-        option: hideOption(doc, key, opts)
+        options: [hideOption(doc, key, opts), pdfQrOption(link, opts)]
       }, ui.pdf);
     });
 
@@ -2306,7 +2365,7 @@
 
       ui.lIn.addEventListener('click', function () {
         closeLink();
-        if (KIN.openAuth) KIN.openAuth({ title: 'سجّل دخولك', text: 'الرابط يفتح شجرتك من حسابك: سجّل دخولك بجوجل عشان تنحفظ فيه، وبعدها سوّ الرابط.' }, ui.linkBtn);
+        if (KIN.openAuth) KIN.openAuth({ title: 'سجّل دخولك', text: 'الرابط يفتح شجرتك من حسابك: سجّل دخولك عشان تنحفظ فيه، وبعدها سوّ الرابط.' }, ui.linkBtn);
       });
 
       // Setting a password makes the link the first time, and changes its password after that.

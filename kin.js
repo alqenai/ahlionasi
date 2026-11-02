@@ -388,22 +388,12 @@
   }
 
   // The small sign-off at the bottom: the mark and the address, on a see-through pill that sits in the story.
-  /* The «shorbaka.com» sticker at the foot of a picture, its middle at (cx, cy) (cx: 540, the middle,
-     when left out). Returns how wide it is; stickerWidth tells that before drawing it. */
-  var STICKER = { label: 'shorbaka.com', markH: 56, gap: 18, padS: 28, padE: 34, h: 96 };
-  function stickerWidth(ctx) {
-    ctx.save();
-    setFont(ctx, '500', 40);
-    var w = STICKER.padS + STICKER.markH * 102 / 72 + STICKER.gap + ctx.measureText(STICKER.label).width + STICKER.padE;
-    ctx.restore();
-    return w;
-  }
-  function drawSticker(ctx, cy, cx) {
-    var label = STICKER.label, markH = STICKER.markH, markW = markH * 102 / 72, gap = STICKER.gap, padS = STICKER.padS, padE = STICKER.padE, h = STICKER.h;
+  function drawSticker(ctx, cy) {
+    var label = 'shorbaka.com', markH = 56, markW = markH * 102 / 72, gap = 18, padS = 28, padE = 34, h = 96;
     ctx.save();
     ctx.direction = 'ltr'; ctx.textAlign = 'left'; setFont(ctx, '500', 40);
     var m = ctx.measureText(label), w = padS + markW + gap + m.width + padE;
-    var x0 = (cx == null ? 540 : cx) - w / 2;
+    var x0 = 540 - w / 2;
     roundRect(ctx, x0, cy - h / 2, w, h, h / 2);
     ctx.fillStyle = 'rgba(244, 239, 230, 0.07)'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.2)'; ctx.stroke();
@@ -412,7 +402,6 @@
     ctx.fillStyle = '#F4EFE6';
     ctx.fillText(label, x0 + padS + markW + gap, cy + ink / 2);
     ctx.restore();
-    return w;
   }
 
   function loadFonts(sample) {
@@ -517,7 +506,7 @@
   KIN.makeStory = makeStory; KIN.fitWalk = fitWalk; KIN.storyBox = storyBox; KIN.FORMATS = FORMATS;
   // For the family tree picture (tree.js), so both pictures look like one family.
   KIN.draw = { FONT: FONT, setFont: setFont, fit: fit, roundRect: roundRect, drawMark: drawMark, pearl: pearl,
-    drawSticker: drawSticker, stickerWidth: stickerWidth, loadFonts: loadFonts, background: background };
+    drawSticker: drawSticker, loadFonts: loadFonts, background: background };
 
   /* ---------- Page ---------- */
 
@@ -600,11 +589,15 @@
       wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), wIn: $('kin-w-in'), modal: $('kin-modal'),
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
       mTitle: $('kin-m-title'), seg: $('kin-seg'), opt: $('kin-opt'), optBox: $('kin-opt-box'),
-      optText: $('kin-opt-text'), optHint: $('kin-opt-hint'), rTree: $('kin-r-tree'), addTree: $('kin-add-tree'),
+      optText: $('kin-opt-text'), optHint: $('kin-opt-hint'), opt2: $('kin-opt2'), opt2Box: $('kin-opt2-box'),
+      opt2Text: $('kin-opt2-text'), opt2Hint: $('kin-opt2-hint'), rTree: $('kin-r-tree'), addTree: $('kin-add-tree'),
       rIn: $('kin-r-in'), rInText: $('kin-r-in-text'), rSee: $('kin-r-see'),
       privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
       authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close'),
       authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local'), mLink: $('kin-mlink'),
+      authOr: $('kin-auth-or'), mail: $('kin-mail'), mailAddr: $('kin-mail-addr'), mailSend: $('kin-mail-send'),
+      code: $('kin-code'), codeSent: $('kin-code-sent'), codeIn: $('kin-code-in'), codeGo: $('kin-code-go'),
+      codeAgain: $('kin-code-again'), codeBack: $('kin-code-back'),
       acctBox: $('acct'), acctIn: $('acct-in'), acctBtn: $('acct-btn'), acctAv: $('acct-av'), acctFirst: $('acct-first'),
       acctMenu: $('acct-menu'), acctAvLg: $('acct-av-lg'), acctName: $('acct-name'), acctEmail: $('acct-email'),
       acctWallet: $('acct-wallet'), acctCount: $('acct-count'), acctOut: $('acct-out'), acctDel: $('acct-del'),
@@ -1031,24 +1024,151 @@
     function openAuth(pending, from, copy) {
       var a = accounts();
       if (!a || !ui.auth) return;
-      var stuck = inAppBrowser();
+      var stuck = inAppBrowser(), byMail = mailOn();
       st.pending = pending || null;
       ui.authTitle.textContent = copy ? copy.title : pending ? 'احفظها بحسابك' : 'سجّل دخولك';
       ui.authText.textContent = copy ? copy.text : pending
-        ? 'سجّل دخولك بجوجل عشان تنحفظ صلة القرابة بحسابك، وتلقاها من أي جهاز.'
-        : 'سجّل دخولك بجوجل عشان تشوف اللي حفظتهم، وتحفظ من أي جهاز.';
+        ? 'سجّل دخولك عشان تنحفظ صلة القرابة بحسابك، وتلقاها من أي جهاز.'
+        : 'سجّل دخولك عشان تشوف اللي حفظتهم، وتحفظ من أي جهاز.';
       ui.authErr.hidden = true;
-      if (ui.authHint) ui.authHint.hidden = !stuck;
+      if (ui.authHint) {
+        ui.authHint.hidden = !stuck;
+        ui.authHint.textContent = byMail ? HINT_MAIL : HINT;
+      }
       showLocal(stuck);
+      // a code sent a moment ago (the page may have reloaded while they fetched it) carries on
+      var kept = byMail ? mailKept() : null;
+      if (kept) mail = kept;
+      showMail(!byMail ? '' : kept ? 'code' : 'addr');
       ui.gbtn.textContent = 'لحظة…';
       openSheet(ui.auth, from);
       a.googleButton(ui.gbtn, function (err) {
         if (err) { authError('ما زبط الدخول، جرّب مرة ثانية.'); return; }
+        forgetMail();
         closeSheet(ui.auth, true);
         afterSignIn();
       }).catch(function () {
         ui.gbtn.textContent = '';
-        authError('ما قدرنا نفتح دخول جوجل. تأكد من النت وجرّب مرة ثانية.');
+        authError(byMail ? 'ما قدرنا نفتح دخول جوجل. سجّل بإيميلك، أو جرّب مرة ثانية.' : 'ما قدرنا نفتح دخول جوجل. تأكد من النت وجرّب مرة ثانية.');
+      });
+    }
+
+    /* --- sign-in with a code sent by email (when the account side has it on) --- */
+
+    var HINT = ui.authHint ? ui.authHint.textContent : '';
+    var HINT_MAIL = 'جوجل ما يخليك تسجّل دخول من داخل التطبيقات مثل انستقرام. سجّل بإيميلك تحت، أو افتح الصفحة بسفاري أو كروم (من زر ⋯ اللي فوق).';
+    var MAIL = 'shorbaka.mail';  // in this tab: the address a code went to and when, so a reload can carry on
+    var mail = { email: '', at: 0 }, againT = null;
+
+    function mailOn() { var a = accounts(); return !!(a && a.emailOn && a.emailOn() && ui.mail); }
+    function mailKept() {
+      try {
+        var m = JSON.parse(sessionStorage.getItem(MAIL) || 'null');
+        return m && m.email && Date.now() - m.at < 15 * 60000 ? m : null;
+      } catch (e) { return null; }
+    }
+    function keepMail() { try { sessionStorage.setItem(MAIL, JSON.stringify(mail)); } catch (e) {} }
+    function forgetMail() {
+      mail = { email: '', at: 0 };
+      clearInterval(againT);
+      try { sessionStorage.removeItem(MAIL); } catch (e) {}
+    }
+
+    // step: 'addr' (write the email), 'code' (write the code that came), or '' (no email sign-in)
+    function showMail(step) {
+      if (!ui.mail) return;
+      ui.authOr.hidden = !step;
+      ui.mail.hidden = step !== 'addr';
+      ui.code.hidden = step !== 'code';
+      if (step !== 'code') return;
+      ui.codeSent.textContent = '';
+      ui.codeSent.appendChild(document.createTextNode('أرسلنا كود إلى '));
+      ui.codeSent.appendChild(el('b', null, mail.email));
+      ui.codeSent.appendChild(document.createTextNode('. اكتبه هني، وإذا ما لقيته شوف الـ Spam.'));
+      againTimer();
+    }
+
+    // Another code can be asked for a minute after the last one.
+    function againTimer() {
+      clearInterval(againT);
+      var tick = function () {
+        var left = Math.ceil((mail.at + 60000 - Date.now()) / 1000);
+        ui.codeAgain.disabled = left > 0;
+        label(ui.codeAgain).textContent = left > 0 ? 'تقدر تطلب كود ثاني بعد ' + left + ' ثانية' : 'ما وصلك؟ أرسله مرة ثانية';
+        if (left <= 0) clearInterval(againT);
+      };
+      tick();
+      againT = setInterval(tick, 1000);
+    }
+
+    function mailError(e, sending) {
+      var code = String((e && e.code) || ''), said = String((e && e.message) || '');
+      if ((e && e.status === 429) || /rate_limit/.test(code)) {
+        return sending ? 'طلبت كود قبل شوي. انتظر دقيقة وجرّب مرة ثانية.' : 'جرّبت وايد. انتظر شوي وجرّب مرة ثانية.';
+      }
+      if (sending) return /email_address_invalid/.test(code) ? 'تأكد من الإيميل، شكله مو صحيح.' : 'ما قدرنا نرسل الكود الحين. جرّب مرة ثانية بعد شوي.';
+      return /otp|expired|invalid/i.test(code + ' ' + said) ? 'الكود غلط أو انتهى. تأكد منه، أو اطلب كود جديد.' : 'ما زبط الدخول. تأكد من النت وجرّب مرة ثانية.';
+    }
+
+    // ٠١٢٣ typed or pasted from an Arabic keyboard is the code 0123
+    function digitsOf(v) {
+      return String(v || '').replace(/[٠-٩۰-۹]/g, function (d) { return String(d.charCodeAt(0) & 0xF); }).replace(/\D/g, '');
+    }
+
+    function sendCode(email, btn) {
+      var a = accounts(), s = label(btn), was = s.textContent, again = btn === ui.codeAgain;
+      if (!a) return;
+      ui.authErr.hidden = true;
+      btn.disabled = true; s.textContent = 'لحظة…';
+      a.sendEmailCode(email).then(function () {
+        mail = { email: email, at: Date.now() };
+        keepMail();
+        ui.codeIn.value = '';
+        showMail('code');
+        ui.codeIn.focus();
+      }, function (err) {
+        authError(mailError(err, true));
+      }).then(function () {
+        if (again) againTimer(); else { btn.disabled = false; s.textContent = was; }
+      });
+    }
+
+    if (ui.mail) {
+      ui.mail.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = ui.mailAddr.value.trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+          authError('اكتب إيميلك كامل، مثل name@gmail.com');
+          ui.mailAddr.focus();
+          return;
+        }
+        sendCode(email, ui.mailSend);
+      });
+      ui.code.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var a = accounts(), code = digitsOf(ui.codeIn.value), s = label(ui.codeGo), was = s.textContent;
+        if (!a || !mail.email) return;
+        ui.authErr.hidden = true;
+        if (code.length < 6) { authError('اكتب الكود كامل.'); ui.codeIn.focus(); return; }
+        ui.codeGo.disabled = true; s.textContent = 'لحظة…';
+        a.verifyEmailCode(mail.email, code).then(function () {
+          ui.codeGo.disabled = false; s.textContent = was;
+          forgetMail();
+          closeSheet(ui.auth, true);
+          afterSignIn();
+        }, function (err) {
+          ui.codeGo.disabled = false; s.textContent = was;
+          authError(mailError(err, false));
+          ui.codeIn.select();
+        });
+      });
+      ui.codeAgain.addEventListener('click', function () { if (mail.email) sendCode(mail.email, ui.codeAgain); });
+      ui.codeBack.addEventListener('click', function () {
+        ui.authErr.hidden = true;
+        ui.mailAddr.value = mail.email;
+        forgetMail();
+        showMail('addr');
+        ui.mailAddr.focus();
       });
     }
 
@@ -1203,21 +1323,32 @@
       });
     }
 
-    // While a picture is being drawn, the toggle and the switch wait.
+    // While a picture is being drawn, the toggle and the switches wait.
     function busy(on) {
       segs.forEach(function (x) { x.disabled = on; });
-      if (ui.optBox) ui.optBox.disabled = on;
+      toggles.forEach(function (t) { t.box.disabled = on; });
       ui.img.classList.toggle('is-busy', on);
     }
 
-    function showOption(o) {
-      if (!ui.opt) return;
-      ui.opt.hidden = !o;
-      ui.modal.classList.toggle('has-opt', !!o);
-      if (!o) return;
-      ui.optBox.checked = !!o.on;
-      ui.optText.textContent = o.label;
-      ui.optHint.textContent = o.hint || '';
+    /* Up to two switches under the size toggle: a source brings option, or options (a list; the
+       tree's PDF has «أخفي أسامي البنات» and its QR). */
+    var toggles = [
+      { wrap: ui.opt, box: ui.optBox, text: ui.optText, hint: ui.optHint },
+      { wrap: ui.opt2, box: ui.opt2Box, text: ui.opt2Text, hint: ui.opt2Hint }
+    ].filter(function (t) { return t.wrap && t.box; });
+    function optionsOf(p) { return ((p && (p.options || [p.option])) || []).filter(Boolean); }
+
+    function showOptions(list) {
+      toggles.forEach(function (t, i) {
+        var o = list[i];
+        t.wrap.hidden = !o;
+        if (!o) return;
+        t.box.checked = !!o.on;
+        t.text.textContent = o.label;
+        t.hint.textContent = o.hint || '';
+      });
+      ui.modal.classList.toggle('has-opt', list.length > 0);
+      ui.modal.classList.toggle('has-opt2', list.length > 1);
     }
 
     // The size toggle shows the source's own sizes (story and post, or the page across and up and down).
@@ -1238,7 +1369,7 @@
       var s = label(from), was = s.textContent;
       pic = source;
       var first = showSizes(source);
-      showOption(source.option);
+      showOptions(optionsOf(source));
       if (ui.mLink) ui.mLink.hidden = !source.link;
       ui.modal.classList.toggle('has-link', !!(ui.mLink && source.link));
       from.disabled = true; s.textContent = 'لحظة…';
@@ -1284,16 +1415,18 @@
       });
     });
 
-    if (ui.optBox) ui.optBox.addEventListener('change', function () {
-      var o = pic && pic.option, on = ui.optBox.checked;
-      if (!o) return;
-      o.set(on);
-      busy(true);
-      showImage(shown).catch(function () {
-        // the picture couldn't be drawn again: the switch goes back to what the picture shows
-        o.set(!on);
-        ui.optBox.checked = !on;
-      }).then(function () { busy(false); });
+    toggles.forEach(function (t, i) {
+      t.box.addEventListener('change', function () {
+        var o = optionsOf(pic)[i], on = t.box.checked;
+        if (!o) return;
+        o.set(on);
+        busy(true);
+        showImage(shown).catch(function () {
+          // the picture couldn't be drawn again: the switch goes back to what the picture shows
+          o.set(!on);
+          t.box.checked = !on;
+        }).then(function () { busy(false); });
+      });
     });
 
     // the source's link (the tree's «رابط الشجرة كاملة»), for Instagram's link sticker

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>كود دخولك لشرباكة</title>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;700&amp;display=swap" rel="stylesheet">
+</head>
+<!-- Shorbaka's sign-in code email: paste it into Supabase, Authentication > Emails, both "Magic link"
+     and "Confirm signup" (a new person gets the second one). -->
+<body style="margin:0; padding:0; background:#F4EFE6;">
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#F4EFE6;">كود دخولك: {{ .Token }}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4EFE6;">
+<tr><td align="center" style="padding:28px 14px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:460px; background:#FFFFFF; border-radius:22px; overflow:hidden; border:1px solid #E4D3A6;">
+    <tr><td align="center" style="background:#0E2A47; padding:26px 20px 22px;">
+      <img src="https://shorbaka.com/email/wordmark.png" width="210" height="56" alt="شرباكة" style="display:block; width:210px; height:56px; border:0; color:#F4EFE6; font-family:Tahoma, Arial, sans-serif; font-size:28px; font-weight:bold;">
+    </td></tr>
+    <tr><td dir="rtl" style="padding:30px 28px 8px; font-family:'Readex Pro', Tahoma, Arial, sans-serif; text-align:right; color:#0E2A47;">
+      <p style="margin:0 0 8px; font-size:22px; line-height:1.5; font-weight:bold;">كود دخولك لشرباكة</p>
+      <p style="margin:0; font-size:16px; line-height:1.8; color:#4A607A;">اكتب هالكود في الموقع عشان تدخل حسابك:</p>
+    </td></tr>
+    <tr><td align="center" style="padding:16px 28px 6px;">
+      <div dir="ltr" style="background:#F4EFE6; border:1px solid #E4D3A6; border-radius:16px; padding:16px 10px; font-family:Arial, Helvetica, sans-serif; font-size:36px; line-height:1.2; font-weight:bold; letter-spacing:8px; color:#0E2A47; text-align:center;">{{ .Token }}</div>
+    </td></tr>
+    <tr><td dir="rtl" style="padding:14px 28px 28px; font-family:'Readex Pro', Tahoma, Arial, sans-serif; text-align:right; font-size:14px; line-height:1.9; color:#4A607A;">
+      الكود ينفع مرة وحدة، ويخلص بعد ساعة.<br>
+      لا تعطيه أحد.<br>
+      إذا ما طلبته، تجاهل هالإيميل.
+    </td></tr>
+    <tr><td align="center" style="border-top:1px solid #EFE6D2; padding:16px 20px 20px; font-family:'Readex Pro', Tahoma, Arial, sans-serif; font-size:13px; line-height:1.6; color:#A3801F;">
+      شرباكة · <a href="https://shorbaka.com" style="color:#A3801F; text-decoration:none;">shorbaka.com</a>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>

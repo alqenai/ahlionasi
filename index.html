@@ -362,6 +362,20 @@
     .kin-auth-note { font-size: .8rem; line-height: 1.7; color: var(--muted); margin-top: 12px; padding: 0 6px; }
     .kin-auth-hint { font-size: .9rem; line-height: 1.75; color: var(--pearl); margin-top: 14px; padding: 10px 14px; border-radius: 14px; background: rgba(233, 196, 106, .1); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .28); }
     .kin-auth-local { display: block; min-height: 44px; margin: 2px auto 0; padding: 0 12px; border: 0; background: none; color: var(--sand); font-size: .92rem; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+    /* sign-in with a code by email, under Google's button */
+    .kin-auth-or { display: flex; align-items: center; gap: 12px; margin: 14px 4px 10px; font-size: .85rem; color: var(--muted); }
+    .kin-auth-or::before, .kin-auth-or::after { content: ""; flex: 1; height: 1px; background: rgba(244, 239, 230, .14); }
+    .kin-mail { display: grid; gap: 10px; }
+    .kin-mail label > span { display: block; font-size: .85rem; color: var(--muted); margin: 0 4px 6px; }
+    .kin-mail-in { text-align: left; }
+    .kin-mail-in::placeholder { text-align: left; }
+    .kin-code-in { text-align: center; font-size: 1.4rem; letter-spacing: .3em; }
+    .kin-mail .kin-btn { width: 100%; }
+    .kin-mail-sent { font-size: .92rem; line-height: 1.75; color: #C9D6E3; padding: 0 4px; }
+    .kin-mail-sent b { direction: ltr; unicode-bidi: isolate; color: var(--pearl); font-weight: 500; }
+    .kin-mail-more { display: flex; justify-content: center; flex-wrap: wrap; gap: 0 14px; }
+    .kin-mail-more .kin-auth-local { margin: 0; font-size: .88rem; }
+    .kin-mail-more .kin-auth-local:disabled { color: var(--muted); text-decoration: none; cursor: default; }
 
     .kin-privacy { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 18px; font-size: .82rem; color: var(--muted); }
     .kin-privacy svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
@@ -408,6 +422,7 @@
     .kin-toggle input:disabled + .kin-switch { opacity: .6; }
     .kin-toggle:has(input:disabled) { cursor: progress; }
     .kin-modal.has-opt #kin-img { max-height: min(54vh, 520px); }
+    .kin-modal.has-opt2 #kin-img { max-height: min(46vh, 440px); }
     /* the tree's «انسخ رابط الشجرة كاملة» under the buttons: the picture gives it the room */
     .kin-modal.has-link #kin-img { max-height: min(54vh, 520px); }
     .kin-modal.has-opt.has-link #kin-img { max-height: min(48vh, 470px); }
@@ -808,6 +823,11 @@
         <input type="checkbox" role="switch" id="kin-opt-box">
         <span class="kin-switch" aria-hidden="true"></span>
       </label>
+      <label class="kin-toggle" id="kin-opt2" hidden>
+        <span class="kin-toggle-words"><span class="kin-toggle-text" id="kin-opt2-text"></span><span class="kin-toggle-hint" id="kin-opt2-hint"></span></span>
+        <input type="checkbox" role="switch" id="kin-opt2-box">
+        <span class="kin-switch" aria-hidden="true"></span>
+      </label>
       <img id="kin-img" alt="" width="1080" height="1920">
       <div class="kin-sheet-btns">
         <button type="button" class="kin-btn kin-primary" id="kin-share" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3.5M7.5 8L12 3.5 16.5 8"/><path d="M5 12.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6.5"/></svg><span>شارك</span></button>
@@ -827,6 +847,20 @@
       <p class="kin-auth-text" id="kin-auth-text"></p>
       <p class="kin-auth-hint" id="kin-auth-hint" hidden>جوجل ما يخليك تسجّل دخول من داخل التطبيقات مثل انستقرام. افتح الصفحة بسفاري أو كروم (من زر ⋯ اللي فوق) وكمّل من هناك.</p>
       <div class="kin-gbtn" id="kin-gbtn"></div>
+      <p class="kin-auth-or" id="kin-auth-or" hidden><span>أو بإيميلك</span></p>
+      <form class="kin-mail" id="kin-mail" novalidate hidden>
+        <label><span>إيميلك</span><input class="tr-input kin-mail-in" id="kin-mail-addr" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" dir="ltr" maxlength="254" placeholder="name@gmail.com" enterkeyhint="send"></label>
+        <button type="submit" class="kin-btn" id="kin-mail-send"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M4.5 7l7.5 6 7.5-6"/></svg><span>أرسل لي كود</span></button>
+      </form>
+      <form class="kin-mail" id="kin-code" novalidate hidden>
+        <p class="kin-mail-sent" id="kin-code-sent" role="status"></p>
+        <label><span>الكود</span><input class="tr-input kin-mail-in kin-code-in" id="kin-code-in" type="text" inputmode="numeric" autocomplete="one-time-code" dir="ltr" maxlength="12" enterkeyhint="done"></label>
+        <button type="submit" class="kin-btn kin-primary" id="kin-code-go"><span>دخول</span></button>
+        <div class="kin-mail-more">
+          <button type="button" class="kin-auth-local" id="kin-code-again"><span>أرسل الكود مرة ثانية</span></button>
+          <button type="button" class="kin-auth-local" id="kin-code-back"><span>غيّر الإيميل</span></button>
+        </div>
+      </form>
       <p class="kin-auth-err" id="kin-auth-err" role="alert" hidden></p>
       <button type="button" class="kin-auth-local" id="kin-auth-local" hidden><span>أو احفظها بجهازك بس</span></button>
       <p class="kin-auth-note">نحفظ بس الأسماء اللي تكتبها وصلة القرابة، وما ننشرها ولا نشاركها مع أحد. وتقدر تمسح حسابك وكل اللي فيه متى ما تبي.</p>
@@ -906,8 +940,8 @@
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=6" defer></script>
-  <script src="/kin.js?v=19" defer></script>
-  <script src="/tree.js?v=11" defer></script>
+  <script src="/account.js?v=7" defer></script>
+  <script src="/kin.js?v=20" defer></script>
+  <script src="/tree.js?v=12" defer></script>
 </body>
 </html>

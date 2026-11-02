@@ -6,7 +6,10 @@
   var CONFIG = {
     supabaseUrl: 'https://jfvbubrhghmivdjfbcku.supabase.co',
     supabaseKey: 'sb_publishable_nom1uzSkzypbyYisBt2-dQ_psJfSZEe',  // public key, safe to ship: row-level security guards the data
-    googleClientId: '715982042873-ps3ftqgqvdskeegi0m7nksadeqae4a81.apps.googleusercontent.com'   // public too: Google only honours it on https://shorbaka.com
+    googleClientId: '715982042873-ps3ftqgqvdskeegi0m7nksadeqae4a81.apps.googleusercontent.com',  // public too: Google only honours it on https://shorbaka.com
+    // Sign-in with a code sent by email. Supabase sends it through the site's own email service (Resend),
+    // with supabase/templates/email-code.html as the email. Until that is set up, shorbaka.com/?email=1 tries it.
+    emailSignIn: false
   };
 
   var SUPABASE_JS = '/vendor/supabase-2.117.3.js';
@@ -105,6 +108,31 @@
         type: 'standard', theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with',
         logo_alignment: 'center', locale: 'ar', width: Math.max(220, Math.min(320, el.clientWidth || 300))
       });
+    });
+  }
+
+  /* --- Sign-in with a code sent by email: works where Google can't, like inside Instagram --- */
+
+  function emailOn() {
+    return on && (CONFIG.emailSignIn || /[?&]email=1(&|$)/.test(root.location ? root.location.search : ''));
+  }
+
+  // Sends a code to email (making the account the first time). Resolves once the email is on its way.
+  function sendEmailCode(email) {
+    return ready.then(function (ok) {
+      if (!ok) throw new Error('accounts are off');
+      return client.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
+    }).then(function (res) { if (res.error) throw res.error; });
+  }
+
+  // Signs in with the code from that email.
+  function verifyEmailCode(email, code) {
+    return ready.then(function (ok) {
+      if (!ok) throw new Error('accounts are off');
+      return client.auth.verifyOtp({ email: email, token: code, type: 'email' });
+    }).then(function (res) {
+      if (res.error) throw res.error;
+      setUser(res.data && res.data.user);
     });
   }
 
@@ -208,6 +236,9 @@
     user: function () { return user; },
     onChange: function (fn) { listeners.push(fn); },
     googleButton: googleButton,
+    emailOn: emailOn,
+    sendEmailCode: sendEmailCode,
+    verifyEmailCode: verifyEmailCode,
     signOut: signOut,
     list: list,
     save: save,
