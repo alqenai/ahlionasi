@@ -1,4 +1,4 @@
-/* شرباكة: لوحة التحكم (shorbaka.com/admin/).
+/* شرباكة: لوحة التحكم (shorbaka.com/dash/).
    Signing in is account.js, the same as on the site. Every number here comes from the admin_*
    functions in supabase/migrations/20261102_admin.sql, which answer only accounts in public.admins,
    so this page being public gives nobody anything. */
