@@ -249,6 +249,14 @@
   // Takes the password off (making the link the first time): whoever has the link sees the tree.
   function openTreeLink() { return client.rpc('open_my_tree_link').then(one); }
 
+  /* «رابط الشجرة كاملة» for «شجرة دوامي»: no password (Ali's call), so whoever has it sees the tree. */
+  // My work tree's link code, or null when I have none.
+  function workLink() { return client.rpc('my_work_link').then(one); }
+  // Makes the link (or gives the one I have). Resolves its code.
+  function makeWorkLink() { return client.rpc('make_work_link').then(one); }
+  // The link stops opening; a link made later gets a new code.
+  function stopWorkLink() { return client.rpc('stop_work_link').then(one); }
+
   /* «اقتراحات على شجرتك»: additions suggested through my tree's link. [{ id, from, at, ops }], oldest
      first; [] when the database doesn't have them yet. */
   function treeSuggestions() {
@@ -290,6 +298,9 @@
     stopTreeLink: stopTreeLink,
     treeLinkState: treeLinkState,
     openTreeLink: openTreeLink,
+    workLink: workLink,
+    makeWorkLink: makeWorkLink,
+    stopWorkLink: stopWorkLink,
     treeSuggestions: treeSuggestions,
     dropTreeSuggestion: dropTreeSuggestion,
     deleteAccount: deleteAccount
