@@ -12,7 +12,7 @@
        fn: 'القناعي',                                          the family name (left out when not given)
        h: ['خالد', 'سارة'],                                     who helped finish it: names of people whose
                                                                suggestions the owner added (left out when none)
-       o: { hideF: true } }                                    settings (left out when none is on)
+       o: { hideF: true } }                                    settings (left out when none is on): see clean()
    A family can be missing its husband or wife (not added yet). Brothers and sisters whose parents
    aren't added yet share a family with neither. A man can have up to four wives: his families are in
    the order he married them (their ids' order). */
@@ -130,12 +130,14 @@
     if (fn) doc.fn = fn;
     var h = helpers(raw.h);
     if (h.length) doc.h = h;
-    // settings: o.hideF hides girls' and women's names in the shared picture, o.tidy lays it out with «ترتيب»
+    // settings: o.hideF hides girls' and women's names in the shared picture, o.hideAll everyone's but mine
+    // (see hideOf), o.tidy lays it out with «ترتيب»
     // (true, or 2 and 3 when it was pressed again to gather the tree more),
     // o.pdfNoQr leaves the «رابط الشجرة كاملة» QR out of the PDF
     if (raw.o && typeof raw.o === 'object') {
       var o = {};
       if (raw.o.hideF === true) o.hideF = true;
+      if (raw.o.hideAll === true) o.hideAll = true;
       if (raw.o.tidy === true || raw.o.tidy === 2 || raw.o.tidy === 3) o.tidy = raw.o.tidy;
       if (raw.o.pdfNoQr === true) o.pdfNoQr = true;
       if (Object.keys(o).length) doc.o = o;
@@ -1196,12 +1198,36 @@
     return { L: L, s: s, folded: Object.keys(collapse).length > 0 };
   }
 
-  // Does this view show any girl or woman? (The switch that hides their names only shows when it does.)
-  function viewHasF(doc, viewKey) {
+  // Does this view show anyone who passes test(p, pid)? (A choice of «الأسامي» only shows when it changes something.)
+  function viewHas(doc, viewKey, test) {
     var idx = index(doc), vs = views(doc, idx), view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
     return layout(doc, idx, view, PIC, { ghosts: false, mates: 'line' }).nodes.some(function (n) {
-      return n.pid && doc.p[n.pid] && doc.p[n.pid].g === 'f';
+      return n.pid && doc.p[n.pid] && test(doc.p[n.pid], n.pid);
     });
+  }
+  // any girl or woman («بدون البنات»)
+  function viewHasF(doc, viewKey) { return viewHas(doc, viewKey, function (p) { return p.g === 'f'; }); }
+  // anyone but me with a name («بس اسمي»)
+  function viewHasOthers(doc, viewKey) { return viewHas(doc, viewKey, function (p, pid) { return pid !== doc.me && !!cleanName(p.n); }); }
+
+  /* «الأسامي»: whose names others don't see, in the pictures, the PDF and on the «رابط الشجرة» page.
+     '' everyone's shows («كلها»), 'f' girls' and women's are hidden («بدون البنات», mine too when I'm a
+     girl), 'all' everyone's but mine («بس اسمي»: Ali, for people who want only their own name out).
+     Kept as o.hideF and o.hideAll; «بس اسمي» keeps o.hideF on too, so a page from before it still hides
+     the girls' names at least. */
+  function hideOf(doc) {
+    var o = (doc && doc.o) || {};
+    return o.hideAll ? 'all' : o.hideF ? 'f' : '';
+  }
+  // A picture's opts.hide ('f' or 'all'), or opts.hideF as before (true: 'f').
+  function hideOpt(opts) {
+    return opts && (opts.hide === 'all' || opts.hide === 'f') ? opts.hide : opts && opts.hideF ? 'f' : '';
+  }
+  // Is this person's name hidden, under hide ('', 'f' or 'all'; true as 'f')?
+  function hides(doc, pid, hide) {
+    var p = doc && doc.p[pid];
+    if (!p) return false;
+    return hide === 'all' ? pid !== doc.me : (hide === 'f' || hide === true) && p.g === 'f';
   }
 
   // A small pearl, drawn where a hidden name's first letter would be.
@@ -1227,9 +1253,9 @@
   };
 
   /* Draws the people and lines of L, a layout at the picture's sizes: X and Y place it, s is its scale.
-     hideF: girls and women show what they are to me («أختي») instead of their name, and a pearl
-     instead of their first letter. Under someone who has passed away: «الله يرحمه». */
-  function drawTree(ctx, doc, rels, L, X, Y, s, ink, hideF) {
+     hide (see hideOf): those whose names are hidden show what they are to me («أختي») instead, and a
+     pearl instead of their first letter. Under someone who has passed away: «الله يرحمه». */
+  function drawTree(ctx, doc, rels, L, X, Y, s, ink, hide) {
     var D = KIN.draw, m = ink.min, AV = PIC.AV * s, NW = PIC.NW * s, r = AV / 2, ring = Math.max(m.ring, 6 * s), idx = index(doc);
     ctx.save();
     ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
@@ -1260,7 +1286,7 @@
       if (n.more) ctx.setLineDash([ring * 1.6, ring * 1.4]);
       ctx.stroke();
       ctx.setLineDash([]);
-      var hidden = !n.more && hideF && doc.p[n.pid].g === 'f', nameless = !n.more && !doc.p[n.pid].n;
+      var hidden = !n.more && hides(doc, n.pid, hide), nameless = !n.more && !doc.p[n.pid].n;
       if (hidden) pearl(ctx, cx, cy, r * 0.3, isMe && ink.meFill === '#F4EFE6');
       else {
         var top = n.more ? '+' + n.more : initial(doc.p[n.pid].n);
@@ -1399,9 +1425,9 @@
   }
 
   /* Who the password comes from: me, the one who made the tree and set it («خذ الباسورد من علي»).
-     When girls' names are hidden and I'm a girl, my name stays out too. */
-  function pwFrom(doc, hideF) {
-    var me = (doc && doc.p[doc.me]) || {}, f = me.g === 'f', name = hideF && f ? '' : String(me.n || '').trim();
+     When girls' names are hidden and I'm a girl, my name stays out too («بس اسمي» shows it). */
+  function pwFrom(doc, hide) {
+    var me = (doc && doc.p[doc.me]) || {}, f = me.g === 'f', name = hides(doc, doc.me, hide) ? '' : String(me.n || '').trim();
     return 'خذ الباسورد من ' + (name || (f ? 'صاحبة الشجرة' : 'صاحب الشجرة'));
   }
 
@@ -1421,12 +1447,13 @@
   }
   TREE.plainPw = plainPw;
 
-  /* opts.hideF: as in drawTree. opts.tidy: laid out with «ترتيب» (at any of its levels the picture takes the
-     shape that fits it best). opts.qr: the «رابط الشجرة كاملة»; when
+  /* opts.hide: whose names are hidden, as in hideOf (or opts.hideF: true, the girls'). opts.tidy: laid
+     out with «ترتيب» (at any of its levels the picture takes the shape that fits it best). opts.qr: the
+     «رابط الشجرة كاملة»; when
      the picture leaves people out (families folded into «+3 عياله», or the other side of the family),
      a QR to it goes at the foot. opts.qrOpen: the link needs no password (no «خذ الباسورد من …»). */
   function makePicture(doc, viewKey, format, opts) {
-    var hideF = !!(opts && opts.hideF), tidy = !!(opts && opts.tidy), link = opts && opts.qr;
+    var hide = hideOpt(opts), tidy = !!(opts && opts.tidy), link = opts && opts.qr;
     var D = KIN.draw, F = PICFMT[format] || PICFMT.story, H = KIN.FORMATS[format === 'post' ? 'post' : 'story'].H;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
@@ -1434,7 +1461,7 @@
     var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH, tidy), boxH = F.boxH;
     // the QR goes on when the picture leaves people out: families folded into «+3», or the other side
     var qrLib = link && (pl.folded || vs.length > 1) ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
-    var pwText = opts && opts.qrOpen ? '' : pwFrom(doc, hideF), QZ = qrZone(F, pwText);
+    var pwText = opts && opts.qrOpen ? '' : pwFrom(doc, hide), QZ = qrZone(F, pwText);
     return Promise.all([D.loadFonts(fontSample(doc, rels, link ? [QR_WORDS.join(' '), pwText].filter(Boolean).join(' ') : '')), qrLib]).then(function (got) {
       var qrcode = got[1];
       if (qrcode) { boxH = QZ.boxH; pl = pictureLayout(doc, idx, view, F.boxW, boxH, tidy); }
@@ -1453,7 +1480,7 @@
       ctx.fillText((view.label ? view.label + ' · ' : '') + gens(L.levels), 540, F.subY);
 
       var ox = 540 - L.W * s / 2, oy = F.boxY + Math.max(0, (boxH - L.H * s) / 2);
-      drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.sea, hideF);
+      drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.sea, hide);
 
       if (qrcode) drawQrPanel(ctx, qrOf(qrcode, link), QZ, pwText);
       else D.drawSticker(ctx, KIN.FORMATS[format === 'post' ? 'post' : 'story'].sticker);
@@ -1515,16 +1542,17 @@
   }
 
   /* The tree on a white A4 page, always laid out with «ترتيب», ready to print: orient is 'land' or
-     'port'. opts.hideF as in drawTree; opts.qr: the «رابط الشجرة كاملة», as a QR in the corner at the
-     foot (a link in the PDF too), with «خذ الباسورد من …» under it unless opts.qrOpen (no password).
+     'port'. opts.hide (or opts.hideF) as in makePicture; opts.qr: the «رابط الشجرة كاملة», as a QR in
+     the corner at the foot (a link in the PDF too), with «خذ الباسورد من …» under it unless opts.qrOpen
+     (no password).
      Resolves { file: the PDF, name, type, preview: a PNG of the page, w, h }. */
   function makePdf(doc, viewKey, orient, opts) {
-    var hideF = !!(opts && opts.hideF), link = opts && opts.qr, D = KIN.draw, P = PAGE[orient] || PAGE.land, k = PK;
+    var hide = hideOpt(opts), link = opts && opts.qr, D = KIN.draw, P = PAGE[orient] || PAGE.land, k = PK;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
     var title = famTitle(doc), foot = 'سوّ شجرة عائلتك على shorbaka.com';
     var qrLib = link ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
-    var pwText = opts && opts.qrOpen ? '' : pwFrom(doc, hideF);
+    var pwText = opts && opts.qrOpen ? '' : pwFrom(doc, hide);
     // a link with a password takes suggestions: the QR also asks for them
     var askText = link && pwText ? QR_ASK : '';
     var more = [foot].concat(link ? [QR_WORDS.join(' '), pwText, askText] : []).filter(Boolean).join(' ');
@@ -1553,7 +1581,7 @@
       ctx.fillText((view.label ? view.label + ' · ' : '') + gens(L.levels), W / 2, titleY + 22 * k);
 
       var ox = W / 2 - L.W * s / 2, oy = boxY + Math.max(0, (boxH - L.H * s) / 2);
-      drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.paper, hideF);
+      drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.paper, hide);
 
       // the sign-off at the foot: the mark and «سوّ شجرة عائلتك على shorbaka.com», a link in the PDF
       var fy = H - 44 * k, markH = 15 * k, markW = markH * 102 / 72, gap = 7 * k;
@@ -1598,6 +1626,9 @@
   TREE.makePicture = makePicture;
   TREE.makePdf = makePdf;
   TREE.viewHasF = viewHasF;
+  TREE.viewHasOthers = viewHasOthers;
+  TREE.hideOf = hideOf;
+  TREE.hides = hides;
   TREE.pictureLayout = pictureLayout;
 
   /* ---------- Page ---------- */
@@ -1649,8 +1680,8 @@
 
   /* Draws the layout L into canvas, an element on the page: the lines in one SVG, everyone in a box.
      opts.tap(n, box): what tapping someone (or a «+» place) does; without it nobody can be tapped.
-     opts.fresh: who was just added (pops in). opts.hideF: girls and women show what they are to me
-     instead of their name, with a pearl for a letter, as in the pictures. */
+     opts.fresh: who was just added (pops in). opts.hide (or opts.hideF), as in the pictures: those whose
+     names are hidden show what they are to me instead, with a pearl for a letter. */
   function paint(canvas, L, doc, opts) {
     opts = opts || {};
     var idx = index(doc), rels = relations(doc, idx);
@@ -1700,7 +1731,7 @@
       return b;
     }
     var p = doc.p[n.pid], isMe = n.pid === doc.me, rel = relLabel(doc, idx, rels, n.pid);
-    var hidden = !!opts.hideF && p.g === 'f';
+    var hidden = hides(doc, n.pid, hideOpt(opts));
     b.classList.add(isMe ? 'is-me' : n.kind === 'mate' ? 'is-mate' : 'is-blood');
     if (!isMe && p.g === 'f') b.classList.add('is-f');
     if (opts.fresh && n.pid === opts.fresh) b.classList.add('is-new');
@@ -1727,11 +1758,11 @@
   /* ---------- A tree to look at only: the page a «رابط الشجرة» opens ---------- */
 
   /* Shows doc in els ({ side, tidy, zoom, scroll, stage, canvas }, laid out as on the tree page): both
-     sides, «ترتيب» and zoom, and nobody can be tapped or added. When the owner hides girls' and women's
-     names, they come without them and show what they are, as in the pictures. */
+     sides, «ترتيب» and zoom, and nobody can be tapped or added. Names the owner hides («الأسامي») come
+     without them (the database leaves them out) and show what they are, as in the pictures. */
   function viewer(els, doc, vopts) {
     vopts = vopts || {};
-    var idx = index(doc), vs = views(doc, idx), hideF = !!(doc.o && doc.o.hideF);
+    var idx = index(doc), vs = views(doc, idx), hide = hideOf(doc);
     var st = { view: vs[0].key, tidy: tidyLevel(doc), shapes: 1, zl: 0, z: 1, L: null, boxW: 0, boxH: 0, center: true, fitNext: false };
     var sideBtns = Array.prototype.slice.call(els.side.querySelectorAll('button'));
 
@@ -1751,7 +1782,7 @@
       els.tidy.hidden = !canTidy;
       tidyButton(els.tidy, shapes ? Math.min(st.tidy, shapes.length) : 0, st.shapes);
       st.L = L;
-      paint(els.canvas, L, doc, { hideF: hideF, tap: vopts.tap, marked: vopts.marked, fresh: st.fresh });
+      paint(els.canvas, L, doc, { hide: hide, tap: vopts.tap, marked: vopts.marked, fresh: st.fresh });
       st.fresh = null;
       size();
       if (st.center) { st.center = false; centerOn(st.focus || doc.me); st.focus = null; }
@@ -2038,7 +2069,7 @@
       return { w: w, h: st.boxH };
     }
 
-    // A setting kept with the tree (o.hideF, o.tidy: true, or «ترتيب»'s level 2 or 3).
+    // A setting kept with the tree (o.hideF, o.hideAll, o.tidy: true, or «ترتيب»'s level 2 or 3).
     function setOpt(key, on) {
       if (!st.doc) return;
       var o = st.doc.o || {};
@@ -2344,11 +2375,14 @@
       var said = spoken(rels[pid]), rel = relLabel(doc, idx, rels, pid);
       // the drawing: my half brother («ولد أبوي») stands beside me, as a brother does in «شنو يصير لك؟»
       var walk = said.join('').replace(/[FM]([SD])/g, function (m, c) { return c === 'S' ? 'B' : 'Z'; }).split('');
-      // «أخفي أسامي البنات» is the tree's own switch, so its pictures and this one stay the same
-      var hide = !!(doc.o && doc.o.hideF), herName = p.g === 'f' && !!cleanName(p.n), myName = me.g === 'f' && !!cleanName(me.n);
+      // «الأسامي» is the tree's own setting, so its pictures and this one stay the same
+      var hide = hideOf(doc), theirName = !!cleanName(p.n), herName = p.g === 'f' && theirName, myName = me.g === 'f' && !!cleanName(me.n);
       function names() {
-        return { me: hide && myName ? '' : cleanName(me.n), them: hide && herName ? '' : cleanName(p.n) };
+        return { me: hides(doc, doc.me, hide) ? '' : cleanName(me.n), them: hides(doc, pid, hide) ? '' : cleanName(p.n) };
       }
+      var items = [{ key: '', label: 'كلها' }];
+      if (herName || myName) items.push({ key: 'f', label: 'بدون البنات' });
+      if (theirName) items.push({ key: 'all', label: 'بس اسمي' });
       // the line at the bottom, as «شنو يصير لك؟» writes it («يعني جدي»), and «الله يرحمه»
       function more(them) {
         var m = KIN.extra(said, them);
@@ -2362,12 +2396,10 @@
           return KIN.makeStory(n.me, n.them, walk, format, { rel: rel, more: more(n.them) });
         },
         text: 'شوف شنو يصير لك أي أحد على شرباكة: https://shorbaka.com',
-        option: herName || myName ? {
-          label: 'أخفي أسامي البنات',
-          hint: herName && myName ? 'يطلع «هي» و«أنا» بدال الأسامي' : herName ? 'يطلع «هي» بدال اسمها' : 'يطلع «أنا» بدال اسمك',
-          on: hide,
-          set: function (on) { hide = on; words(); if (st.doc) { setOpt('hideF', on); changed(); } }
-        } : null
+        choice: items.length < 2 ? null : {
+          label: 'الأسامي', items: items, value: hide,
+          set: function (v) { hide = v; words(); setHide(v); }
+        }
       };
       function words() {
         var n = names(), who = KIN.subject(said, n.them);
@@ -2471,7 +2503,7 @@
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
       // with a «رابط الشجرة كاملة», a picture that leaves people out carries its QR, and the sheet can copy it
       var link = st.link && signedIn() ? linkUrl(st.link) : null, open = !!(link && st.linkOpen);
-      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), tidy: tidyLevel(st.doc) > 0, qr: link, qrOpen: open };
+      var opts = { hide: hideOf(st.doc), tidy: tidyLevel(st.doc) > 0, qr: link, qrOpen: open };
       KIN.openShare({
         file: 'shorbaka-tree',
         make: function (format) { return makePicture(doc, key, format, opts); },
@@ -2487,16 +2519,26 @@
           ? 'سويت شجرة عائلتي على شرباكة 🌳 شوفوها كاملة هني: ' + link + (open ? '' : '\nواطلبوا مني الباسورد')
           : 'سويت شجرة عائلتي على شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
         // remembered with the tree, so the next picture comes out the same way
-        option: hideOption(doc, key, opts)
+        choice: namesChoice(doc, key, opts)
       }, ui.share);
     });
 
-    // The switch «أخفي أسامي البنات», remembered with the tree so the next picture comes out the same way.
-    function hideOption(doc, key, opts) {
-      return !viewHasF(doc, key) ? null : {
-        label: 'أخفي أسامي البنات', hint: 'يطلع «أختي» و«أمي» بدال الأسامي', on: opts.hideF,
-        set: function (on) { opts.hideF = on; if (st.doc) { setOpt('hideF', on); changed(); } }
+    /* «الأسامي»: «كلها»، «بدون البنات» or «بس اسمي» (each only when it changes this picture), remembered
+       with the tree so the next picture, the PDF and the «رابط الشجرة» page come out the same way. */
+    function namesChoice(doc, key, opts) {
+      var items = [{ key: '', label: 'كلها' }];
+      if (viewHasF(doc, key)) items.push({ key: 'f', label: 'بدون البنات' });
+      if (viewHasOthers(doc, key)) items.push({ key: 'all', label: 'بس اسمي' });
+      return items.length < 2 ? null : {
+        label: 'الأسامي', items: items, value: opts.hide,
+        set: function (v) { opts.hide = v; setHide(v); }
       };
+    }
+    function setHide(v) {
+      if (!st.doc) return;
+      setOpt('hideAll', v === 'all');
+      setOpt('hideF', v === 'all' || v === 'f');
+      changed();
     }
 
     // With a «رابط الشجرة كاملة», the PDF can carry its QR in the corner, or not.
@@ -2514,7 +2556,7 @@
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
       // the QR to the whole tree goes in the corner unless it was switched off (remembered with the tree)
       var link = st.link && signedIn() ? linkUrl(st.link) : null;
-      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), qr: link && !(st.doc.o && st.doc.o.pdfNoQr) ? link : null, qrOpen: !!(link && st.linkOpen) };
+      var opts = { hide: hideOf(st.doc), qr: link && !(st.doc.o && st.doc.o.pdfNoQr) ? link : null, qrOpen: !!(link && st.linkOpen) };
       var size = function (label, alt) {
         return { label: label, title: 'جاهزة للطباعة', alt: alt, dl: 'حمّل ملف PDF', tip: '' };
       };
@@ -2526,7 +2568,8 @@
         alt: famTitle(doc) + (view.label ? '، ' + view.label : ''),
         tips: { land: 'اطبعها على ورقة A4، أو أرسلها بقروب العائلة', port: 'اطبعها على ورقة A4، أو أرسلها بقروب العائلة' },
         text: 'شجرة عائلتي من شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
-        options: [hideOption(doc, key, opts), pdfQrOption(link, opts)]
+        choice: namesChoice(doc, key, opts),
+        options: [pdfQrOption(link, opts)]
       }, ui.pdf);
     });
 

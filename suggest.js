@@ -37,10 +37,11 @@
     };
     if (!ui.box || !ui.sheet) { T.viewer(els, base); return; }
 
-    var hideF = !!(base.o && base.o.hideF);
+    // the owner's «الأسامي» (tree.js hideOf): whose names stay hidden here, as in the pictures
+    var hide = T.hideOf(base);
     var me = base.p[base.me] || {}, meF = me.g === 'f';
     // who the suggestions go to: the owner's name, unless it's a girl's name the owner keeps hidden
-    var owner = (hideF && meF ? '' : String(me.n || '').trim()) || (meF ? 'صاحبة الشجرة' : 'صاحب الشجرة');
+    var owner = (T.hides(base, base.me, hide) ? '' : String(me.n || '').trim()) || (meF ? 'صاحبة الشجرة' : 'صاحب الشجرة');
     var st = { on: false, from: '', ops: [], doc: base, person: null, adding: null, union: null, back: null };
 
     ui.askText.textContent = 'تعرف أحد مو موجود بالشجرة؟ ولد، بنت، زوجة… ضيفه واقترحه على ' + owner + '.';
@@ -133,7 +134,7 @@
     function fill() {
       var doc = st.doc, pid = st.person, p = doc.p[pid];
       if (!p) { closeSheet(); return; }
-      var idx = T.index(doc), rels = T.relations(doc, idx), isMe = pid === doc.me, hid = hideF && p.g === 'f' && !marked()[pid];
+      var idx = T.index(doc), rels = T.relations(doc, idx), isMe = pid === doc.me, hid = T.hides(doc, pid, hide) && !marked()[pid];
       var shown = hid ? '' : p.n;
       ui.av.textContent = hid ? '' : initial(p.n);
       ui.who2.className = 'tr-p-who' + (isMe ? ' is-me' : p.g === 'f' ? ' is-f' : '');
@@ -167,7 +168,7 @@
     }
 
     function startAdd(t) {
-      var doc = st.doc, idx = T.index(doc), unions = t === 'S' || t === 'D' ? (idx.unions[st.person] || []) : [];
+      var doc = st.doc, idx = T.index(doc), unions = t === 'S' || t === 'D' ? (idx.unions[st.person] || []) : [], rels = null;
       st.adding = t;
       st.union = unions.length > 1 ? (unions.indexOf(st.union) >= 0 ? st.union : unions[0]) : null;
       Array.prototype.forEach.call(ui.adds.children, function (c) { c.setAttribute('aria-pressed', String(c.dataset.t === t)); });
@@ -178,7 +179,9 @@
         ui.unions.appendChild(el('span', null, doc.p[st.person].g === 'f' ? 'أبوه:' : 'أمه:'));
         unions.forEach(function (fid) {
           var x = doc.f[fid], mate = x.a === st.person ? x.b : x.a, mp = mate ? doc.p[mate] : null;
-          var label = !mp ? 'ما أعرف' : (hideF && mp.g === 'f' && !marked()[mate]) ? 'زوجته' : (mp.n || '…');
+          // a hidden name: what that wife or husband is to the owner («زوجة عمي الثانية»)
+          var label = !mp ? 'ما أعرف' : T.hides(doc, mate, hide) && !marked()[mate]
+            ? T.relLabel(doc, idx, rels || (rels = T.relations(doc, idx)), mate) : (mp.n || '…');
           var b = el('button', 'tr-chip tr-chip-sm', label);
           b.type = 'button';
           b.setAttribute('aria-pressed', String(fid === st.union));

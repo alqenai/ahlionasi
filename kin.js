@@ -592,6 +592,7 @@
       wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), wIn: $('kin-w-in'), modal: $('kin-modal'),
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
       mTitle: $('kin-m-title'), seg: $('kin-seg'), opt: $('kin-opt'), optBox: $('kin-opt-box'),
+      choice: $('kin-choice'), choiceText: $('kin-choice-text'), choiceSeg: $('kin-choice-seg'),
       optText: $('kin-opt-text'), optHint: $('kin-opt-hint'), opt2: $('kin-opt2'), opt2Box: $('kin-opt2-box'),
       opt2Text: $('kin-opt2-text'), opt2Hint: $('kin-opt2-hint'), rTree: $('kin-r-tree'), addTree: $('kin-add-tree'),
       rIn: $('kin-r-in'), rInText: $('kin-r-in-text'), rSee: $('kin-r-see'),
@@ -1282,8 +1283,10 @@
     var segs = ui.seg ? Array.prototype.slice.call(ui.seg.querySelectorAll('button')) : [];
 
     /* What the sheet is showing. A picture source is { file, make(format) -> Promise<Blob>, alt, mention }:
-       the finder's relation here, or the family tree from tree.js. It can also bring one switch,
-       option: { label, hint, on, set(on) }, shown under the size toggle (the tree's «أخفي أسامي البنات»).
+       the finder's relation here, or the family tree from tree.js. It can also bring a choice,
+       choice: { label, items: [{ key, label }], value, set(key) }, shown under the size toggle (the tree's
+       «الأسامي»: «كلها»، «بدون البنات»، «بس اسمي»), and switches under it, option: { label, hint, on, set(on) }
+       or options (a list).
        A source can bring its own sizes instead of story and post ({ key: { label, title, alt, dl } },
        sizesLabel), and make() can then resolve a file that isn't the picture shown: { file, name, type,
        preview, w, h } (the tree's PDF, with a picture of the page). */
@@ -1328,9 +1331,10 @@
       });
     }
 
-    // While a picture is being drawn, the toggle and the switches wait.
+    // While a picture is being drawn, the toggle, the choice and the switches wait.
     function busy(on) {
       segs.forEach(function (x) { x.disabled = on; });
+      choiceBtns().forEach(function (x) { x.disabled = on; });
       toggles.forEach(function (t) { t.box.disabled = on; });
       ui.img.classList.toggle('is-busy', on);
     }
@@ -1343,7 +1347,8 @@
     ].filter(function (t) { return t.wrap && t.box; });
     function optionsOf(p) { return ((p && (p.options || [p.option])) || []).filter(Boolean); }
 
-    function showOptions(list) {
+    // more: rows already shown above the switches (the choice), for the room the picture leaves them
+    function showOptions(list, more) {
       toggles.forEach(function (t, i) {
         var o = list[i];
         t.wrap.hidden = !o;
@@ -1352,8 +1357,45 @@
         t.text.textContent = o.label;
         t.hint.textContent = o.hint || '';
       });
-      ui.modal.classList.toggle('has-opt', list.length > 0);
-      ui.modal.classList.toggle('has-opt2', list.length > 1);
+      var rows = list.length + (more || 0);
+      ui.modal.classList.toggle('has-opt', rows > 0);
+      ui.modal.classList.toggle('has-opt2', rows > 1);
+    }
+
+    /* The source's choice, as a small toggle of its own: the picture is drawn again when it changes, and
+       if it can't be, the choice goes back. When the source's value isn't one of the items (the tree hides
+       girls' names, and this side of it has none), the first item shows pressed. */
+    function choiceBtns() { return ui.choiceSeg ? Array.prototype.slice.call(ui.choiceSeg.querySelectorAll('button')) : []; }
+    function pressChoice(key) { choiceBtns().forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.key === key)); }); }
+    function showChoice(c) {
+      if (!ui.choice || !ui.choiceSeg) return false;
+      ui.choice.hidden = !c;
+      ui.choiceSeg.textContent = '';
+      if (!c) return false;
+      ui.choiceText.textContent = c.label;
+      var on = c.items.some(function (it) { return it.key === c.value; }) ? c.value : c.items[0].key;
+      c.items.forEach(function (it) {
+        var b = document.createElement('button'), s = document.createElement('span');
+        b.type = 'button';
+        b.dataset.key = it.key;
+        s.textContent = it.label;
+        b.appendChild(s);
+        b.addEventListener('click', function () {
+          if (b.getAttribute('aria-pressed') === 'true' || !pic || pic.choice !== c) return;
+          var was = c.value, wasOn = (choiceBtns().filter(function (x) { return x.getAttribute('aria-pressed') === 'true'; })[0] || {}).dataset;
+          c.set(it.key); c.value = it.key;
+          pressChoice(it.key);
+          busy(true);
+          showImage(shown).catch(function () {
+            c.set(was); c.value = was;
+            pressChoice(wasOn ? wasOn.key : was);
+            flash(b, 'ما زبطت', 2000);
+          }).then(function () { busy(false); });
+        });
+        ui.choiceSeg.appendChild(b);
+      });
+      pressChoice(on);
+      return true;
     }
 
     // The size toggle shows the source's own sizes (story and post, or the page across and up and down).
@@ -1374,7 +1416,7 @@
       var s = label(from), was = s.textContent;
       pic = source;
       var first = showSizes(source);
-      showOptions(optionsOf(source));
+      showOptions(optionsOf(source), showChoice(source.choice) ? 1 : 0);
       if (ui.mLink) ui.mLink.hidden = !source.link;
       ui.modal.classList.toggle('has-link', !!(ui.mLink && source.link));
       from.disabled = true; s.textContent = 'لحظة…';

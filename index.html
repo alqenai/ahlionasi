@@ -443,6 +443,15 @@
     .kin-toggle input:focus-visible + .kin-switch { outline: 2px solid var(--teal); outline-offset: 2px; }
     .kin-toggle input:disabled + .kin-switch { opacity: .6; }
     .kin-toggle:has(input:disabled) { cursor: progress; }
+    /* a choice under the size toggle (the tree's «الأسامي»: «كلها»، «بدون البنات»، «بس اسمي»), its toggle
+       beside its word, or under it when the sheet is narrow */
+    .kin-choice {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 12px; padding: 5px 14px 5px 5px;
+      border-radius: 16px; background: rgba(244, 239, 230, .05); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .1);
+    }
+    .kin-choice-text { flex: none; font-size: .95rem; font-weight: 500; }
+    .kin-choice .kin-seg { flex: 1 1 auto; margin: 0; padding: 3px; gap: 2px; }
+    .kin-choice .kin-seg button { flex: 1 1 auto; min-height: 34px; padding: 0 8px; font-size: .86rem; white-space: nowrap; }
     .kin-modal.has-opt #kin-img { max-height: min(54vh, 520px); }
     .kin-modal.has-opt2 #kin-img { max-height: min(46vh, 440px); }
     /* the tree's «انسخ رابط الشجرة كاملة» under the buttons: the picture gives it the room */
@@ -1012,6 +1021,10 @@
         <button type="button" data-format="story" aria-pressed="true"><span>ستوري</span></button>
         <button type="button" data-format="post" aria-pressed="false"><span>بوست</span></button>
       </div>
+      <div class="kin-choice" id="kin-choice" hidden>
+        <span class="kin-choice-text" id="kin-choice-text"></span>
+        <div class="kin-seg" id="kin-choice-seg" role="group" aria-labelledby="kin-choice-text"></div>
+      </div>
       <label class="kin-toggle" id="kin-opt" hidden>
         <span class="kin-toggle-words"><span class="kin-toggle-text" id="kin-opt-text"></span><span class="kin-toggle-hint" id="kin-opt-hint"></span></span>
         <input type="checkbox" role="switch" id="kin-opt-box">
@@ -1224,8 +1237,8 @@
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
   <script src="/account.js?v=11" defer></script>
   <script src="/flags.js?v=1" defer></script>
-  <script src="/kin.js?v=23" defer></script>
-  <script src="/tree.js?v=20" defer></script>
+  <script src="/kin.js?v=24" defer></script>
+  <script src="/tree.js?v=21" defer></script>
   <script src="/work.js?v=2" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
