@@ -231,6 +231,10 @@
   /* ---------- Marriages ---------- */
 
   var MAX_WIVES = 4;
+  /* A part of the site the admins can turn off from the dashboard (flags.js): off only hides it, the
+     data stays. Without flags.js (tests), everything is on. divorce: «مطلقة», «طليقة», the two strokes. */
+  function feature(k) { var f = root.SHORBAKA_FLAGS; return !f || f[k] !== false; }
+
   var ORD = ['', 'الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة', 'التاسعة', 'العاشرة'];
 
   // A man's families with his wives, in the order he married them.
@@ -328,7 +332,7 @@
     var path = rels[pid], fid = path ? marriageOf(doc, idx, rels, pid) : null;
     if (!fid) return relName(path);
     var x = doc.f[fid], wife = path[path.length - 1] === 'W', of = path.slice(0, -1), his = of.length ? ' ' + relName(of) : '';
-    if (x.x) return wife ? (his ? 'طليقة' + his : 'طليقتي') : (his ? 'طليق' + his : 'طليقي');
+    if (x.x && feature('divorce')) return wife ? (his ? 'طليقة' + his : 'طليقتي') : (his ? 'طليق' + his : 'طليقي');
     var ws = wife ? wivesOf(doc, idx, x.a) : [];
     if (ws.length < 2) return relName(path);
     var n = ws.indexOf(fid) + 1;
@@ -417,7 +421,7 @@
       var unions = idx.unions[pid] || [], parts = [];
       unions.forEach(function (fid) {
         var x = doc.f[fid], mate = x.a === pid ? x.b : x.a, slot = null;
-        if (mate && (!line || line[fid])) slot = { pid: mate, kind: 'mate', ex: !!x.x, d: !!doc.p[mate].d };
+        if (mate && (!line || line[fid])) slot = { pid: mate, kind: 'mate', ex: !!x.x && feature('divorce'), d: !!doc.p[mate].d };
         else if (!mate && opts.ghosts && (fid === myParents || fid === view.root.fam)) {
           slot = { ghost: { of: fid === myParents ? me : view.root.via, t: x.a ? 'M' : 'F' } };
         }
@@ -477,7 +481,7 @@
     if (r.fam) {
       var R = doc.f[r.fam];
       if (R.a) top.push({ pid: R.a, kind: 'top', d: !!doc.p[R.a].d }); else if (opts.ghosts) top.push({ ghost: { of: r.via, t: 'F' } });
-      if (R.b) top.push({ pid: R.b, kind: 'top', ex: !!(R.x && R.a), d: !!doc.p[R.b].d }); else if (opts.ghosts) top.push({ ghost: { of: r.via, t: 'M' } });
+      if (R.b) top.push({ pid: R.b, kind: 'top', ex: !!(R.x && R.a) && feature('divorce'), d: !!doc.p[R.b].d }); else if (opts.ghosts) top.push({ ghost: { of: r.via, t: 'M' } });
       kids = R.k.map(person);
     } else {
       if (opts.ghosts) top.push({ ghost: { of: r.kid, t: 'F' } }, { ghost: { of: r.kid, t: 'M' } });
@@ -2135,7 +2139,7 @@
       var marks = [];
       if (!isMe) marks.push({ key: 'd', text: p.g === 'f' ? 'متوفية' : 'متوفي', hint: (p.g === 'f' ? 'ونكتب تحت اسمها ' : 'ونكتب تحت اسمه ') + '«' + rip(p) + '»', on: !!p.d,
         set: function (on) { if (on) p.d = true; else delete p.d; } });
-      if (p.g === 'f') {
+      if (p.g === 'f' && feature('divorce')) {
         var hs = (idx.unions[pid] || []).filter(function (fid) { return doc.f[fid].b === pid && doc.f[fid].a; });
         hs.forEach(function (fid) {
           var x = doc.f[fid];
@@ -2713,6 +2717,10 @@
       ui.sg.addEventListener('click', function (e) { if (e.target === ui.sg) closeSugg(); });
       document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (st.sgView && ui.sg.hidden) leaveSuggView(true); else closeSugg(); } });
       document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') loadSuggestions(); });
+    }
+    // the admins turned a part of the site on or off (flags.js): draw again
+    if (root.addEventListener) {
+      root.addEventListener('shorbaka:flags', function () { if (st.doc) render(); });
     }
 
     function loadLink() {
