@@ -279,10 +279,13 @@
   }
 
   // «أنا», «عمي», «بنت خالي», «جد أبوي».
+  // A half brother or sister on the way (my grandfather's son from his other wife) is said the everyday
+  // way, as a brother or sister: «عمي», «ولد عمي», «ولد أخوي». Only my own stay «ولد أبوي», «بنت أمي».
   function relName(path) {
     if (!path) return '';
     if (!path.length) return 'أنا';
     if (path.length === 3 && /^[FM]{3}$/.test(path.join(''))) return KIN.common(path);
+    if (path.length > 2) path = path.join('').replace(/[FM]([SD])/g, function (m, c) { return c === 'S' ? 'B' : 'Z'; }).split('');
     return KIN.phrase(path);
   }
 
@@ -393,7 +396,9 @@
       unions.forEach(function (fid) {
         var x = doc.f[fid], mate = x.a === pid ? x.b : x.a, slot = null;
         if (mate && (!line || line[fid])) slot = { pid: mate, kind: 'mate', ex: !!x.x, d: !!doc.p[mate].d };
-        else if (!mate && opts.ghosts && fid === myParents) slot = { ghost: { of: me, t: x.a ? 'M' : 'F' } };
+        else if (!mate && opts.ghosts && (fid === myParents || fid === view.root.fam)) {
+          slot = { ghost: { of: fid === myParents ? me : view.root.via, t: x.a ? 'M' : 'F' } };
+        }
         parts.push({ fid: fid, slot: slot });
       });
       // own: whose family each group of children is when it is drawn under its mother (or father)
@@ -444,6 +449,9 @@
     }
 
     var r = view.root, top = [], kids;
+    // the man at the top is drawn like everyone else, with all his wives and all their children
+    // (and so another wife can be added to him)
+    if (r.fam && doc.f[r.fam].a) return { root: person(doc.f[r.fam].a), heads: heads };
     if (r.fam) {
       var R = doc.f[r.fam];
       if (R.a) top.push({ pid: R.a, kind: 'top', d: !!doc.p[R.a].d }); else if (opts.ghosts) top.push({ ghost: { of: r.via, t: 'F' } });
