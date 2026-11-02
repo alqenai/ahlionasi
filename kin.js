@@ -1502,33 +1502,34 @@
       });
     });
 
-    /* Two sections share the page under the hero: «شنو يصير لك؟» (with the saved list) and
-       «شجرة عائلتي» (tree.js). The switcher under the hero picks one; #tree in the address opens the tree. */
+    /* Three sections share the page under the hero: «شنو يصير لك؟» (with the saved list), «شجرة عائلتي»
+       (tree.js) and «شجرة دوامي» (work.js). The switcher under the hero picks one; #tree or #work in the
+       address opens that tree. */
     var mainEl = document.querySelector('main');
     var secLinks = Array.prototype.slice.call(document.querySelectorAll('.sec'));
     function showSection(name, scroll) {
       if (!mainEl) return;
-      name = name === 'tree' && $('tree') ? 'tree' : 'kin';
+      name = (name === 'tree' || name === 'work') && $(name) ? name : 'kin';
       mainEl.setAttribute('data-sec', name);
       secLinks.forEach(function (a) {
         if (a.dataset.sec === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
       if (root.TREE && root.TREE.shown) root.TREE.shown(name === 'tree');
+      if (root.WORK && root.WORK.shown) root.WORK.shown(name === 'work');
       if (name === 'kin') render();  // names from the tree may have changed meanwhile
       if (scroll) $(name).scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
     secLinks.forEach(function (a) {
       a.addEventListener('click', function (e) {
         e.preventDefault();
-        if (history.replaceState) history.replaceState(null, '', a.dataset.sec === 'tree' ? '#tree' : '#kin');
+        if (history.replaceState) history.replaceState(null, '', '#' + a.dataset.sec);
         showSection(a.dataset.sec, true);
       });
     });
-    window.addEventListener('hashchange', function () {
-      showSection(location.hash === '#tree' ? 'tree' : 'kin', location.hash === '#tree');
-    });
-    showSection(location.hash === '#tree' ? 'tree' : 'kin', false);
-    if (location.hash === '#tree') setTimeout(function () { $('tree').scrollIntoView({ block: 'start' }); }, 0);
+    function hashSec() { return location.hash === '#tree' ? 'tree' : location.hash === '#work' ? 'work' : 'kin'; }
+    window.addEventListener('hashchange', function () { showSection(hashSec(), hashSec() !== 'kin'); });
+    showSection(hashSec(), false);
+    if (hashSec() !== 'kin' && $(hashSec())) setTimeout(function () { $(hashSec()).scrollIntoView({ block: 'start' }); }, 0);
     var acctTree = $('acct-tree');
     if (acctTree) acctTree.addEventListener('click', function () {
       closeMenu();

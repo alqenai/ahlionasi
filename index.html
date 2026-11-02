@@ -477,13 +477,21 @@
     .secs ~ .kin { margin-top: 18px; }
     main .kin { scroll-margin-top: 84px; }
     main[data-sec="tree"] #kin, main[data-sec="tree"] #kin-wallet { display: none !important; }
+    main[data-sec="work"] #kin, main[data-sec="work"] #kin-wallet { display: none !important; }
     main:not([data-sec="tree"]) #tree { display: none; }
+    main:not([data-sec="work"]) #work { display: none; }
+    /* three sections in the switcher: on a phone the words alone, a little smaller */
+    .secs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (max-width: 459px) {
+      .sec { gap: 6px; padding: 0 6px; font-size: .9rem; }
+      .sec svg { display: none; }
+    }
 
     /* «شجرة عائلتي» */
     .tree:focus { outline: none; }
     /* On a computer the tree gets the width of the screen; everything around it stays in the column. */
     @media (min-width: 760px) {
-      main[data-sec="tree"] .tree { width: min(1280px, calc(100vw - 48px)); max-width: none; }
+      main[data-sec="tree"] .tree, main[data-sec="work"] .tree { width: min(1280px, calc(100vw - 48px)); max-width: none; }
       .tree > :not(.tr-wrap), .tr-wrap > :not(.tr-scroll) { max-width: 484px; margin-inline: auto; }
     }
     .tr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -643,6 +651,32 @@
     .tr-sg-msg { margin-top: 12px; font-size: .9rem; color: var(--teal); text-align: center; }
     .tr-sg-msg.is-err { color: var(--coral); }
 
+    /* work tree: «شجرة دوامي» (work.js). Rings are departments; me in sand. */
+    .wk-node.is-left { opacity: .45; }
+    .wk-node .tr-av, .wk-p-av { position: relative; }
+    .wk-heart {
+      position: absolute; top: -7px; right: -7px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+      background: var(--sand); box-shadow: 0 0 0 2px var(--navy);
+    }
+    .wk-heart svg { width: 13px; height: 13px; fill: var(--navy); }
+    .wk-keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin-top: 12px; font-size: .82rem; color: #C9D6E3; }
+    .wk-key { display: inline-flex; align-items: center; gap: 6px; }
+    .wk-key i, .wk-dept i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+    .wk-dept { gap: 7px; }
+    .wk-dept[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--teal); }
+    .wk-dept-new::before { content: "+"; font-size: 1.05rem; font-weight: 700; color: var(--teal); }
+    .wk-p-edit { display: grid; gap: 10px; margin-top: 4px; }
+    .wk-p-edit .tr-p-rename { margin-top: 0; }
+    .wk-p-edit label > span, .wk-p-form label > span { display: block; font-size: .82rem; color: var(--muted); margin: 0 4px 6px; }
+    .wk-p-edit .kin-seg, .wk-p-form .kin-seg { margin-bottom: 0; }
+    .wk-p-edit .kin-seg button, .wk-p-form .kin-seg button { min-height: 40px; }
+    .wk-p-dept-form { margin-top: 8px; }
+    .wk-p-who .tr-av { box-shadow: 0 0 0 3px var(--ring, var(--teal)); }
+    .wk-co-btn.is-empty::before { content: "+"; }
+    .wk-p-err { font-size: .88rem; color: var(--coral); }
+    #wk-side button { white-space: nowrap; }
+    @media (max-width: 399px) { #wk-tidy { width: 46px; padding: 0; justify-content: center; } #wk-tidy span { display: none; } }
+
     /* One person's sheet */
     .tr-p-who { display: flex; align-items: center; gap: 12px; min-width: 0; padding-inline-start: 4px; }
     .tr-p-who .tr-av { width: 46px; height: 46px; font-size: 1.15rem; box-shadow: 0 0 0 3px var(--teal); }
@@ -783,6 +817,7 @@
     <nav class="secs" aria-label="أقسام شرباكة">
       <a class="sec" href="#kin" data-sec="kin" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="7.5" r="3"/><circle cx="17.5" cy="16.5" r="3"/><path d="M9 9.6l6 4.8"/></svg><span>شنو يصير لك؟</span></a>
       <a class="sec" href="#tree" data-sec="tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>شجرة عائلتي</span></a>
+      <a class="sec" href="#work" data-sec="work"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7V5.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V7M3 13h18"/></svg><span>شجرة دوامي</span></a>
     </nav>
 
     <section class="kin" id="kin" aria-labelledby="kin-title">
@@ -905,6 +940,64 @@
       </div>
       <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>شجرتك لك بروحك.</b> ما تنشر بالموقع ولا نشاركها مع أحد، وإنت اللي تقرر إذا تبي تشاركها صورة أو رابط بباسورد. وتقدر تمسح أي أحد منها متى ما تبي.</span></p>
     </section>
+
+    <section class="kin tree" id="work" tabindex="-1" aria-labelledby="wk-title">
+      <div class="tr-head">
+        <div>
+          <h2 id="wk-title">شجرة دوامي</h2>
+          <p class="kin-en" lang="en">My work tree</p>
+        </div>
+        <span class="tr-count" id="wk-count"></span>
+      </div>
+      <p class="kin-sub">ابدأ بنفسك وضيف مديرك وزملائك وفريقك، وتحت كل اسم نكتب لك شنو يصير لك.</p>
+
+      <p class="tr-msg" id="wk-msg" role="status" hidden></p>
+      <button type="button" class="kin-btn tr-retry" id="wk-retry" hidden><span>جرّب مرة ثانية</span></button>
+
+      <form class="tr-start" id="wk-start" novalidate hidden>
+        <label class="tr-field"><span>اسمك</span><input class="tr-input" id="wk-me" type="text" maxlength="40" autocomplete="given-name" placeholder="مثال: علي" enterkeyhint="next"></label>
+        <label class="tr-field"><span>شغلتك <i>(إذا تبي)</i></span><input class="tr-input" id="wk-job" type="text" maxlength="40" autocomplete="organization-title" placeholder="مثال: مصمم" enterkeyhint="next"></label>
+        <label class="tr-field"><span>اسم الشركة <i>(إذا تبي)</i></span><input class="tr-input" id="wk-co-start" type="text" maxlength="40" autocomplete="organization" placeholder="مثال: شركة اللؤلؤة" enterkeyhint="done"></label>
+        <div class="tr-field">
+          <span id="wk-g-label">إنت</span>
+          <div class="kin-seg tr-g" id="wk-g" role="group" aria-labelledby="wk-g-label">
+            <button type="button" data-g="m" aria-pressed="false">ولد</button>
+            <button type="button" data-g="f" aria-pressed="false">بنت</button>
+          </div>
+        </div>
+        <p class="tr-err" id="wk-start-err" role="alert" hidden></p>
+        <button type="submit" class="kin-btn kin-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7V5.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V7M3 13h18"/></svg><span>ابدأ شجرة دوامي</span></button>
+      </form>
+
+      <div class="tr-wrap" id="wk-wrap" hidden>
+        <div class="tr-fam">
+          <button type="button" class="tr-fam-btn wk-co-btn" id="wk-co-btn"><span id="wk-co-text"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>
+          <form class="tr-fam-form" id="wk-co-form" hidden>
+            <label><span>اسم الشركة</span><input class="tr-input" id="wk-co-name" type="text" maxlength="40" autocomplete="organization" placeholder="مثال: شركة اللؤلؤة" enterkeyhint="done"></label>
+            <button type="submit" class="kin-w-ok"><span>حفظ</span></button>
+          </form>
+        </div>
+        <div class="tr-bar" id="wk-bar">
+          <div class="kin-seg tr-side" id="wk-side" role="group" aria-label="شنو تشوف" hidden>
+            <button type="button" data-v="all" aria-pressed="true">كل الدوام</button>
+            <button type="button" data-v="mine" aria-pressed="false">قسمي</button>
+          </div>
+          <button type="button" class="tr-tidy" id="wk-tidy" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M6.5 12h11M9 17.5h6"/></svg><span>ترتيب</span></button>
+          <button type="button" class="tr-zoom" id="wk-zoom" aria-pressed="false" hidden></button>
+        </div>
+        <div class="wk-keys" id="wk-keys" hidden></div>
+        <div class="tr-scroll" id="wk-scroll"><div class="tr-stage" id="wk-stage"><div class="tr-canvas" id="wk-canvas"></div></div></div>
+        <p class="tr-hint">دوس على أي اسم عشان تضيف مديره أو زملاءه أو فريقه.</p>
+        <div class="tr-actions">
+          <button type="button" class="kin-btn kin-primary" id="wk-share"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شاركها ستوري</span></button>
+          <button type="button" class="kin-btn" id="wk-pdf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="8" rx="2"/><path d="M7 14.5h10V21H7z"/></svg><span>PDF للطباعة</span></button>
+        </div>
+        <p class="kin-w-note tr-note" id="wk-note"></p>
+        <button type="button" class="tr-link" id="wk-save-retry" hidden>جرّب مرة ثانية</button>
+        <button type="button" class="kin-w-in tr-in" id="wk-in" hidden>سجّل دخول عشان تنحفظ بحسابك</button>
+      </div>
+      <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>شجرتك لك بروحك.</b> ما تنشر بالموقع ولا نشاركها مع أحد، وإنت اللي تقرر شنو تشارك. وتقدر تخفي الأسامي قبل لا تنشرها.</span></p>
+    </section>
   </main>
 
   <footer>© <span id="y">2026</span> SHORBAKA.COM</footer>
@@ -1005,6 +1098,60 @@
     </div>
   </div>
 
+  <div class="kin-modal" id="wk-sheet" role="dialog" aria-modal="true" aria-labelledby="wk-p-title" hidden>
+    <div class="kin-sheet tr-psheet">
+      <div class="kin-sheet-head">
+        <div class="tr-p-who wk-p-who" id="wk-p-who"><span class="tr-av wk-p-av" id="wk-p-av"></span><div class="tr-p-id"><h3 id="wk-p-title"></h3><p class="tr-p-rel" id="wk-p-rel"></p></div></div>
+        <button type="button" class="kin-x" id="wk-p-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <form class="wk-p-edit" id="wk-p-edit">
+        <label><span>الاسم</span><input class="tr-input" id="wk-p-name" type="text" maxlength="40" autocomplete="off" enterkeyhint="next"></label>
+        <label><span>شغلته <i>(إذا تبي)</i></span><input class="tr-input" id="wk-p-job" type="text" maxlength="40" autocomplete="off" placeholder="مثال: محاسب" enterkeyhint="done"></label>
+        <div class="kin-seg" id="wk-p-g" role="group" aria-label="ولد ولا بنت">
+          <button type="button" data-g="m" aria-pressed="false">ولد</button>
+          <button type="button" data-g="f" aria-pressed="false">بنت</button>
+        </div>
+        <button type="submit" class="kin-w-ok" id="wk-p-save" disabled><span>حفظ</span></button>
+      </form>
+      <p class="tr-p-label">القسم</p>
+      <div class="tr-p-adds" id="wk-p-depts"></div>
+      <form class="tr-fam-form wk-p-dept-form" id="wk-p-dept-form" hidden>
+        <label><span>اسم القسم</span><input class="tr-input" id="wk-p-dept-name" type="text" maxlength="24" autocomplete="off" placeholder="مثال: التسويق" enterkeyhint="done"></label>
+        <button type="submit" class="kin-w-ok"><span>ضيف</span></button>
+      </form>
+      <p class="tr-p-label">ضيف</p>
+      <div class="tr-p-adds" id="wk-p-adds"></div>
+      <form class="tr-p-form wk-p-form" id="wk-p-form" novalidate hidden>
+        <label><span id="wk-p-form-label"></span><input class="tr-input" id="wk-p-new" type="text" maxlength="40" autocomplete="off" enterkeyhint="next"></label>
+        <label><span>شغلته <i>(إذا تبي)</i></span><input class="tr-input" id="wk-p-new-job" type="text" maxlength="40" autocomplete="off" placeholder="مثال: محاسب" enterkeyhint="done"></label>
+        <div class="kin-seg" id="wk-p-new-g" role="group" aria-label="ولد ولا بنت">
+          <button type="button" data-g="m" aria-pressed="false">ولد</button>
+          <button type="button" data-g="f" aria-pressed="false">بنت</button>
+        </div>
+        <p class="wk-p-err" id="wk-p-err" role="alert" hidden></p>
+        <button type="submit" class="kin-btn kin-primary" id="wk-p-add"><span>ضيف</span></button>
+      </form>
+      <p class="tr-p-done" id="wk-p-done" role="status"></p>
+      <div class="tr-p-marks" id="wk-p-marks">
+        <label class="kin-toggle">
+          <span class="kin-toggle-words"><span class="kin-toggle-text">ربعي</span><span class="kin-toggle-hint">يطلع عليه قلب، واسمه يبين حتى لو خفيت الأسامي</span></span>
+          <input type="checkbox" role="switch" id="wk-p-friend">
+          <span class="kin-switch" aria-hidden="true"></span>
+        </label>
+        <label class="kin-toggle">
+          <span class="kin-toggle-words"><span class="kin-toggle-text">طلع من الدوام</span></span>
+          <input type="checkbox" role="switch" id="wk-p-left">
+          <span class="kin-switch" aria-hidden="true"></span>
+        </label>
+      </div>
+      <button type="button" class="tr-p-del" id="wk-p-del"><span></span></button>
+      <div class="tr-p-confirm" id="wk-p-confirm" hidden>
+        <p id="wk-p-warn"></p>
+        <div><button type="button" class="tr-p-yes" id="wk-p-yes">امسح</button><button type="button" class="tr-p-no" id="wk-p-no">تراجع</button></div>
+      </div>
+    </div>
+  </div>
+
   <div class="kin-modal" id="tr-sg" role="dialog" aria-modal="true" aria-labelledby="tr-sg-title" hidden>
     <div class="kin-sheet tr-sgsheet">
       <div class="kin-sheet-head">
@@ -1075,10 +1222,11 @@
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=10" defer></script>
+  <script src="/account.js?v=11" defer></script>
   <script src="/flags.js?v=1" defer></script>
-  <script src="/kin.js?v=21" defer></script>
+  <script src="/kin.js?v=23" defer></script>
   <script src="/tree.js?v=20" defer></script>
+  <script src="/work.js?v=1" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>

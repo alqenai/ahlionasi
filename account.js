@@ -50,7 +50,7 @@
      finish (browsers allow up to 64 KB); if the browser refuses, it goes again as a normal request. */
   function fetchKeep(input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || '';
-    if (init && init.method === 'POST' && url.indexOf('/rest/v1/family_trees') >= 0 && typeof init.body === 'string' &&
+    if (init && init.method === 'POST' && /\/rest\/v1\/(family|work)_trees/.test(url) && typeof init.body === 'string' &&
         root.Blob && new Blob([init.body]).size < 60000) {
       return fetch(input, Object.assign({}, init, { keepalive: true })).catch(function () { return fetch(input, init); });
     }
@@ -192,16 +192,30 @@
   /* The same save, sent before this function returns, for when the page is being closed: a page on its
      way out can't wait for Supabase to look up the session first. Returns the request, or null when
      it can't go this way (no session yet, or the tree is over the 64 KB a closing page may send). */
-  function saveTreeNow(data) {
+  function saveTreeNow(data, table) {
     if (!session || !session.access_token || !user || !root.fetch || !root.Blob) return null;
     var body = JSON.stringify({ user_id: user.id, data: data, updated_at: new Date().toISOString() });
     if (new Blob([body]).size >= 60000) return null;
-    return root.fetch(CONFIG.supabaseUrl + '/rest/v1/family_trees?on_conflict=user_id', {
+    return root.fetch(CONFIG.supabaseUrl + '/rest/v1/' + (table || 'family_trees') + '?on_conflict=user_id', {
       method: 'POST', keepalive: true, body: body,
       headers: { apikey: CONFIG.supabaseKey, Authorization: 'Bearer ' + session.access_token,
         'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }
     }).then(function (res) { if (!res.ok) throw new Error('tree not saved: ' + res.status); });
   }
+
+  // «شجرة دوامي» (work.js): one document per account too, in its own table; null when there is none yet.
+  function loadWorkTree() {
+    return client.from('work_trees').select('data').eq('user_id', user.id).maybeSingle().then(function (res) {
+      if (res.error) throw res.error;
+      return res.data ? res.data.data : null;
+    });
+  }
+  function saveWorkTree(data) {
+    return client.from('work_trees')
+      .upsert({ user_id: user.id, data: data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      .then(rows);
+  }
+  function saveWorkTreeNow(data) { return saveTreeNow(data, 'work_trees'); }
 
   // Fixes the name of a saved person. If that name with that relation is already saved, the two become one.
   function rename(id, them) {
@@ -267,7 +281,10 @@
     rename: rename,
     loadTree: loadTree,
     saveTree: saveTree,
-    saveTreeNow: saveTreeNow,
+    saveTreeNow: function (data) { return saveTreeNow(data); },
+    loadWorkTree: loadWorkTree,
+    saveWorkTree: saveWorkTree,
+    saveWorkTreeNow: saveWorkTreeNow,
     treeLink: treeLink,
     setTreeLink: setTreeLink,
     stopTreeLink: stopTreeLink,
