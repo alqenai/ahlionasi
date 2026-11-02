@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>لوحة التحكم | شرباكة</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0E2A47">
+  <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+  <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0E2A47; --deep: #12385E; --bg: #0B233B;
+      --teal: #2EC4B6; --coral: #FF8A80; --pearl: #F4EFE6; --sand: #E9C46A; --muted: #9DB2C8;
+      --card: rgba(244, 239, 230, .055); --line: rgba(244, 239, 230, .12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+    html, body { background: var(--bg); }
+    body {
+      font-family: "Readex Pro", system-ui, sans-serif; color: var(--pearl); line-height: 1.6;
+      min-height: 100vh; min-height: 100dvh;
+      padding: calc(16px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
+      font-variant-numeric: tabular-nums;
+    }
+    button, input { font: inherit; color: inherit; }
+    .wrap { max-width: 1040px; margin: 0 auto; }
+
+    header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    header .mark { width: 40px; height: 40px; display: block; }
+    header h1 { font-size: 1.25rem; font-weight: 700; }
+    header .who { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); min-width: 0; }
+    header .who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 6px 14px;
+      border: 0; border-radius: 999px; background: rgba(244, 239, 230, .08); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .2);
+      cursor: pointer; font-size: .9rem; white-space: nowrap;
+    }
+    .btn:hover { background: rgba(244, 239, 230, .14); }
+    .btn:focus-visible, .tab:focus-visible, .input:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .btn.primary { background: var(--teal); color: var(--navy); box-shadow: none; font-weight: 700; }
+    .btn.danger { color: var(--coral); box-shadow: inset 0 0 0 1px rgba(255, 138, 128, .45); }
+    .btn.small { min-height: 34px; padding: 4px 12px; font-size: .82rem; }
+    .btn:disabled { opacity: .5; cursor: default; }
+
+    .card { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 20px; padding: 18px; }
+    .gate { max-width: 440px; margin: 48px auto 0; text-align: center; }
+    .gate h2 { font-size: 1.3rem; margin-bottom: 6px; }
+    .gate p { color: var(--muted); }
+    .gate .g-btn { display: flex; justify-content: center; margin-top: 18px; min-height: 44px; }
+    .gate form { display: grid; gap: 10px; margin-top: 14px; }
+    .input {
+      width: 100%; padding: 10px 14px; border: 0; border-radius: 14px; background: rgba(244, 239, 230, .07);
+      box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .18); outline: none; font-size: 1rem;
+    }
+    .or { margin-top: 16px; font-size: .85rem; color: var(--muted); }
+    .err { color: var(--coral); font-size: .9rem; }
+    .sql {
+      direction: ltr; text-align: left; margin-top: 14px; padding: 12px; border-radius: 12px; background: rgba(0, 0, 0, .25);
+      font: .8rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; user-select: all;
+    }
+
+    .tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 20px 0 16px; }
+    .tabs .tl { display: flex; gap: 6px; overflow-x: auto; max-width: 100%; }
+    .tabs .rf { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; }
+    .tab {
+      border: 0; background: transparent; padding: 8px 14px; border-radius: 999px; cursor: pointer; color: var(--muted); white-space: nowrap;
+    }
+    .tab[aria-selected="true"] { background: rgba(244, 239, 230, .1); color: var(--pearl); box-shadow: inset 0 0 0 1px var(--line); }
+    .stamp { font-size: .78rem; color: var(--muted); white-space: nowrap; }
+
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .tile { padding: 14px 16px; }
+    .tile .k { font-size: .82rem; color: var(--muted); }
+    .tile .v { font-size: 1.9rem; font-weight: 700; line-height: 1.2; margin-top: 2px; }
+    .tile .s { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+    .tile .s b { color: var(--teal); font-weight: 500; }
+
+    .chart { margin-top: 12px; }
+    .chart h3, .sec h3 { font-size: 1rem; font-weight: 500; }
+    .chart .sub { font-size: .8rem; color: var(--muted); }
+    .bars { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 160px; margin-top: 14px;
+      border-bottom: 1px solid var(--line); direction: ltr; }
+    .bar { flex: 1; height: 100%; display: flex; align-items: flex-end; cursor: default; position: relative; }
+    .bar i { display: block; width: 100%; background: var(--teal); border-radius: 4px 4px 0 0; min-height: 0; }
+    .bar.zero i { background: transparent; }
+    .bar:hover i, .bar:focus i { background: #5FD8CC; }
+    .bar:focus { outline: none; }
+    .axis { display: flex; justify-content: space-between; direction: ltr; font-size: .72rem; color: var(--muted); margin-top: 4px; }
+    .tip {
+      position: absolute; bottom: calc(100% + 6px); transform: translateX(-50%); padding: 6px 10px; border-radius: 10px;
+      background: var(--pearl); color: var(--navy); font-size: .78rem; white-space: nowrap; pointer-events: none; direction: rtl; z-index: 2;
+    }
+    .gridline { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(244, 239, 230, .08); font-size: .68rem; color: var(--muted); }
+    .gridline span { position: absolute; left: 0; top: -1.3em; }
+    details.tbl { margin-top: 10px; font-size: .85rem; color: var(--muted); }
+    details.tbl table { width: 100%; border-collapse: collapse; margin-top: 8px; color: var(--pearl); }
+    details.tbl td, details.tbl th { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: start; font-weight: 400; }
+
+    .split { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+    @media (min-width: 760px) { .split { grid-template-columns: 2fr 1fr; } }
+    .meter { height: 8px; border-radius: 4px; background: rgba(244, 239, 230, .1); overflow: hidden; display: flex; gap: 2px; margin: 10px 0 6px; }
+    .meter i { display: block; height: 100%; }
+    .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--muted); }
+    .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 6px; background: var(--c); vertical-align: -1px; }
+
+    .search { display: flex; gap: 8px; margin-bottom: 12px; }
+    .users { display: grid; gap: 10px; }
+    .user { padding: 14px 16px; }
+    .user .top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .user .em { font-weight: 500; direction: ltr; unicode-bidi: plaintext; word-break: break-all; }
+    .chip { font-size: .72rem; padding: 1px 8px; border-radius: 999px; background: rgba(244, 239, 230, .1); color: var(--muted); }
+    .chip.admin { background: rgba(233, 196, 106, .18); color: var(--sand); }
+    .chip.blocked { background: rgba(255, 138, 128, .16); color: var(--coral); }
+    .user .meta { display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: .82rem; color: var(--muted); margin-top: 6px; }
+    .user .meta b { color: var(--pearl); font-weight: 500; }
+    .user .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .more { display: flex; justify-content: center; margin-top: 12px; }
+    .count { font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
+
+    .feed { list-style: none; display: grid; gap: 0; }
+    .feed li { display: flex; gap: 12px; align-items: baseline; padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: .92rem; }
+    .feed li:last-child { border-bottom: 0; }
+    .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); transform: translateY(-1px); }
+    .feed .txt { flex: 1; min-width: 0; }
+    .feed .txt bdi { direction: ltr; unicode-bidi: isolate; color: var(--muted); word-break: break-all; }
+    .feed time { flex: none; font-size: .78rem; color: var(--muted); }
+    .note { font-size: .8rem; color: var(--muted); margin-top: 14px; }
+    .toast {
+      position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+      background: var(--pearl); color: var(--navy); padding: 10px 18px; border-radius: 999px; font-size: .9rem; z-index: 9; max-width: calc(100% - 32px);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a href="/" aria-label="شرباكة"><img class="mark" src="/favicon.svg?v=2" alt=""></a>
+      <h1>لوحة التحكم</h1>
+      <div class="who" id="who" hidden><span id="who-email"></span><button class="btn small" id="signout" type="button">اطلع</button></div>
+    </header>
+
+    <section class="gate card" id="g-wait"><p>لحظة…</p></section>
+
+    <section class="gate card" id="g-in" hidden>
+      <h2>سجّل دخولك</h2>
+      <p>بنفس حسابك اللي بشرباكة.</p>
+      <div class="g-btn" id="g-google"></div>
+      <p class="or">أو بإيميلك</p>
+      <form id="g-mail">
+        <input class="input" id="g-email" type="email" inputmode="email" autocomplete="email" placeholder="الإيميل" dir="ltr" required>
+        <button class="btn primary" type="submit">أرسل لي كود</button>
+      </form>
+      <form id="g-code" hidden>
+        <input class="input" id="g-otp" inputmode="numeric" autocomplete="one-time-code" placeholder="الكود" dir="ltr" required>
+        <button class="btn primary" type="submit">دخول</button>
+      </form>
+      <p class="err" id="g-err" hidden></p>
+    </section>
+
+    <section class="gate card" id="g-no" hidden>
+      <h2>هذا الحساب مو أدمن</h2>
+      <p>إذا هذا حسابك، انسخ السطر تحت وشغّله بـ Supabase ← SQL Editor، وبعدين حدّث الصفحة.</p>
+      <div class="sql" id="g-sql"></div>
+      <p style="margin-top:12px"><button class="btn small" id="g-copy" type="button">انسخ</button></p>
+    </section>
+
+    <section class="gate card" id="g-setup" hidden>
+      <h2>باقي خطوة وحدة</h2>
+      <p>شغّل ملف <span dir="ltr">20261102_admin.sql</span> بـ Supabase ← SQL Editor، وبعدين حدّث الصفحة.</p>
+      <p style="margin-top:12px"><a class="btn small" href="https://raw.githubusercontent.com/alqenai/shorbaka/main/supabase/migrations/20261102_admin.sql" target="_blank" rel="noopener">افتح الملف</a></p>
+    </section>
+
+    <section class="gate card" id="g-fail" hidden>
+      <h2>ما قدرنا نجيب البيانات</h2>
+      <p id="g-fail-msg"></p>
+      <p style="margin-top:12px"><button class="btn small" type="button" onclick="location.reload()">جرّب مرة ثانية</button></p>
+    </section>
+
+    <main id="dash" hidden>
+      <nav class="tabs">
+        <div class="tl" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-tab="overview">نظرة عامة</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="users">المستخدمين</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="activity">آخر الأحداث</button>
+        </div>
+        <div class="rf"><span class="stamp" id="stamp"></span><button class="btn small" id="refresh" type="button">تحديث</button></div>
+      </nav>
+
+      <section id="p-overview" role="tabpanel">
+        <div class="tiles" id="tiles"></div>
+        <div class="split">
+          <div class="card chart">
+            <h3>حسابات جديدة كل يوم</h3>
+            <p class="sub">آخر 30 يوم، بتوقيت الكويت</p>
+            <div class="bars" id="bars"></div>
+            <div class="axis" id="axis"></div>
+            <details class="tbl"><summary>عرض كجدول</summary><table id="days-table"></table></details>
+          </div>
+          <div class="card chart">
+            <h3>كيف يدخلون</h3>
+            <div class="meter" id="meter"></div>
+            <div class="legend" id="legend"></div>
+            <h3 style="margin-top:22px">روابط الشجرة</h3>
+            <div class="meter" id="meter2"></div>
+            <div class="legend" id="legend2"></div>
+          </div>
+        </div>
+        <p class="note">اللوحة تعرض أرقام وحسابات بس. أسامي الناس داخل الشجرات والقرابات ما تطلع هني، مثل ما يوعدهم الموقع.</p>
+      </section>
+
+      <section id="p-users" role="tabpanel" hidden>
+        <form class="search" id="search">
+          <input class="input" id="q" type="search" placeholder="دوّر بالإيميل أو الاسم" autocomplete="off">
+          <button class="btn" type="submit">دوّر</button>
+        </form>
+        <p class="count" id="u-count"></p>
+        <div class="users" id="users"></div>
+        <div class="more"><button class="btn" id="u-more" type="button" hidden>اعرض أكثر</button></div>
+      </section>
+
+      <section id="p-activity" role="tabpanel" hidden>
+        <div class="card"><ul class="feed" id="feed"></ul></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="/account.js?v=9"></script>
+  <script src="/admin/admin.js?v=1"></script>
+</body>
+</html>

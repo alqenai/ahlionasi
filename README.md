@@ -34,6 +34,13 @@ Static files, no build step, served by GitHub Pages from `main`:
 3. Supabase → Authentication → Sign In / Providers → Google: enabled, with that client ID under *Client IDs*.
 4. Fill `CONFIG` in `account.js` with the project URL, its public (anon) key and the Google client ID.
 
+## لوحة التحكم (admin)
+
+`shorbaka.com/admin/` (`admin/index.html`, `admin/admin.js`): numbers, sign-ups per day, the account list (block, stop a tree link, delete) and recent activity. The page is public; the `admin_*` functions in `supabase/migrations/20261102_admin.sql` answer only accounts listed in `public.admins`. They never return the names inside trees or saved relations.
+
+1. Run `20261102_admin.sql` in the Supabase SQL Editor.
+2. Open `shorbaka.com/admin/` signed in; it shows a line `insert into public.admins …` with your account id. Run that line too, then reload.
+
 ## Brand
 
 - **Logo:** "Rings" (الحلقتين). Two linked rings, one for family and one for friends, with a pearl in the middle for you.
