@@ -965,14 +965,31 @@
     return { doc: d, map: map, done: done, left: left };
   }
 
-  /* What each step would add, for the owner to pick from: [{ id, n, rel, needs }] (rel: what the new
-     person is to the owner, «ولد عمي»; '' when the step no longer fits). */
+  /* What each step would add, for the owner to pick from: [{ id, pid, n, rel, via, needs }]. rel: what
+     the new person is to the owner, «ولد عمي» ('' when the step no longer fits); pid: their id on the
+     tree with every step added; via: who they hang from, «ولد عبدالله (عمي)», so the owner knows the
+     exact place ('' when it's the owner themself). */
+  var STEP_OF = { F: 'أبو', M: 'أم', B: 'أخو', Z: 'أخت', S: 'ولد', D: 'بنت', H: 'زوج', W: 'زوجة' };
   function describeSteps(doc, ops) {
     var steps = cleanSteps(ops), r = replay(doc, steps), idx = index(r.doc), rels = relations(r.doc, idx);
     return steps.map(function (op) {
-      var id = r.map[op.id];
-      return { id: op.id, n: op.n, rel: id ? relLabel(r.doc, idx, rels, id) : '', needs: stepNeeds(steps, op) };
+      var id = r.map[op.id], of = r.map[op.of] || (doc.p[op.of] ? op.of : null), via = '';
+      if (id && of && of !== r.doc.me) {
+        var who = r.doc.p[of], whoRel = relLabel(r.doc, idx, rels, of);
+        via = STEP_OF[op.t] + ' ' + (who.n || 'بدون اسم') + (whoRel ? ' (' + whoRel + ')' : '');
+      }
+      return { id: op.id, pid: id || null, n: op.n, rel: id ? relLabel(r.doc, idx, rels, id) : '', via: via, needs: stepNeeds(steps, op) };
     });
+  }
+
+  /* Picking a step picks the steps it stands on; leaving one out leaves out the steps built on it.
+     pick: { stepId: true }; only steps in ok can be picked. */
+  function pickStep(steps, pick, id, on, ok) {
+    if (ok && !ok[id]) return;
+    if (!!pick[id] === on) return;
+    if (on) pick[id] = true; else delete pick[id];
+    if (on) (steps.filter(function (y) { return y.id === id; })[0] || { needs: [] }).needs.forEach(function (n) { pickStep(steps, pick, n, true, ok); });
+    else steps.forEach(function (y) { if (y.needs.indexOf(id) >= 0) pickStep(steps, pick, y.id, false, ok); });
   }
 
   /* The line from parents down to each child, turning with round corners instead of square ones:
@@ -1055,7 +1072,7 @@
     allHeads: allHeads, canAdd: canAdd, kinOf: kinOf, addWalk: addWalk, fitLayout: fitLayout, linkLines: linkLines, rowsOf: rowsOf,
     canMarry: canMarry, wivesOf: wivesOf, wifeIn: wifeIn, moveWife: moveWife, relLabel: relLabel, marriageOf: marriageOf,
     spreadRow: spreadRow, exMark: exMark, rip: rip, cleanName: cleanName, helpers: helpers,
-    cleanSteps: cleanSteps, stepNeeds: stepNeeds, replay: replay, describeSteps: describeSteps, thanksLine: thanksLine
+    cleanSteps: cleanSteps, stepNeeds: stepNeeds, replay: replay, describeSteps: describeSteps, pickStep: pickStep, thanksLine: thanksLine
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = TREE;
   root.TREE = TREE;
@@ -1573,6 +1590,8 @@
     return c ? c.toUpperCase() : '؟';
   }
 
+  // The tree drawn small, on the button that shows a suggestion's place on the tree.
+  var TREE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg>';
   var ZOOM = {
     out: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20M7.5 10.5h6"/>',
     in: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20M7.5 10.5h6M10.5 7.5v6"/>'
@@ -1646,6 +1665,7 @@
     if (!isMe && p.g === 'f') b.classList.add('is-f');
     if (opts.fresh && n.pid === opts.fresh) b.classList.add('is-new');
     if (opts.marked && opts.marked[n.pid]) b.classList.add('is-sugg');
+    if (opts.skipped && opts.skipped[n.pid]) b.classList.add('is-skip');
     b.dataset.pid = n.pid;
     var av = el('span', 'tr-av', hidden ? null : initial(p.n));
     if (hidden) { av.classList.add('is-pearl'); av.appendChild(el('i')); }
@@ -1786,7 +1806,8 @@
       lForm: $('tr-l-form'), lLabel: $('tr-l-label'), lPass: $('tr-l-pass'), lSave: $('tr-l-save'), lCancel: $('tr-l-cancel'),
       lMore: $('tr-l-more'), lChange: $('tr-l-change'), lStop: $('tr-l-stop'), lConfirm: $('tr-l-confirm'), lYes: $('tr-l-yes'), lNo: $('tr-l-no'),
       lOpen: $('tr-l-open'), lFree: $('tr-l-free'), lAsk: $('tr-l-ask'), lTip: $('tr-l-tip'),
-      sgBar: $('tr-sg-bar'), sgBarText: $('tr-sg-bar-text'), sg: $('tr-sg'), sgClose: $('tr-sg-close'), sgList: $('tr-sg-list'), sgMsg: $('tr-sg-msg')
+      sgBar: $('tr-sg-bar'), sgBarText: $('tr-sg-bar-text'), sg: $('tr-sg'), sgClose: $('tr-sg-close'), sgList: $('tr-sg-list'), sgMsg: $('tr-sg-msg'),
+      sgv: $('tr-sgv'), sgvText: $('tr-sgv-text'), sgvAdd: $('tr-sgv-add'), sgvNo: $('tr-sgv-no'), sgvBack: $('tr-sgv-back')
     };
     if (!ui.sec || !ui.canvas || !KIN) return;
 
@@ -1796,7 +1817,8 @@
       person: null, from: null, adding: null, union: null, g: '',
       saving: null, again: false, saveErr: false, pending: false,
       // «رابط الشجرة كاملة»: the link's code, null for none, undefined while it's asked for
-      link: null, linkErr: false, linkOff: false
+      link: null, linkErr: false, linkOff: false,
+      sgView: null  // a suggestion being looked at on the tree (seeSugg)
     };
     var acctReady = !root.ACCOUNT, timer = null, told = null;  // told: the tree kin.js last heard about
     var sideBtns = Array.prototype.slice.call(ui.side.querySelectorAll('button'));
@@ -1828,6 +1850,7 @@
       var a = signedIn(), uid = a ? a.user().id : null;
       if (!force && uid === synced) return;
       synced = uid;
+      if (st.sgView) { st.sgView = null; ui.wrap.classList.remove('is-sgview'); ui.sgv.hidden = true; document.documentElement.classList.remove('tr-sgview-on'); }
       loadLink();
       var seq = ++st.seq;
       st.failed = false;
@@ -1984,14 +2007,14 @@
     }
 
     function draw() {
-      var doc = st.doc, idx = index(doc), vs = views(doc, idx);
+      var pv = st.sgView, doc = pv ? pv.doc : st.doc, idx = index(doc), vs = views(doc, idx);
       var view = vs.filter(function (v) { return v.key === st.view; })[0] || vs[0];
       st.view = view.key;
       ui.side.hidden = vs.length < 2;
       sideBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.side === view.key)); });
 
       // «ترتيب» shows once the tree is wider than the screen: then it can gather it to the screen's shape
-      var base = { ghosts: true, mates: 'all' }, L = layout(doc, idx, view, SCREEN, base), box = screenBox();
+      var base = { ghosts: !pv, mates: 'all' }, L = layout(doc, idx, view, SCREEN, base), box = screenBox();
       var tidy = !!(doc.o && doc.o.tidy), canTidy = L.W > box.w + 1;
       if (ui.tidy) {
         ui.tidy.hidden = !canTidy;
@@ -2000,7 +2023,7 @@
       }
       if (tidy && canTidy) L = fitLayout(doc, idx, view, SCREEN, base, box.w, box.h, 1).L;
       st.L = L;
-      paint(ui.canvas, L, doc, {
+      paint(ui.canvas, L, doc, pv ? { marked: pv.on, skipped: pv.off, tap: function (n) { tapSugg(n.pid); } } : {
         fresh: st.lastAdded,
         tap: function (n, b) { if (n.ghost) openPerson(n.ghost.of, n.ghost.t, b); else openPerson(n.pid, null, b); }
       });
@@ -2447,6 +2470,7 @@
     }
     function showSuggBar() {
       if (!ui.sgBar) return;
+      if (st.sgView) { ui.sgBar.hidden = true; return; }
       var n = st.where === 'account' && st.doc ? sugg.list.length : 0;
       ui.sgBar.hidden = !n;
       if (n) ui.sgBarText.textContent = n === 1 ? 'عندك اقتراح من ' + sugg.list[0].from + ' على شجرتك' : n === 2 ? 'عندك اقتراحين على شجرتك' : 'عندك ' + n + (n <= 10 ? ' اقتراحات' : ' اقتراح') + ' على شجرتك';
@@ -2474,38 +2498,40 @@
         head.appendChild(el('span', null, 'من ' + sg.from));
         head.appendChild(el('small', null, sayDate(sg.at)));
         item.appendChild(head);
-        var steps = describeSteps(st.doc, sg.ops), boxes = {};
+        var steps = describeSteps(st.doc, sg.ops), boxes = {}, ok = {}, pick = {};
+        steps.forEach(function (x) { if (x.rel) ok[x.id] = pick[x.id] = true; });
+        var sync = function () {
+          steps.forEach(function (y) { boxes[y.id].checked = !!pick[y.id]; });
+          addBtn.disabled = !Object.keys(pick).length;
+        };
         steps.forEach(function (x) {
-          var row = el('label', 'tr-sg-op' + (x.rel ? '' : ' is-off')), box = el('input'), words = el('span');
+          var row = el('div', 'tr-sg-op' + (x.rel ? '' : ' is-off')), lab = el('label'), box = el('input'), words = el('span', 'tr-sg-words');
           box.type = 'checkbox';
           box.checked = !!x.rel;
           box.disabled = !x.rel;
           boxes[x.id] = box;
-          row.appendChild(box);
-          row.appendChild(el('b', null, x.n));
-          words.textContent = x.rel ? ' ' + x.rel : ' ما يركب على الشجرة الحين';
-          row.appendChild(words);
-          // picking someone picks who they're built on; leaving someone out leaves out who is built on them
-          box.addEventListener('change', function () {
-            var walk = function (id, on) {
-              var b = boxes[id];
-              if (!b || b.disabled) return;
-              b.checked = on;
-              if (on) (steps.filter(function (y) { return y.id === id; })[0] || { needs: [] }).needs.forEach(function (n) { walk(n, true); });
-              else steps.forEach(function (y) { if (y.needs.indexOf(id) >= 0 && boxes[y.id].checked) walk(y.id, false); });
-            };
-            walk(x.id, box.checked);
-            addBtn.disabled = !steps.some(function (y) { return boxes[y.id].checked; });
-          });
+          lab.appendChild(box);
+          words.appendChild(el('b', null, x.n));
+          words.appendChild(el('span', 'tr-sg-rel', x.rel ? ' ' + x.rel : ' ما يركب على الشجرة الحين'));
+          if (x.via) words.appendChild(el('small', 'tr-sg-via', x.via));
+          lab.appendChild(words);
+          row.appendChild(lab);
+          box.addEventListener('change', function () { pickStep(steps, pick, x.id, box.checked, ok); sync(); });
+          if (x.rel) {
+            // «وين مكانه؟»: the tree with this suggestion on it, the new people blinking
+            var see = el('button', 'tr-sg-see');
+            see.type = 'button';
+            see.setAttribute('aria-label', 'شوف مكان ' + x.n + ' بالشجرة');
+            see.innerHTML = TREE_ICON;
+            see.addEventListener('click', function () { seeSugg(sg, pick, x.id); });
+            row.appendChild(see);
+          }
           item.appendChild(row);
         });
         var btns = el('div', 'tr-sg-btns'), addBtn = el('button', 'kin-btn kin-primary', 'ضيف المختار'), noBtn = el('button', 'kin-btn', 'لا، شكرًا');
         addBtn.type = noBtn.type = 'button';
-        addBtn.disabled = !steps.some(function (y) { return boxes[y.id].checked; });
-        addBtn.addEventListener('click', function () {
-          var pick = steps.filter(function (y) { return boxes[y.id].checked; }).map(function (y) { return y.id; });
-          takeSugg(sg, pick);
-        });
+        addBtn.disabled = !Object.keys(pick).length;
+        addBtn.addEventListener('click', function () { takeSugg(sg, Object.keys(pick)); });
         noBtn.addEventListener('click', function () { takeSugg(sg, []); });
         btns.appendChild(addBtn); btns.appendChild(noBtn);
         item.appendChild(btns);
@@ -2544,6 +2570,74 @@
         sgSay('ما قدرنا نشيل الاقتراح من القائمة. تأكد من النت وجرّب مرة ثانية.', true);
       });
     }
+    /* The tree with one suggestion on it, to see exactly where each new person goes: the picked ones
+       blink, the left-out ones are faded, and a tap on either picks or leaves them out. The bar at the
+       bottom adds what's picked, turns it down, or goes back to the list. */
+    function seeSugg(sg, pick, focusStep) {
+      var steps = describeSteps(st.doc, sg.ops), r = replay(st.doc, sg.ops), ok = {}, byPid = {};
+      steps.forEach(function (x) { if (x.rel && x.pid) { ok[x.id] = true; byPid[x.pid] = x.id; } });
+      var p = {};
+      Object.keys(pick).forEach(function (k) { if (ok[k]) p[k] = true; });
+      st.sgView = { sg: sg, steps: steps, ok: ok, byPid: byPid, pick: p, doc: r.doc, on: {}, off: {} };
+      closeSugg(true);
+      var focus = (steps.filter(function (x) { return x.id === focusStep; })[0] || {}).pid;
+      // the side of the family where they are
+      var idx = index(r.doc), vs = views(r.doc, idx);
+      vs.some(function (v) {
+        var L = layout(r.doc, idx, v, SCREEN, { ghosts: false, mates: 'all' });
+        if (L.nodes.some(function (n) { return n.pid === focus; })) { st.view = v.key; return true; }
+        return false;
+      });
+      st.focus = focus; st.center = true;
+      showSuggView();
+      ui.wrap.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+    function showSuggView() {
+      var pv = st.sgView;
+      ui.wrap.classList.toggle('is-sgview', !!pv);
+      ui.sgv.hidden = !pv;
+      document.documentElement.classList.toggle('tr-sgview-on', !!pv);
+      if (!pv) { showSuggBar(); render(); return; }
+      ui.sgBar.hidden = true;
+      pv.on = {}; pv.off = {};
+      Object.keys(pv.byPid).forEach(function (pid) { if (pv.pick[pv.byPid[pid]]) pv.on[pid] = true; else pv.off[pid] = true; });
+      var n = Object.keys(pv.pick).length;
+      ui.sgvText.textContent = 'اقتراح ' + pv.sg.from + ': اللي يشب جديد. دوس عليه عشان تشيله أو ترجعه.';
+      ui.sgvAdd.disabled = !n;
+      ui.sgvAdd.textContent = n ? 'ضيف المختار (' + n + ')' : 'ضيف المختار';
+      render();
+    }
+    function tapSugg(pid) {
+      var pv = st.sgView, id = pv && pv.byPid[pid];
+      if (!id) return;
+      var left = ui.scroll.scrollLeft;
+      pickStep(pv.steps, pv.pick, id, !pv.pick[id], pv.ok);
+      showSuggView();
+      ui.scroll.scrollLeft = left;
+    }
+    function leaveSuggView(back) {
+      if (!st.sgView) return;
+      st.sgView = null;
+      st.center = true;
+      showSuggView();
+      if (back) openSugg();
+    }
+    if (ui.sgv) {
+      ui.sgvAdd.addEventListener('click', function () {
+        var pv = st.sgView;
+        if (!pv) return;
+        leaveSuggView(true);
+        takeSugg(pv.sg, Object.keys(pv.pick));
+      });
+      ui.sgvNo.addEventListener('click', function () {
+        var pv = st.sgView;
+        if (!pv) return;
+        leaveSuggView(true);
+        takeSugg(pv.sg, []);
+      });
+      ui.sgvBack.addEventListener('click', function () { leaveSuggView(true); });
+    }
+
     function openSugg() {
       if (!st.doc) return;
       sgSay('');
@@ -2552,17 +2646,17 @@
       document.documentElement.classList.add('kin-lock');
       ui.sgClose.focus();
     }
-    function closeSugg() {
+    function closeSugg(quiet) {
       if (!ui.sg || ui.sg.hidden) return;
       ui.sg.hidden = true;
       document.documentElement.classList.remove('kin-lock');
-      if (!ui.sgBar.hidden) ui.sgBar.focus({ preventScroll: true });
+      if (quiet !== true && !ui.sgBar.hidden) ui.sgBar.focus({ preventScroll: true });
     }
     if (ui.sgBar) {
       ui.sgBar.addEventListener('click', openSugg);
       ui.sgClose.addEventListener('click', closeSugg);
       ui.sg.addEventListener('click', function (e) { if (e.target === ui.sg) closeSugg(); });
-      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSugg(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (st.sgView && ui.sg.hidden) leaveSuggView(true); else closeSugg(); } });
       document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') loadSuggestions(); });
     }
 
