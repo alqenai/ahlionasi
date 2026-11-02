@@ -382,6 +382,10 @@
     .kin-gbtn { display: flex; justify-content: center; align-items: center; min-height: 52px; margin: 18px 0 6px; color: var(--muted); font-size: .9rem; }
     .kin-auth-err { font-size: .9rem; line-height: 1.6; color: var(--coral); text-align: center; margin-top: 6px; }
     .kin-auth-note { font-size: .8rem; line-height: 1.7; color: var(--muted); margin-top: 12px; padding: 0 6px; }
+    /* signing in from «شجرة دوامي»: the note says nothing about kinship */
+    .kin-auth-note .for-work { display: none; }
+    body:has(main[data-sec="work"]) .kin-auth-note .for-kin { display: none; }
+    body:has(main[data-sec="work"]) .kin-auth-note .for-work { display: inline; }
     .kin-auth-hint { font-size: .9rem; line-height: 1.75; color: var(--pearl); margin-top: 14px; padding: 10px 14px; border-radius: 14px; background: rgba(233, 196, 106, .1); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .28); }
     .kin-auth-local { display: block; min-height: 44px; margin: 2px auto 0; padding: 0 12px; border: 0; background: none; color: var(--sand); font-size: .92rem; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
     /* sign-in with a code by email, under Google's button */
@@ -808,7 +812,7 @@
         <button type="button" class="acct-item" id="acct-out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h10"/></svg><span>تسجيل الخروج</span></button>
         <button type="button" class="acct-item acct-danger" id="acct-del"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2M6.5 7l1 12.2a1.5 1.5 0 0 0 1.5 1.3h6a1.5 1.5 0 0 0 1.5-1.3l1-12.2M10 11v6M14 11v6"/></svg><span>حذف الحساب</span></button>
         <div class="acct-confirm" id="acct-confirm" hidden>
-          <p class="acct-warn">بينمسح حسابك وكل اللي حفظته فيه: صلات القرابة وشجرة عائلتك، وما تقدر ترجعهم.</p>
+          <p class="acct-warn">بينمسح حسابك وكل اللي حفظته فيه: صلات القرابة وشجرة عائلتك وشجرة دوامك، وما تقدر ترجعهم.</p>
           <div class="acct-confirm-btns">
             <button type="button" class="acct-yes" id="acct-yes">احذف حسابي</button>
             <button type="button" class="acct-no" id="acct-no">تراجع</button>
@@ -958,7 +962,7 @@
         </div>
         <span class="tr-count" id="wk-count"></span>
       </div>
-      <p class="kin-sub">ابدأ بنفسك وضيف مديرك وزملائك وفريقك، وتحت كل اسم نكتب لك شنو يصير لك.</p>
+      <p class="kin-sub">ابدأ بنفسك وضيف مديرك وزملائك وفريقك.</p>
 
       <p class="tr-msg" id="wk-msg" role="status" hidden></p>
       <button type="button" class="kin-btn tr-retry" id="wk-retry" hidden><span>جرّب مرة ثانية</span></button>
@@ -1070,7 +1074,7 @@
       </form>
       <p class="kin-auth-err" id="kin-auth-err" role="alert" hidden></p>
       <button type="button" class="kin-auth-local" id="kin-auth-local" hidden><span>أو احفظها بجهازك بس</span></button>
-      <p class="kin-auth-note">نحفظ بس الأسماء اللي تكتبها وصلة القرابة، وما ننشرها ولا نشاركها مع أحد. وتقدر تمسح حسابك وكل اللي فيه متى ما تبي.</p>
+      <p class="kin-auth-note"><span class="for-kin">نحفظ بس الأسماء اللي تكتبها وصلة القرابة، وما ننشرها ولا نشاركها مع أحد.</span><span class="for-work">نحفظ بس اللي تكتبه، وما ننشره ولا نشاركه مع أحد.</span> وتقدر تمسح حسابك وكل اللي فيه متى ما تبي.</p>
     </div>
   </div>
 
