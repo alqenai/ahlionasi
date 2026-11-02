@@ -541,8 +541,9 @@
 
   var PAGE = { land: { w: 842, h: 595 }, port: { w: 595, h: 842 } }, PK = 4;
   var PDF_LINK = 'https://shorbaka.com/#work';
-  // The QR in the page's corner: whoever scans it at work lands on «شجرة دوامي» to make their own.
-  var QR_WORDS = ['امسح الكود', 'وسوّ شجرة دوامك'];
+  /* The QR in the page's corner: with a «رابط الشجرة كاملة» (opts.qr), whoever scans it sees the whole
+     tree; without one, they land on «شجرة دوامي» to make their own. */
+  var QR_WORDS = ['امسح الكود', 'وسوّ شجرة دوامك'], LINK_WORDS = ['امسح الكود', 'وشوف الشجرة كاملة'];
 
   // The QR library tree.js loads (/vendor/qrcode-generator), or null when it can't be had.
   function qrLib() {
@@ -600,11 +601,12 @@
     return new Blob(parts, { type: 'application/pdf' });
   }
 
-  // Resolves { file: the PDF, name, type, preview: a PNG of the page, w, h }.
+  // Resolves { file: the PDF, name, type, preview: a PNG of the page, w, h }. opts.qr: the tree's link.
   function makePdf(doc, orient, opts) {
     var hide = !!(opts && opts.hide), v = viewOf(doc, !!(opts && opts.mine)), D = KIN.draw, P = PAGE[orient] || PAGE.land, k = PK;
     var title = picTitle(doc), foot = 'سوّ شجرة دوامك على shorbaka.com', keys = legend(doc, v, 'paper');
-    return Promise.all([D.loadFonts(fontSample(doc, foot + ' ' + QR_WORDS.join(' '))), qrLib()]).then(function (got) {
+    var qrUrl = (opts && opts.qr) || PDF_LINK, words = opts && opts.qr ? LINK_WORDS : QR_WORDS;
+    return Promise.all([D.loadFonts(fontSample(doc, foot + ' ' + words.join(' '))), qrLib()]).then(function (got) {
       var qrcode = got[1];
       var W = P.w * k, H = P.h * k, c = document.createElement('canvas');
       c.width = W; c.height = H;
@@ -633,15 +635,15 @@
       ctx.fillStyle = '#4A607A';
       ctx.fillText(foot, right - tw / 2, fy + 3.5 * k);
       D.drawMark(ctx, left + markW / 2, fy, markH, true);
-      // the QR in the bottom left corner, «امسح الكود» / «وسوّ شجرة دوامك» beside it, all in navy
+      // the QR in the bottom left corner, «امسح الكود» and what it opens beside it, all in navy
       var qrSide = 68 * k, qx = 34 * k, qy = H - 34 * k - qrSide;
       if (qrcode) {
-        drawQrCode(ctx, root.TREE.qrOf(qrcode, PDF_LINK), qx, qy, qrSide);
+        drawQrCode(ctx, root.TREE.qrOf(qrcode, qrUrl), qx, qy, qrSide);
         ctx.textAlign = 'left';
         ctx.fillStyle = '#0E2A47'; D.setFont(ctx, '700', 9.5 * k);
-        ctx.fillText(QR_WORDS[0], qx + qrSide + 6 * k, qy + qrSide / 2 - 2 * k);
+        ctx.fillText(words[0], qx + qrSide + 6 * k, qy + qrSide / 2 - 2 * k);
         D.setFont(ctx, '500', 8.5 * k);
-        ctx.fillText(QR_WORDS[1], qx + qrSide + 6 * k, qy + qrSide / 2 + 11 * k);
+        ctx.fillText(words[1], qx + qrSide + 6 * k, qy + qrSide / 2 + 11 * k);
       }
       var preview = document.createElement('canvas'), pw = 1100, ph = Math.round(1100 * H / W);
       preview.width = pw; preview.height = ph;
@@ -649,7 +651,7 @@
       var blob = function (cv, type, q) { return new Promise(function (res, rej) { cv.toBlob(function (b) { if (b) res(b); else rej(new Error('no picture')); }, type, q); }); };
       return Promise.all([blob(c, 'image/jpeg', 0.92).then(bytesOf), blob(preview, 'image/png')]).then(function (r) {
         var links = [{ rect: [left / k - 4, (H - fy) / k - 10, right / k + 4, (H - fy) / k + 12], uri: PDF_LINK }];
-        if (qrcode) links.push({ rect: [qx / k, (H - qy - qrSide) / k, (qx + qrSide) / k, (H - qy) / k], uri: PDF_LINK });
+        if (qrcode) links.push({ rect: [qx / k, (H - qy - qrSide) / k, (qx + qrSide) / k, (H - qy) / k], uri: qrUrl });
         var pdf = pdfOf(r[0], { w: W, h: H }, P, title, links);
         c.width = c.height = 0;
         return { file: pdf, name: 'shorbaka-work-tree.pdf', type: 'application/pdf', preview: r[1], w: pw, h: ph };
@@ -689,6 +691,117 @@
   // A table that isn't there yet (the database change not made): the tree stays on this device.
   function noTable(e) { return !!e && (e.code === 'PGRST205' || e.code === '42P01' || /work_trees/.test(String(e.message || ''))); }
 
+  // The lines of L as one SVG path, under the people (the page and the link's page).
+  function linesSvg(L) {
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'tr-lines');
+    svg.setAttribute('width', L.W); svg.setAttribute('height', L.H);
+    svg.setAttribute('viewBox', '0 0 ' + L.W + ' ' + L.H);
+    svg.setAttribute('aria-hidden', 'true');
+    var path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', L.lines.map(function (c) { return c[0] + c.slice(1).map(function (v) { return Math.round(v * 10) / 10; }).join(' '); }).join(''));
+    svg.appendChild(path);
+    return svg;
+  }
+
+  /* ---------- A tree to look at only: the page a «رابط الشجرة كاملة» opens (shorbaka.com/w/#code) ----------
+     Shows doc in els ({ tidy, zoom, scroll, stage, canvas, keys }): the whole workplace, «ترتيب» and
+     zoom, and nobody can be tapped. Under each name the job (or what they are to the tree's owner when
+     no job is given), as on the printed page. With «أخفي الأسامي» the database sends only the names of
+     «ربعي»: everyone else shows a pearl, what they are to the owner and their job, as in the pictures. */
+  function viewer(els, doc) {
+    var hide = !!(doc.o && doc.o.hide), v = viewOf(doc, false);
+    var st = { tidy: !!(doc.o && doc.o.tidy), zl: 0, z: 1, L: null, center: true };
+
+    function person(n) {
+      var p = doc.p[n.id], hidden = hide && !p.h, b = el('div', 'tr-node wk-node');
+      b.style.left = (n.x - SCREEN.NW / 2) + 'px';
+      b.style.top = n.y + 'px';
+      if (n.id === doc.me) b.classList.add('is-me');
+      else b.style.setProperty('--ring', deptColor(doc, n.id, 'sea'));
+      if (p.x) b.classList.add('is-left');
+      var av = el('span', 'tr-av' + (hidden ? ' is-pearl' : ''), hidden ? null : initial(p.n));
+      if (hidden) av.appendChild(el('i'));
+      if (p.h) {
+        var h = el('span', 'wk-heart'); h.innerHTML = HEART_SVG;
+        h.setAttribute('role', 'img'); h.setAttribute('aria-label', 'ربعي');
+        av.appendChild(h);
+      }
+      b.appendChild(av);
+      var rel = relLabel(doc, n.id), job = p.j || '';
+      b.appendChild(el('span', 'tr-name' + (hidden || p.n ? '' : ' is-noname'), hidden ? rel : p.n || 'بدون اسم'));
+      var second = hidden ? job : job || rel;
+      if (second) b.appendChild(el('span', 'tr-rel' + (job ? ' wk-job' : ''), second));
+      return b;
+    }
+
+    function draw() {
+      var L = layout(doc, v, SCREEN, false), box = Math.max(240, els.scroll.clientWidth - 36);
+      var T = L.W > box + 1 ? layout(doc, v, SCREEN, true) : null, canTidy = !!(T && T.W < L.W);
+      if (canTidy && st.tidy) L = T;
+      els.tidy.hidden = !canTidy;
+      els.tidy.setAttribute('aria-pressed', String(canTidy && st.tidy));
+      st.L = L;
+      els.canvas.textContent = '';
+      els.canvas.style.width = L.W + 'px';
+      els.canvas.style.height = L.H + 'px';
+      els.canvas.appendChild(linesSvg(L));
+      L.nodes.forEach(function (n) { els.canvas.appendChild(person(n)); });
+      size();
+      if (st.center) { st.center = false; centerOn(doc.me); }
+    }
+    function steps() { return zoomSteps(st.L && st.L.W, els.scroll.clientWidth - 36); }
+    function size() {
+      var L = st.L;
+      if (!L || els.scroll.clientWidth - 36 <= 0) return;
+      var zs = steps();
+      st.zl = Math.min(st.zl, zs.length - 1);
+      var last = zs.length > 1 && st.zl >= zs.length - 1;
+      els.zoom.hidden = zs.length < 2;
+      st.z = zs[st.zl];
+      els.canvas.style.transform = st.z === 1 ? '' : 'scale(' + st.z + ')';
+      els.stage.style.width = Math.ceil(L.W * st.z) + 'px';
+      els.stage.style.height = Math.ceil(L.H * st.z) + 'px';
+      els.zoom.setAttribute('aria-label', last ? 'رجّع الشجرة لحجمها' : st.zl ? 'صغّرها أكثر' : 'صغّر الشجرة');
+      els.zoom.setAttribute('aria-pressed', String(st.zl > 0));
+      els.zoom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (last ? ZOOM.in : ZOOM.out) + '</svg>';
+    }
+    function centerOn(pid) {
+      var n = st.L && st.L.nodes.filter(function (x) { return x.id === pid; })[0];
+      if (n) els.scroll.scrollLeft = Math.max(0, 18 + n.x * st.z - els.scroll.clientWidth / 2);
+    }
+
+    if (els.keys) {
+      els.keys.textContent = '';
+      var items = legend(doc, v, 'sea');
+      els.keys.hidden = !items.length;
+      items.forEach(function (it) {
+        var s = el('span', 'wk-key'), dot = el('i');
+        dot.style.background = it.color;
+        s.appendChild(dot); s.appendChild(document.createTextNode(it.n));
+        els.keys.appendChild(s);
+      });
+    }
+    els.tidy.addEventListener('click', function () { st.tidy = !st.tidy; st.zl = 0; st.center = true; draw(); });
+    els.zoom.addEventListener('click', function () {
+      var mid = (els.scroll.scrollLeft + els.scroll.clientWidth / 2 - 18) / st.z;
+      st.zl = (st.zl + 1) % steps().length;
+      size();
+      els.scroll.scrollLeft = Math.max(0, 18 + mid * st.z - els.scroll.clientWidth / 2);
+    });
+    var resizeT = null, lastW = els.scroll.clientWidth;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeT);
+      resizeT = setTimeout(function () {
+        if (els.scroll.clientWidth === lastW) return;
+        lastW = els.scroll.clientWidth;
+        draw();
+      }, 120);
+    });
+    draw();
+  }
+  WORK.viewer = viewer;
+
   function start() {
     var $ = function (id) { return document.getElementById(id); };
     var ui = {
@@ -704,7 +817,10 @@
       pAdds: $('wk-p-adds'), pForm: $('wk-p-form'), pFormLabel: $('wk-p-form-label'), pNew: $('wk-p-new'), pNewJob: $('wk-p-new-job'),
       pNewG: $('wk-p-new-g'), pAdd: $('wk-p-add'), pErr: $('wk-p-err'), pDone: $('wk-p-done'),
       pMarks: $('wk-p-marks'), pFriend: $('wk-p-friend'), pLeft: $('wk-p-left'),
-      pDel: $('wk-p-del'), pConfirm: $('wk-p-confirm'), pWarn: $('wk-p-warn'), pYes: $('wk-p-yes'), pNo: $('wk-p-no')
+      pDel: $('wk-p-del'), pConfirm: $('wk-p-confirm'), pWarn: $('wk-p-warn'), pYes: $('wk-p-yes'), pNo: $('wk-p-no'),
+      linkBtn: $('wk-link-btn'), link: $('wk-link'), lClose: $('wk-l-close'), lMsg: $('wk-l-msg'), lRetry: $('wk-l-retry'),
+      lIn: $('wk-l-in'), lMake: $('wk-l-make'), lOn: $('wk-l-on'), lQr: $('wk-l-qr'), lUrl: $('wk-l-url'), lCopy: $('wk-l-copy'),
+      lMore: $('wk-l-more'), lStop: $('wk-l-stop'), lConfirm: $('wk-l-confirm'), lYes: $('wk-l-yes'), lNo: $('wk-l-no')
     };
     if (!ui.sec || !ui.sheet) return;
 
@@ -738,6 +854,7 @@
       var a = signedIn(), uid = a ? a.user().id : null;
       if (!force && uid === synced) return;
       synced = uid;
+      loadLink();
       var seq = ++st.seq;
       st.failed = false;
       if (!canAccount(a)) {
@@ -761,7 +878,7 @@
         render();
       }, function (e) {
         if (seq !== st.seq) return;
-        if (noTable(e)) { st.noTable = true; sync(true); return; }
+        if (noTable(e)) { st.noTable = true; showLinkBtn(); sync(true); return; }
         st.failed = true;
         render();
       });
@@ -861,6 +978,7 @@
       showCo();
       draw();
       note();
+      showLinkBtn();
       if (!ui.sheet.hidden) fillSheet();
     }
 
@@ -912,15 +1030,7 @@
       ui.canvas.textContent = '';
       ui.canvas.style.width = L.W + 'px';
       ui.canvas.style.height = L.H + 'px';
-      var svg = document.createElementNS(NS, 'svg');
-      svg.setAttribute('class', 'tr-lines');
-      svg.setAttribute('width', L.W); svg.setAttribute('height', L.H);
-      svg.setAttribute('viewBox', '0 0 ' + L.W + ' ' + L.H);
-      svg.setAttribute('aria-hidden', 'true');
-      var path = document.createElementNS(NS, 'path');
-      path.setAttribute('d', L.lines.map(function (c) { return c[0] + c.slice(1).map(function (v) { return Math.round(v * 10) / 10; }).join(' '); }).join(''));
-      svg.appendChild(path);
-      ui.canvas.appendChild(svg);
+      ui.canvas.appendChild(linesSvg(L));
       L.nodes.forEach(function (n) { ui.canvas.appendChild(nodeBox(n, doc)); });
     }
 
@@ -1207,22 +1317,30 @@
         set: function (on) { opts.hide = on; if (st.doc) { setOpt('hide', on); changed(); } }
       };
     }
+    // my «رابط الشجرة كاملة», when I have one (it goes with the account)
+    function myLink() { return st.link && signedIn() ? linkUrl(st.link) : null; }
     ui.share.addEventListener('click', function () {
       if (!st.doc || !KIN.openShare) return;
-      var doc = copy(st.doc), opts = { hide: opt('hide'), mine: opt('mine') && hasMine(st.doc) };
+      var doc = copy(st.doc), opts = { hide: opt('hide'), mine: opt('mine') && hasMine(st.doc) }, link = myLink();
       KIN.openShare({
         file: 'shorbaka-work',
         make: function (format) { return makePicture(doc, format, opts); },
         alt: doc.co ? 'شجرة دوامي في ' + doc.co : 'شجرة دوامي',
         mention: 'تمنشن ربعك بالدوام',
-        tips: { story: 'حطها ستوري ومنشن ربعك بالدوام', post: 'انشرها بقروب الدوام، أو نزّلها بوست ومنشن ربعك' },
-        text: 'سويت شجرة دوامي على شرباكة 🌳 سوّ شجرة دوامك: https://shorbaka.com/#work',
+        link: link,
+        tips: link
+          ? { story: 'حطها ستوري مع ستيكر الرابط، ومنشن ربعك بالدوام', post: 'انشرها بقروب الدوام مع الرابط، أو نزّلها بوست ومنشن ربعك' }
+          : { story: 'حطها ستوري ومنشن ربعك بالدوام', post: 'انشرها بقروب الدوام، أو نزّلها بوست ومنشن ربعك' },
+        text: link
+          ? 'سويت شجرة دوامي على شرباكة 🌳 شوفوها كاملة هني: ' + link
+          : 'سويت شجرة دوامي على شرباكة 🌳 سوّ شجرة دوامك: https://shorbaka.com/#work',
         option: hideOption(opts)
       }, ui.share);
     });
     ui.pdf.addEventListener('click', function () {
       if (!st.doc || !KIN.openShare) return;
-      var doc = copy(st.doc), opts = { hide: opt('hide'), mine: opt('mine') && hasMine(st.doc) };
+      // with a «رابط الشجرة كاملة», the QR in the corner opens it
+      var link = myLink(), doc = copy(st.doc), opts = { hide: opt('hide'), mine: opt('mine') && hasMine(st.doc), qr: link };
       var size = function (label, alt) { return { label: label, title: 'جاهزة للطباعة', alt: alt, dl: 'حمّل ملف PDF', tip: '' }; };
       KIN.openShare({
         file: 'shorbaka-work-tree',
@@ -1231,10 +1349,166 @@
         make: function (orient) { return makePdf(doc, orient, opts); },
         alt: doc.co ? 'شجرة دوامي في ' + doc.co : 'شجرة دوامي',
         tips: { land: 'اطبعها على ورقة A4، أو أرسلها بقروب الدوام', port: 'اطبعها على ورقة A4، أو أرسلها بقروب الدوام' },
-        text: 'شجرة دوامي من شرباكة 🌳 سوّ شجرة دوامك: https://shorbaka.com/#work',
+        text: link
+          ? 'شجرة دوامي من شرباكة 🌳 شوفوها كاملة هني: ' + link
+          : 'شجرة دوامي من شرباكة 🌳 سوّ شجرة دوامك: https://shorbaka.com/#work',
         option: hideOption(opts)
       }, ui.pdf);
     });
+
+    /* --- «رابط الشجرة كاملة»: the whole work tree at shorbaka.com/w/#code, with no password (Ali's call) ---
+       It needs the account: the page shows the tree as it is saved there. The sheet shows one of out (not
+       signed in), wait, err, none (no link yet), on (the link, its QR and a way to copy it) or stop (are
+       you sure). st.link: undefined while it loads, null when I have none. */
+
+    var linkSeq = 0, linkMode = '', linkNote = null;  // linkNote: what the sheet says after a change, in one state
+
+    function linkUrl(code) {
+      var site = /(^|\.)shorbaka\.com$/.test(location.hostname) ? 'https://shorbaka.com' : location.origin;
+      return site + '/w/#' + code;
+    }
+
+    function loadLink() {
+      var a = signedIn(), seq = ++linkSeq;
+      st.linkErr = false; linkMode = ''; linkNote = null;
+      if (!a || !a.workLink) { st.link = null; showLinkBtn(); fillLink(); return; }
+      st.link = undefined;
+      showLinkBtn(); fillLink();
+      a.workLink().then(function (code) {
+        if (seq === linkSeq) st.link = code || null;
+      }, function (e) {
+        if (seq !== linkSeq) return;
+        st.link = null;
+        // the site went up before its database knew about work links: no button until it does
+        if (e && (e.code === 'PGRST202' || e.code === '42883')) st.linkOff = true; else st.linkErr = true;
+      }).then(function () {
+        if (seq === linkSeq) { showLinkBtn(); fillLink(); }
+      });
+    }
+
+    function showLinkBtn() {
+      if (ui.linkBtn) ui.linkBtn.hidden = !st.doc || !accounts() || !!st.linkOff || st.noTable;
+    }
+
+    function linkState() {
+      if (!signedIn()) return 'out';
+      if (st.linkErr) return 'err';
+      if (st.link === undefined) return 'wait';
+      if (!st.link) return 'none';
+      return linkMode || 'on';
+    }
+
+    function fillLink() {
+      if (!ui.link || ui.link.hidden) return;
+      var s = linkState(), url = st.link ? linkUrl(st.link) : '';
+      ui.lIn.hidden = s !== 'out';
+      ui.lRetry.hidden = s !== 'err';
+      ui.lMake.hidden = s !== 'none';
+      ui.lOn.hidden = ui.lMore.hidden = s !== 'on';
+      ui.lConfirm.hidden = s !== 'stop';
+      var m = s === 'wait' ? { a: 'لحظة…' }
+        : s === 'err' ? { err: true, a: 'ما قدرنا نجيب رابط شجرتك الحين. تأكد من النت.' }
+        : linkNote && linkNote.s === s ? linkNote : null;
+      ui.lMsg.textContent = m ? m.a : '';
+      ui.lMsg.hidden = !m;
+      ui.lMsg.classList.toggle('is-err', !!(m && m.err));
+
+      if (s !== 'on' || ui.lQr.dataset.url === url) return;
+      ui.lUrl.textContent = url.replace(/^https?:\/\//, '');
+      ui.lQr.dataset.url = url; ui.lQr.textContent = '';
+      var T = root.TREE;
+      if (!T || !T.loadQr || !T.qrOf || !T.qrSvg) { ui.lQr.hidden = true; return; }
+      T.loadQr().then(function (qrcode) {
+        if (ui.lQr.dataset.url !== url) return;
+        ui.lQr.innerHTML = T.qrSvg(T.qrOf(qrcode, url));
+        ui.lQr.hidden = false;
+      }, function () {
+        if (ui.lQr.dataset.url === url) { ui.lQr.dataset.url = ''; ui.lQr.hidden = true; }
+      });
+    }
+
+    function btnText(btn) { return btn.querySelector('span') || btn; }
+    function flashBtn(btn, text) {
+      var s = btnText(btn);
+      if (!s.dataset.label) s.dataset.label = s.textContent;
+      s.textContent = text;
+      clearTimeout(btn._t);
+      btn._t = setTimeout(function () { s.textContent = s.dataset.label; }, 2200);
+    }
+    function sayLink(s, err, a) { linkNote = { s: s, err: err, a: a }; fillLink(); }
+
+    function openLink() {
+      if (!st.doc || !ui.link) return;
+      linkMode = ''; linkNote = null;
+      if (signedIn() && st.linkErr) loadLink();
+      ui.link.hidden = false;
+      document.documentElement.classList.add('kin-lock');
+      fillLink();
+      ui.lClose.focus();
+    }
+
+    function closeLink() {
+      if (!ui.link || ui.link.hidden) return;
+      ui.link.hidden = true;
+      document.documentElement.classList.remove('kin-lock');
+      linkMode = ''; linkNote = null;
+      if (ui.linkBtn && !ui.linkBtn.hidden) ui.linkBtn.focus({ preventScroll: true });
+    }
+
+    if (ui.link && ui.linkBtn) {
+      ui.linkBtn.addEventListener('click', openLink);
+      ui.lClose.addEventListener('click', closeLink);
+      ui.link.addEventListener('click', function (e) { if (e.target === ui.link) closeLink(); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !ui.link.hidden) { e.stopPropagation(); closeLink(); }
+      }, true);
+      ui.lRetry.addEventListener('click', loadLink);
+      ui.lIn.addEventListener('click', function () {
+        closeLink();
+        if (KIN.openAuth) KIN.openAuth({ title: 'سجّل دخولك', text: 'الرابط يفتح شجرة دوامك من حسابك: سجّل دخولك عشان تنحفظ فيه، وبعدها سوّ الرابط.' }, ui.linkBtn);
+      });
+      ui.lMake.addEventListener('click', function () {
+        var a = signedIn();
+        if (!a || linkState() !== 'none') return;
+        var uid = a.user().id, s = btnText(ui.lMake), text = s.textContent;
+        ui.lMake.disabled = true; s.textContent = 'لحظة…';
+        // the link shows the tree saved in the account, so the last change goes first
+        (st.pending || st.saving ? save() : Promise.resolve(true)).then(function () {
+          return a.makeWorkLink();
+        }).then(function (code) {
+          ui.lMake.disabled = false; s.textContent = text;
+          var b = signedIn();
+          if (!b || b.user().id !== uid || !code) return;
+          st.link = code; st.linkErr = false; linkMode = '';
+          sayLink('on', false, 'سوّينا الرابط ✓');
+          ui.lCopy.focus({ preventScroll: true });
+        }, function () {
+          ui.lMake.disabled = false; s.textContent = text;
+          sayLink('none', true, 'ما زبطت. تأكد من النت وجرّب مرة ثانية.');
+        });
+      });
+      ui.lCopy.addEventListener('click', function () {
+        if (!st.link) return;
+        KIN.copyText(linkUrl(st.link)).then(function (ok) { flashBtn(ui.lCopy, ok ? 'انتسخ الرابط ✓' : 'ما انتسخ، جرّب مرة ثانية'); });
+      });
+      ui.lStop.addEventListener('click', function () { linkMode = 'stop'; linkNote = null; fillLink(); ui.lNo.focus(); });
+      ui.lNo.addEventListener('click', function () { linkMode = ''; fillLink(); ui.lStop.focus(); });
+      ui.lYes.addEventListener('click', function () {
+        var a = signedIn();
+        if (!a || linkState() !== 'stop') return;
+        ui.lYes.disabled = ui.lNo.disabled = true;
+        a.stopWorkLink().then(function () {
+          ui.lYes.disabled = ui.lNo.disabled = false;
+          st.link = null; linkMode = '';
+          sayLink('none', false, 'وقّفنا الرابط، وما عاد ينفتح.');
+          ui.lClose.focus();
+        }, function () {
+          ui.lYes.disabled = ui.lNo.disabled = false;
+          linkMode = '';
+          sayLink('on', true, 'ما قدرنا نوقّفه الحين. تأكد من النت وجرّب مرة ثانية.');
+        });
+      });
+    }
 
     /* --- account --- */
 

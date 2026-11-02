@@ -1004,6 +1004,7 @@
         <div class="tr-actions">
           <button type="button" class="kin-btn kin-primary" id="wk-share"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شاركها ستوري</span></button>
           <button type="button" class="kin-btn" id="wk-pdf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="8" rx="2"/><path d="M7 14.5h10V21H7z"/></svg><span>PDF للطباعة</span></button>
+          <button type="button" class="kin-btn tr-link-btn" id="wk-link-btn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3.2-3.2a4.2 4.2 0 0 0-6-6L11.6 6.4"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3.2 3.2a4.2 4.2 0 0 0 6 6l1.6-1.6"/></svg><span>رابط الشجرة كاملة</span></button>
         </div>
         <p class="kin-w-note tr-note" id="wk-note"></p>
         <button type="button" class="tr-link" id="wk-save-retry" hidden>جرّب مرة ثانية</button>
@@ -1218,6 +1219,33 @@
     </div>
   </div>
 
+  <div class="kin-modal" id="wk-link" role="dialog" aria-modal="true" aria-labelledby="wk-l-title" hidden>
+    <div class="kin-sheet tr-lsheet">
+      <div class="kin-sheet-head">
+        <h3 id="wk-l-title">رابط الشجرة كاملة</h3>
+        <button type="button" class="kin-x" id="wk-l-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <p class="tr-l-text">اللي عنده الرابط يشوف شجرة دوامك كاملة، وما يقدر يغيّر فيها شي.</p>
+      <p class="tr-l-msg" id="wk-l-msg" hidden></p>
+      <button type="button" class="tr-link" id="wk-l-retry" hidden>جرّب مرة ثانية</button>
+      <button type="button" class="kin-btn kin-primary tr-l-in" id="wk-l-in" hidden><span>سجّل دخولك عشان تسوي الرابط</span></button>
+      <button type="button" class="kin-btn kin-primary tr-l-in" id="wk-l-make" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3.2-3.2a4.2 4.2 0 0 0-6-6L11.6 6.4"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3.2 3.2a4.2 4.2 0 0 0 6 6l1.6-1.6"/></svg><span>سوّ الرابط</span></button>
+      <div class="tr-l-on" id="wk-l-on" hidden>
+        <div class="tr-l-qr" id="wk-l-qr"></div>
+        <p class="tr-l-url" id="wk-l-url" dir="ltr"></p>
+        <button type="button" class="kin-btn kin-primary" id="wk-l-copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/></svg><span>انسخ الرابط</span></button>
+        <p class="tr-l-tip">حطه بستيكر الرابط بالستوري أو أرسله بقروب الدوام.</p>
+      </div>
+      <div class="tr-l-more" id="wk-l-more" hidden>
+        <button type="button" class="tr-link tr-l-stop" id="wk-l-stop">وقّف الرابط</button>
+      </div>
+      <div class="tr-p-confirm" id="wk-l-confirm" hidden>
+        <p>اللي عندهم الرابط ما يقدرون يفتحونه بعدها. وإذا سويت رابط جديد بعدين، بيكون رابط ثاني.</p>
+        <div><button type="button" class="tr-p-yes" id="wk-l-yes">وقّفه</button><button type="button" class="tr-p-no" id="wk-l-no">تراجع</button></div>
+      </div>
+    </div>
+  </div>
+
   <div class="kin-modal" id="app-sheet" role="dialog" aria-modal="true" aria-labelledby="app-title" hidden>
     <div class="kin-sheet">
       <div class="kin-sheet-head">
@@ -1239,11 +1267,11 @@
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=11" defer></script>
+  <script src="/account.js?v=12" defer></script>
   <script src="/flags.js?v=1" defer></script>
   <script src="/kin.js?v=24" defer></script>
   <script src="/tree.js?v=21" defer></script>
-  <script src="/work.js?v=2" defer></script>
+  <script src="/work.js?v=3" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
