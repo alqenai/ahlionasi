@@ -1,10 +1,10 @@
--- شرباكة: لوحة التحكم (shorbaka.com/admin/). Only accounts listed in public.admins can use it.
+-- شرباكة: لوحة التحكم (shorbaka.com/dash/). Only accounts listed in public.admins can use it.
 -- The page is public like the rest of the site; what guards the data is these functions: each one
 -- checks that the signed-in account is an admin before it answers. They give counts and account
 -- details (email, dates, how many people / relations / links), never the names inside a tree or
 -- in saved relations, as the site promises its users.
 --
--- After running this file, make yourself the admin: open shorbaka.com/admin/ signed in, copy the
+-- After running this file, make yourself the admin: open shorbaka.com/dash/ signed in, copy the
 -- line it shows («insert into public.admins …») and run it here in the SQL Editor.
 
 create table public.admins (

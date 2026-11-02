@@ -36,10 +36,10 @@ Static files, no build step, served by GitHub Pages from `main`:
 
 ## لوحة التحكم (admin)
 
-`shorbaka.com/admin/` (`admin/index.html`, `admin/admin.js`): numbers, sign-ups per day, the account list (block, stop a tree link, delete) and recent activity. The page is public; the `admin_*` functions in `supabase/migrations/20261102_admin.sql` answer only accounts listed in `public.admins`. They never return the names inside trees or saved relations.
+`shorbaka.com/dash/` (`dash/index.html`, `dash/dash.js`): numbers, sign-ups per day, the account list (block, stop a tree link, delete) and recent activity. The page is public; the `admin_*` functions in `supabase/migrations/20261102_admin.sql` answer only accounts listed in `public.admins`. They never return the names inside trees or saved relations.
 
 1. Run `20261102_admin.sql` in the Supabase SQL Editor.
-2. Open `shorbaka.com/admin/` signed in; it shows a line `insert into public.admins …` with your account id. Run that line too, then reload.
+2. Open `shorbaka.com/dash/` signed in; it shows a line `insert into public.admins …` with your account id. Run that line too, then reload.
 
 ## Brand
 
