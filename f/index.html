@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ربعي | شرباكة</title>
+  <meta name="description" content="ربع على شرباكة.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0E2A47">
+  <meta property="og:site_name" content="شرباكة">
+  <meta property="og:title" content="ربعي على شرباكة">
+  <meta property="og:description" content="شوف الربع وقروباتهم، وحط ربعك.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ar_KW">
+  <meta property="og:image" content="https://shorbaka.com/og-image.png?v=3">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+  <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0E2A47;
+      --teal: #2EC4B6;
+      --coral: #FF8A80;
+      --pearl: #F4EFE6;
+      --sand: #E9C46A;
+      --muted: #9DB2C8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    button, input { font-family: inherit; }
+    [hidden] { display: none !important; }
+    html { background: #0B233B; }
+    body {
+      font-family: "Readex Pro", system-ui, sans-serif; color: var(--pearl); background: #0B233B;
+      min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center;
+      padding: calc(28px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+      overflow-x: hidden; text-align: center;
+    }
+    .sea {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(90% 55% at 50% 34%, rgba(46, 196, 182, .10), transparent 70%),
+        radial-gradient(120% 80% at 50% 30%, #16466F 0%, var(--navy) 58%, #0A2036 100%);
+    }
+    main { position: relative; z-index: 1; width: 100%; max-width: 520px; display: flex; flex-direction: column; align-items: center; }
+    .t-home { display: block; line-height: 0; border-radius: 12px; }
+    .t-home .wm { display: block; width: clamp(150px, 44vw, 200px); height: auto; overflow: visible; }
+    .t-home:focus-visible { outline: 2px solid var(--teal); outline-offset: 6px; }
+
+    .t-card {
+      width: 100%; margin-top: 26px; padding: 24px 18px 22px; border-radius: 28px; text-align: start;
+      background: linear-gradient(180deg, rgba(244, 239, 230, .075), rgba(244, 239, 230, .03));
+      box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .12), 0 30px 60px rgba(0, 0, 0, .22);
+    }
+    .t-card h1 { font-size: clamp(1.6rem, 7vw, 2rem); font-weight: 700; line-height: 1.35; }
+    .t-sub { margin-top: 8px; color: var(--muted); font-size: 1rem; line-height: 1.75; }
+    .t-count { margin-top: 6px; font-size: .9rem; line-height: 1.6; color: var(--muted); }
+    .t-count b { color: var(--pearl); font-weight: 700; }
+    .t-count span { color: var(--sand); }
+
+    .t-err { font-size: .92rem; line-height: 1.7; color: var(--coral); text-align: center; }
+    .kin-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 6px 18px;
+      border: 0; border-radius: 999px; background: rgba(244, 239, 230, .08); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .22);
+      color: var(--pearl); font-size: 1rem; font-weight: 500; cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent;
+    }
+    .kin-btn:hover { background: rgba(244, 239, 230, .14); }
+    .kin-primary, .kin-primary:hover { background: var(--pearl); color: var(--navy); font-weight: 700; box-shadow: 0 10px 24px rgba(0, 0, 0, .25); }
+    .kin-btn svg { width: 19px; height: 19px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+    .kin-btn:disabled { opacity: .75; cursor: progress; }
+    button:focus-visible, a:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+    /* «ربعي», as on the site, to look at only (friends.js draws it) */
+    .tr-bar { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+    .tr-zoom {
+      flex: none; width: 46px; height: 46px; margin-inline-start: auto; border: 0; border-radius: 50%;
+      background: rgba(244, 239, 230, .08); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .16);
+      color: var(--pearl); display: grid; place-items: center; cursor: pointer;
+    }
+    .tr-zoom[aria-pressed="true"] { background: var(--pearl); color: var(--navy); }
+    .tr-zoom svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .tr-scroll {
+      direction: ltr; margin: 10px -18px 0; overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+    }
+    .tr-scroll::-webkit-scrollbar { display: none; }
+    .tr-stage { position: relative; margin: 0 auto; padding: 12px 18px 8px; box-sizing: content-box; }
+    .tr-canvas { position: absolute; top: 12px; left: 18px; transform-origin: 0 0; }
+    .fr-map { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+    .t-only { margin-top: 10px; font-size: .85rem; line-height: 1.6; color: var(--muted); text-align: center; }
+    .t-retry { display: flex; width: 100%; margin-top: 16px; }
+    .t-cta { margin-top: 22px; width: 100%; max-width: 360px; }
+    footer { position: relative; z-index: 1; margin-top: 34px; direction: ltr; font-size: .8rem; letter-spacing: .14em; color: var(--muted); }
+    footer a { color: inherit; text-decoration: none; }
+    @media (min-width: 760px) {
+      main.is-open { max-width: min(1280px, calc(100vw - 48px)); }
+      main.is-open .t-card > :not(.tr-scroll), main.is-open .t-cta { max-width: 484px; margin-inline: auto; }
+      main.is-open .t-card > :not(.tr-scroll) { display: block; }
+      main.is-open .t-card .tr-bar { display: flex; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sea" aria-hidden="true"></div>
+  <main id="t-main">
+    <a class="t-home" href="https://shorbaka.com/" aria-label="شرباكة"><svg class="wm" xmlns="http://www.w3.org/2000/svg" viewBox="-217 -84 434 116" role="img" aria-label="شرباكة"><title>شرباكة</title><defs><mask id="sbk-o1" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><circle cx="-38" cy="-50" r="14" fill="#fff"/></mask><mask id="sbk-no2" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><circle cx="-38" cy="-50" r="14" fill="#000"/></mask><mask id="sbk-x4" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><circle cx="-166" cy="-40" r="11" fill="#fff"/></mask><mask id="sbk-o5" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><circle cx="151" cy="-38" r="16" fill="#fff"/></mask><mask id="sbk-no6" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><circle cx="151" cy="-38" r="16" fill="#000"/></mask><mask id="sbk-x8" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><circle cx="-16" cy="-40" r="11" fill="#fff"/><circle cx="147" cy="-37" r="12" fill="#fff"/></mask><mask id="sbk-t9" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><g mask="url(#sbk-o1)"><path d="M200 -62 C150 -62 130 4 70 4 S-30 -62 -90 -62 S-170 -18 -205 -18" fill="none" stroke="#000" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sbk-o5)"><path d="M200 -18 C150 -18 130 -70 70 -70 S-30 4 -90 4 S-170 -62 -205 -62" fill="none" stroke="#000" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/></g></mask><mask id="sbk-m3" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><g mask="url(#sbk-no2)"><path d="M-135.25 -1.5Q-142.55 -1.5 -148.15 -3.6Q-153.75 -5.7 -156.9 -9.7Q-160.05 -13.7 -160.05 -19.3Q-160.05 -24.5 -157.3 -28.7Q-154.55 -32.9 -149.6 -36.35Q-144.65 -39.8 -137.9 -42.85Q-131.15 -45.9 -123.25 -48.8L-120.85 -33Q-127.55 -31.4 -132 -29.65Q-136.45 -27.9 -139.05 -26.15Q-141.65 -24.4 -142.8 -22.85Q-143.95 -21.3 -143.95 -20.2Q-143.95 -18.9 -142.25 -18.05Q-140.55 -17.2 -135.85 -17.2Q-134.85 -17.2 -132.95 -17.3Q-131.05 -17.4 -128.55 -17.75Q-126.05 -18.1 -123.25 -18.8L-119.55 -5.6Q-123.55 -3.7 -127.1 -2.6Q-130.65 -1.5 -135.25 -1.5ZM-110.85 0Q-117.25 0 -121.1 -1.75Q-124.95 -3.5 -126.9 -6.25Q-128.85 -9 -129.5 -12.2Q-130.15 -15.4 -130.15 -18.2V-53.4H-114.05V-22.7Q-114.05 -18.8 -112 -17.25Q-109.95 -15.7 -105.35 -15.7H-102.05V0ZM-142.75 -59 -153.25 -69.6 -143.35 -80.3 -132.85 -69.6ZM-125.15 -59 -135.65 -69.6 -125.65 -80.3 -115.15 -69.6ZM-95.65 -53.7 -67.65 -77 -57.05 -64.4 -84.45 -41.7 -81.95 -47.6Q-70.55 -44.4 -64.3 -37.7Q-58.05 -31 -56.3 -21.45Q-54.55 -11.9 -56.75 0H-102.05V-15.7H-70.55Q-71.75 -20.3 -74.95 -24.4Q-78.15 -28.5 -83.3 -31.45Q-88.45 -34.4 -95.65 -35.5ZM-102.05 -15.7H-101.05V0H-102.05Q-105.05 0 -105.05 -7.8Q-105.05 -15.7 -102.05 -15.7ZM-26.45 0Q-31.45 0 -35.05 -1Q-38.65 -2 -41 -4.15Q-43.35 -6.3 -44.5 -9.7Q-45.65 -13.1 -45.65 -17.9V-74H-29.55V-23.7Q-29.55 -21.5 -29.25 -19.95Q-28.95 -18.4 -28.15 -17.45Q-27.35 -16.5 -25.9 -16.1Q-24.45 -15.7 -22.05 -15.7H-18.15V0ZM-18.15 0V-15.7H-0.55Q-1.35 -19.2 -3.65 -23.5Q-5.95 -27.8 -9.45 -32.2L4.95 -46.9Q7.95 -41.2 10.15 -34.4Q12.35 -27.6 12.4 -19.15Q12.45 -10.7 8.75 0ZM-18.15 -15.7H-17.15V0H-18.15Q-21.15 0 -21.15 -7.8Q-21.15 -15.7 -18.15 -15.7ZM-1.15 26.9 -11.75 16.2 -1.65 5.6 8.85 16.2ZM28.95 25.6Q24.45 25.6 19 23.6Q13.55 21.6 9.15 17.9L14.15 7.8Q18.15 9 20.85 9.45Q23.55 9.9 25.95 9.9Q31.35 9.9 35.5 7.85Q39.65 5.8 42 2.3Q44.35 -1.2 44.35 -5.3Q44.35 -8.7 43.3 -11.05Q42.25 -13.4 40.6 -15.55Q38.95 -17.7 37.05 -20.5L58.55 -10.1Q58.55 -8.9 58.55 -7.7Q58.55 -6.5 58.55 -5.3Q58.55 -2.3 57.6 1.7Q56.65 5.7 54.55 9.85Q52.45 14 49 17.6Q45.55 21.2 40.6 23.4Q35.65 25.6 28.95 25.6ZM66.45 0Q62.85 0 59.7 -0.65Q56.55 -1.3 53.8 -2.7Q51.05 -4.1 48.6 -6.3Q46.15 -8.5 43.75 -11.6L30.75 -28.3L43.55 -44L56.15 -22Q57.55 -19.6 58.75 -18.2Q59.95 -16.8 61.7 -16.25Q63.45 -15.7 66.45 -15.7H67.45V0ZM134.85 0Q127.95 0 123.2 -1.35Q118.45 -2.7 115.25 -4.55Q112.05 -6.4 109.75 -8L118.65 -17.6Q120.45 -16.8 123.6 -16.25Q126.75 -15.7 130.55 -15.7H142.85Q141.65 -20.2 139.4 -24.45Q137.15 -28.7 134.25 -32.4L148.65 -47Q150.95 -42.8 152.85 -37.95Q154.75 -33.1 155.6 -27.45Q156.45 -21.8 155.75 -15Q155.05 -8.2 152.15 0ZM67.45 0V-15.7H77.05Q77.35 -17.8 77.5 -20Q77.65 -22.2 77.65 -24.7Q77.65 -27.2 77.35 -30.1L96.25 -36.6Q94.85 -29.6 93.55 -24.7Q92.25 -19.8 90.7 -16Q89.15 -12.2 87 -8.5Q84.85 -4.8 81.65 0ZM98.45 0Q90.95 0 85.75 -1.35Q80.55 -2.7 77.5 -4.45Q74.45 -6.2 73.25 -7.3L79.15 -19Q81.65 -17.4 85.35 -16.55Q89.05 -15.7 93.45 -15.7H105.55Q105.85 -17.2 106 -19.45Q106.15 -21.7 106.15 -24.45Q106.15 -27.2 105.85 -30.1L124.95 -36.6Q123.45 -29.6 122.15 -24.7Q120.85 -19.8 119.25 -16Q117.65 -12.2 115.5 -8.5Q113.35 -4.8 110.25 0ZM67.45 -15.7H68.45V0H67.45Q64.45 0 64.45 -7.8Q64.45 -15.7 67.45 -15.7ZM116.45 -56.5 105.75 -67.1 115.85 -77.8 126.35 -67.1ZM107.85 -39.8 97.35 -50.5 107.25 -61.1 117.75 -50.5ZM125.45 -39.8 114.95 -50.5 124.95 -61.1 135.45 -50.5Z" fill="#000" stroke="#000" stroke-width="5.2" stroke-linejoin="round"/></g><g mask="url(#sbk-x8)"><path d="M200 -18 C150 -18 130 -70 70 -70 S-30 4 -90 4 S-170 -62 -205 -62" fill="none" stroke="#000" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/></g></mask><mask id="sbk-m7" maskUnits="userSpaceOnUse" x="-285" y="-155" width="570" height="255"><rect x="-285" y="-155" width="570" height="255" fill="#fff"/><g mask="url(#sbk-no6)"><path d="M-135.25 -1.5Q-142.55 -1.5 -148.15 -3.6Q-153.75 -5.7 -156.9 -9.7Q-160.05 -13.7 -160.05 -19.3Q-160.05 -24.5 -157.3 -28.7Q-154.55 -32.9 -149.6 -36.35Q-144.65 -39.8 -137.9 -42.85Q-131.15 -45.9 -123.25 -48.8L-120.85 -33Q-127.55 -31.4 -132 -29.65Q-136.45 -27.9 -139.05 -26.15Q-141.65 -24.4 -142.8 -22.85Q-143.95 -21.3 -143.95 -20.2Q-143.95 -18.9 -142.25 -18.05Q-140.55 -17.2 -135.85 -17.2Q-134.85 -17.2 -132.95 -17.3Q-131.05 -17.4 -128.55 -17.75Q-126.05 -18.1 -123.25 -18.8L-119.55 -5.6Q-123.55 -3.7 -127.1 -2.6Q-130.65 -1.5 -135.25 -1.5ZM-110.85 0Q-117.25 0 -121.1 -1.75Q-124.95 -3.5 -126.9 -6.25Q-128.85 -9 -129.5 -12.2Q-130.15 -15.4 -130.15 -18.2V-53.4H-114.05V-22.7Q-114.05 -18.8 -112 -17.25Q-109.95 -15.7 -105.35 -15.7H-102.05V0ZM-142.75 -59 -153.25 -69.6 -143.35 -80.3 -132.85 -69.6ZM-125.15 -59 -135.65 -69.6 -125.65 -80.3 -115.15 -69.6ZM-95.65 -53.7 -67.65 -77 -57.05 -64.4 -84.45 -41.7 -81.95 -47.6Q-70.55 -44.4 -64.3 -37.7Q-58.05 -31 -56.3 -21.45Q-54.55 -11.9 -56.75 0H-102.05V-15.7H-70.55Q-71.75 -20.3 -74.95 -24.4Q-78.15 -28.5 -83.3 -31.45Q-88.45 -34.4 -95.65 -35.5ZM-102.05 -15.7H-101.05V0H-102.05Q-105.05 0 -105.05 -7.8Q-105.05 -15.7 -102.05 -15.7ZM-26.45 0Q-31.45 0 -35.05 -1Q-38.65 -2 -41 -4.15Q-43.35 -6.3 -44.5 -9.7Q-45.65 -13.1 -45.65 -17.9V-74H-29.55V-23.7Q-29.55 -21.5 -29.25 -19.95Q-28.95 -18.4 -28.15 -17.45Q-27.35 -16.5 -25.9 -16.1Q-24.45 -15.7 -22.05 -15.7H-18.15V0ZM-18.15 0V-15.7H-0.55Q-1.35 -19.2 -3.65 -23.5Q-5.95 -27.8 -9.45 -32.2L4.95 -46.9Q7.95 -41.2 10.15 -34.4Q12.35 -27.6 12.4 -19.15Q12.45 -10.7 8.75 0ZM-18.15 -15.7H-17.15V0H-18.15Q-21.15 0 -21.15 -7.8Q-21.15 -15.7 -18.15 -15.7ZM-1.15 26.9 -11.75 16.2 -1.65 5.6 8.85 16.2ZM28.95 25.6Q24.45 25.6 19 23.6Q13.55 21.6 9.15 17.9L14.15 7.8Q18.15 9 20.85 9.45Q23.55 9.9 25.95 9.9Q31.35 9.9 35.5 7.85Q39.65 5.8 42 2.3Q44.35 -1.2 44.35 -5.3Q44.35 -8.7 43.3 -11.05Q42.25 -13.4 40.6 -15.55Q38.95 -17.7 37.05 -20.5L58.55 -10.1Q58.55 -8.9 58.55 -7.7Q58.55 -6.5 58.55 -5.3Q58.55 -2.3 57.6 1.7Q56.65 5.7 54.55 9.85Q52.45 14 49 17.6Q45.55 21.2 40.6 23.4Q35.65 25.6 28.95 25.6ZM66.45 0Q62.85 0 59.7 -0.65Q56.55 -1.3 53.8 -2.7Q51.05 -4.1 48.6 -6.3Q46.15 -8.5 43.75 -11.6L30.75 -28.3L43.55 -44L56.15 -22Q57.55 -19.6 58.75 -18.2Q59.95 -16.8 61.7 -16.25Q63.45 -15.7 66.45 -15.7H67.45V0ZM134.85 0Q127.95 0 123.2 -1.35Q118.45 -2.7 115.25 -4.55Q112.05 -6.4 109.75 -8L118.65 -17.6Q120.45 -16.8 123.6 -16.25Q126.75 -15.7 130.55 -15.7H142.85Q141.65 -20.2 139.4 -24.45Q137.15 -28.7 134.25 -32.4L148.65 -47Q150.95 -42.8 152.85 -37.95Q154.75 -33.1 155.6 -27.45Q156.45 -21.8 155.75 -15Q155.05 -8.2 152.15 0ZM67.45 0V-15.7H77.05Q77.35 -17.8 77.5 -20Q77.65 -22.2 77.65 -24.7Q77.65 -27.2 77.35 -30.1L96.25 -36.6Q94.85 -29.6 93.55 -24.7Q92.25 -19.8 90.7 -16Q89.15 -12.2 87 -8.5Q84.85 -4.8 81.65 0ZM98.45 0Q90.95 0 85.75 -1.35Q80.55 -2.7 77.5 -4.45Q74.45 -6.2 73.25 -7.3L79.15 -19Q81.65 -17.4 85.35 -16.55Q89.05 -15.7 93.45 -15.7H105.55Q105.85 -17.2 106 -19.45Q106.15 -21.7 106.15 -24.45Q106.15 -27.2 105.85 -30.1L124.95 -36.6Q123.45 -29.6 122.15 -24.7Q120.85 -19.8 119.25 -16Q117.65 -12.2 115.5 -8.5Q113.35 -4.8 110.25 0ZM67.45 -15.7H68.45V0H67.45Q64.45 0 64.45 -7.8Q64.45 -15.7 67.45 -15.7ZM116.45 -56.5 105.75 -67.1 115.85 -77.8 126.35 -67.1ZM107.85 -39.8 97.35 -50.5 107.25 -61.1 117.75 -50.5ZM125.45 -39.8 114.95 -50.5 124.95 -61.1 135.45 -50.5Z" fill="#000" stroke="#000" stroke-width="5.2" stroke-linejoin="round"/></g><g mask="url(#sbk-x4)"><path d="M200 -62 C150 -62 130 4 70 4 S-30 -62 -90 -62 S-170 -18 -205 -18" fill="none" stroke="#000" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/></g></mask></defs><g class="wm-word" mask="url(#sbk-t9)"><path d="M-135.25 -1.5Q-142.55 -1.5 -148.15 -3.6Q-153.75 -5.7 -156.9 -9.7Q-160.05 -13.7 -160.05 -19.3Q-160.05 -24.5 -157.3 -28.7Q-154.55 -32.9 -149.6 -36.35Q-144.65 -39.8 -137.9 -42.85Q-131.15 -45.9 -123.25 -48.8L-120.85 -33Q-127.55 -31.4 -132 -29.65Q-136.45 -27.9 -139.05 -26.15Q-141.65 -24.4 -142.8 -22.85Q-143.95 -21.3 -143.95 -20.2Q-143.95 -18.9 -142.25 -18.05Q-140.55 -17.2 -135.85 -17.2Q-134.85 -17.2 -132.95 -17.3Q-131.05 -17.4 -128.55 -17.75Q-126.05 -18.1 -123.25 -18.8L-119.55 -5.6Q-123.55 -3.7 -127.1 -2.6Q-130.65 -1.5 -135.25 -1.5ZM-110.85 0Q-117.25 0 -121.1 -1.75Q-124.95 -3.5 -126.9 -6.25Q-128.85 -9 -129.5 -12.2Q-130.15 -15.4 -130.15 -18.2V-53.4H-114.05V-22.7Q-114.05 -18.8 -112 -17.25Q-109.95 -15.7 -105.35 -15.7H-102.05V0ZM-142.75 -59 -153.25 -69.6 -143.35 -80.3 -132.85 -69.6ZM-125.15 -59 -135.65 -69.6 -125.65 -80.3 -115.15 -69.6ZM-95.65 -53.7 -67.65 -77 -57.05 -64.4 -84.45 -41.7 -81.95 -47.6Q-70.55 -44.4 -64.3 -37.7Q-58.05 -31 -56.3 -21.45Q-54.55 -11.9 -56.75 0H-102.05V-15.7H-70.55Q-71.75 -20.3 -74.95 -24.4Q-78.15 -28.5 -83.3 -31.45Q-88.45 -34.4 -95.65 -35.5ZM-102.05 -15.7H-101.05V0H-102.05Q-105.05 0 -105.05 -7.8Q-105.05 -15.7 -102.05 -15.7ZM-26.45 0Q-31.45 0 -35.05 -1Q-38.65 -2 -41 -4.15Q-43.35 -6.3 -44.5 -9.7Q-45.65 -13.1 -45.65 -17.9V-74H-29.55V-23.7Q-29.55 -21.5 -29.25 -19.95Q-28.95 -18.4 -28.15 -17.45Q-27.35 -16.5 -25.9 -16.1Q-24.45 -15.7 -22.05 -15.7H-18.15V0ZM-18.15 0V-15.7H-0.55Q-1.35 -19.2 -3.65 -23.5Q-5.95 -27.8 -9.45 -32.2L4.95 -46.9Q7.95 -41.2 10.15 -34.4Q12.35 -27.6 12.4 -19.15Q12.45 -10.7 8.75 0ZM-18.15 -15.7H-17.15V0H-18.15Q-21.15 0 -21.15 -7.8Q-21.15 -15.7 -18.15 -15.7ZM-1.15 26.9 -11.75 16.2 -1.65 5.6 8.85 16.2ZM28.95 25.6Q24.45 25.6 19 23.6Q13.55 21.6 9.15 17.9L14.15 7.8Q18.15 9 20.85 9.45Q23.55 9.9 25.95 9.9Q31.35 9.9 35.5 7.85Q39.65 5.8 42 2.3Q44.35 -1.2 44.35 -5.3Q44.35 -8.7 43.3 -11.05Q42.25 -13.4 40.6 -15.55Q38.95 -17.7 37.05 -20.5L58.55 -10.1Q58.55 -8.9 58.55 -7.7Q58.55 -6.5 58.55 -5.3Q58.55 -2.3 57.6 1.7Q56.65 5.7 54.55 9.85Q52.45 14 49 17.6Q45.55 21.2 40.6 23.4Q35.65 25.6 28.95 25.6ZM66.45 0Q62.85 0 59.7 -0.65Q56.55 -1.3 53.8 -2.7Q51.05 -4.1 48.6 -6.3Q46.15 -8.5 43.75 -11.6L30.75 -28.3L43.55 -44L56.15 -22Q57.55 -19.6 58.75 -18.2Q59.95 -16.8 61.7 -16.25Q63.45 -15.7 66.45 -15.7H67.45V0ZM134.85 0Q127.95 0 123.2 -1.35Q118.45 -2.7 115.25 -4.55Q112.05 -6.4 109.75 -8L118.65 -17.6Q120.45 -16.8 123.6 -16.25Q126.75 -15.7 130.55 -15.7H142.85Q141.65 -20.2 139.4 -24.45Q137.15 -28.7 134.25 -32.4L148.65 -47Q150.95 -42.8 152.85 -37.95Q154.75 -33.1 155.6 -27.45Q156.45 -21.8 155.75 -15Q155.05 -8.2 152.15 0ZM67.45 0V-15.7H77.05Q77.35 -17.8 77.5 -20Q77.65 -22.2 77.65 -24.7Q77.65 -27.2 77.35 -30.1L96.25 -36.6Q94.85 -29.6 93.55 -24.7Q92.25 -19.8 90.7 -16Q89.15 -12.2 87 -8.5Q84.85 -4.8 81.65 0ZM98.45 0Q90.95 0 85.75 -1.35Q80.55 -2.7 77.5 -4.45Q74.45 -6.2 73.25 -7.3L79.15 -19Q81.65 -17.4 85.35 -16.55Q89.05 -15.7 93.45 -15.7H105.55Q105.85 -17.2 106 -19.45Q106.15 -21.7 106.15 -24.45Q106.15 -27.2 105.85 -30.1L124.95 -36.6Q123.45 -29.6 122.15 -24.7Q120.85 -19.8 119.25 -16Q117.65 -12.2 115.5 -8.5Q113.35 -4.8 110.25 0ZM67.45 -15.7H68.45V0H67.45Q64.45 0 64.45 -7.8Q64.45 -15.7 67.45 -15.7ZM116.45 -56.5 105.75 -67.1 115.85 -77.8 126.35 -67.1ZM107.85 -39.8 97.35 -50.5 107.25 -61.1 117.75 -50.5ZM125.45 -39.8 114.95 -50.5 124.95 -61.1 135.45 -50.5Z" fill="#F4EFE6"/></g><g mask="url(#sbk-m3)"><path class="th th-a" pathLength="1" d="M200 -62 C150 -62 130 4 70 4 S-30 -62 -90 -62 S-170 -18 -205 -18" fill="none" stroke="#2EC4B6" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sbk-m7)"><path class="th th-b" pathLength="1" d="M200 -18 C150 -18 130 -70 70 -70 S-30 4 -90 4 S-170 -62 -205 -62" fill="none" stroke="#FF8A80" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></g><defs><radialGradient id="sbk-p10" cx="0.36" cy="0.3" r="0.78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F4EFE6"/><stop offset="1" stop-color="#D3C08F"/></radialGradient></defs><circle class="pl pl-s" cx="200" cy="-62" r="7.2" fill="url(#sbk-p10)"/><defs><radialGradient id="sbk-p11" cx="0.36" cy="0.3" r="0.78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F4EFE6"/><stop offset="1" stop-color="#D3C08F"/></radialGradient></defs><circle class="pl pl-e" cx="200" cy="-18" r="7.2" fill="url(#sbk-p11)"/><defs><radialGradient id="sbk-p12" cx="0.36" cy="0.3" r="0.78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F4EFE6"/><stop offset="1" stop-color="#D3C08F"/></radialGradient></defs><circle class="pl pl-e" cx="-205" cy="-18" r="7.2" fill="url(#sbk-p12)"/><defs><radialGradient id="sbk-p13" cx="0.36" cy="0.3" r="0.78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F4EFE6"/><stop offset="1" stop-color="#D3C08F"/></radialGradient></defs><circle class="pl pl-s" cx="-205" cy="-62" r="7.2" fill="url(#sbk-p13)"/></svg></a>
+    <section class="t-card" aria-labelledby="t-title">
+      <h1 id="t-title">ربعي</h1>
+      <p class="t-sub" id="t-sub">لحظة…</p>
+      <p class="t-count" id="t-count" hidden></p>
+      <button type="button" class="kin-btn t-retry" id="t-retry" hidden><span>جرّب مرة ثانية</span></button>
+      <div class="tr-bar" id="t-bar" hidden>
+        <button type="button" class="tr-zoom" id="t-zoom" aria-pressed="false" hidden></button>
+      </div>
+      <div class="tr-scroll" id="t-scroll" hidden><div class="tr-stage" id="t-stage"><div class="tr-canvas" id="t-canvas"></div></div></div>
+      <p class="t-only" id="t-only" hidden>تشوفهم بس، وما تقدر تغيّر فيهم شي.</p>
+    </section>
+    <a class="kin-btn t-cta" href="https://shorbaka.com/#friends"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5v17M12 3.5v17M19 3.5v17"/><circle cx="5" cy="9" r="1.6"/><path d="M3.5 15.5h10"/><circle cx="19" cy="12" r="1.6"/></svg><span>حط ربعك على شرباكة</span></a>
+  </main>
+  <footer><a href="https://shorbaka.com/">© SHORBAKA.COM</a></footer>
+  <script src="/friends.js?v=1"></script>
+  <script src="/flink.js?v=1"></script>
+</body>
+</html>

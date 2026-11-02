@@ -593,6 +593,7 @@
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
       mTitle: $('kin-m-title'), seg: $('kin-seg'), opt: $('kin-opt'), optBox: $('kin-opt-box'),
       choice: $('kin-choice'), choiceText: $('kin-choice-text'), choiceSeg: $('kin-choice-seg'),
+      picks: $('kin-picks'), picksText: $('kin-picks-text'), picksRow: $('kin-picks-row'),
       optText: $('kin-opt-text'), optHint: $('kin-opt-hint'), opt2: $('kin-opt2'), opt2Box: $('kin-opt2-box'),
       opt2Text: $('kin-opt2-text'), opt2Hint: $('kin-opt2-hint'), rTree: $('kin-r-tree'), addTree: $('kin-add-tree'),
       rIn: $('kin-r-in'), rInText: $('kin-r-in-text'), rSee: $('kin-r-see'),
@@ -1286,7 +1287,9 @@
        the finder's relation here, or the family tree from tree.js. It can also bring a choice,
        choice: { label, items: [{ key, label }], value, set(key) }, shown under the size toggle (the tree's
        «الأسامي»: «كلها»، «بدون البنات»، «بس اسمي»), and switches under it, option: { label, hint, on, set(on) }
-       or options (a list).
+       or options (a list). And groups to pick from, picks: { label, items: [{ key, label, color }], value: [keys],
+       set(keys) } («ربعي»: which of my groups show), as chips over the choice. With link, a button copies it
+       (linkLabel: its words, «انسخ رابط الشجرة كاملة» when none).
        A source can bring its own sizes instead of story and post ({ key: { label, title, alt, dl } },
        sizesLabel), and make() can then resolve a file that isn't the picture shown: { file, name, type,
        preview, w, h } (the tree's PDF, with a picture of the page). */
@@ -1331,9 +1334,10 @@
       });
     }
 
-    // While a picture is being drawn, the toggle, the choice and the switches wait.
+    // While a picture is being drawn, the toggle, the picks, the choice and the switches wait.
     function busy(on) {
       segs.forEach(function (x) { x.disabled = on; });
+      pickBtns().forEach(function (x) { x.disabled = on; });
       choiceBtns().forEach(function (x) { x.disabled = on; });
       toggles.forEach(function (t) { t.box.disabled = on; });
       ui.img.classList.toggle('is-busy', on);
@@ -1360,6 +1364,57 @@
       var rows = list.length + (more || 0);
       ui.modal.classList.toggle('has-opt', rows > 0);
       ui.modal.classList.toggle('has-opt2', rows > 1);
+      ui.modal.classList.toggle('has-opt3', rows > 2);
+    }
+
+    /* The source's groups as chips: «الكل» and one for each group (Ali: one group, two, or all of them).
+       With all of them on, a tap on one leaves only it; after that each tap adds one or takes one off, and
+       taking off the last one brings back all. The picture is drawn again each time; if it can't be, the
+       pick goes back. */
+    function pickBtns() { return ui.picksRow ? Array.prototype.slice.call(ui.picksRow.querySelectorAll('button')) : []; }
+    function pressPicks(c) {
+      var all = c.value.length >= c.items.length;
+      pickBtns().forEach(function (b) {
+        var on = b.dataset.key === '*' ? all : !all && c.value.indexOf(b.dataset.key) >= 0;
+        b.setAttribute('aria-pressed', String(on));
+      });
+    }
+    function showPicks(c) {
+      if (!ui.picks || !ui.picksRow) return 0;
+      ui.picks.hidden = !c;
+      ui.picksRow.textContent = '';
+      if (!c) return 0;
+      ui.picksText.textContent = c.label;
+      var keys = c.items.map(function (it) { return it.key; });
+      [{ key: '*', label: 'الكل' }].concat(c.items).forEach(function (it) {
+        var b = document.createElement('button'), s = document.createElement('span');
+        b.type = 'button';
+        b.className = 'kin-pick';
+        b.dataset.key = it.key;
+        if (it.color) { var dot = document.createElement('i'); dot.style.background = it.color; b.appendChild(dot); }
+        s.textContent = it.label;
+        b.appendChild(s);
+        b.addEventListener('click', function () {
+          if (!pic || pic.picks !== c) return;
+          var was = c.value.slice(), all = was.length >= keys.length, next;
+          if (it.key === '*') { if (all) return; next = keys; }
+          else if (all) next = [it.key];
+          else if (was.indexOf(it.key) >= 0) next = was.length > 1 ? was.filter(function (k) { return k !== it.key; }) : keys;
+          else next = keys.filter(function (k) { return k === it.key || was.indexOf(k) >= 0; });
+          c.set(next); c.value = next;
+          pressPicks(c);
+          busy(true);
+          showImage(shown).catch(function () {
+            c.set(was); c.value = was;
+            pressPicks(c);
+            flash(b, 'ما زبطت', 2000);
+          }).then(function () { busy(false); });
+        });
+        ui.picksRow.appendChild(b);
+      });
+      pressPicks(c);
+      // the rows the chips take, for the room the picture leaves them
+      return c.items.length > 3 ? 2 : 1;
     }
 
     /* The source's choice, as a small toggle of its own: the picture is drawn again when it changes, and
@@ -1416,8 +1471,14 @@
       var s = label(from), was = s.textContent;
       pic = source;
       var first = showSizes(source);
-      showOptions(optionsOf(source), showChoice(source.choice) ? 1 : 0);
-      if (ui.mLink) ui.mLink.hidden = !source.link;
+      showOptions(optionsOf(source), showPicks(source.picks) + (showChoice(source.choice) ? 1 : 0));
+      if (ui.mLink) {
+        // «انسخ رابط الشجرة كاملة», or the source's own words for its link («انسخ رابط ربعي»)
+        var ml = label(ui.mLink);
+        clearTimeout(ui.mLink._t);
+        ml.textContent = ml.dataset.label = source.linkLabel || 'انسخ رابط الشجرة كاملة';
+        ui.mLink.hidden = !source.link;
+      }
       ui.modal.classList.toggle('has-link', !!(ui.mLink && source.link));
       from.disabled = true; s.textContent = 'لحظة…';
       return showImage(first).then(function () {
@@ -1544,20 +1605,21 @@
       });
     });
 
-    /* Three sections share the page under the hero: «شنو يصير لك؟» (with the saved list), «شجرة عائلتي»
-       (tree.js) and «شجرة دوامي» (work.js). The switcher under the hero picks one; #tree or #work in the
-       address opens that tree. */
+    /* Four sections share the page under the hero: «شنو يصير لك؟» (with the saved list), «شجرة عائلتي»
+       (tree.js), «شجرة دوامي» (work.js) and «ربعي» (friends.js). The switcher under the hero picks one;
+       #tree, #work or #friends in the address opens that section. */
     var mainEl = document.querySelector('main');
     var secLinks = Array.prototype.slice.call(document.querySelectorAll('.sec'));
     function showSection(name, scroll) {
       if (!mainEl) return;
-      name = (name === 'tree' || name === 'work') && $(name) ? name : 'kin';
+      name = (name === 'tree' || name === 'work' || name === 'friends') && $(name) ? name : 'kin';
       mainEl.setAttribute('data-sec', name);
       secLinks.forEach(function (a) {
         if (a.dataset.sec === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
       if (root.TREE && root.TREE.shown) root.TREE.shown(name === 'tree');
       if (root.WORK && root.WORK.shown) root.WORK.shown(name === 'work');
+      if (root.FRIENDS && root.FRIENDS.shown) root.FRIENDS.shown(name === 'friends');
       if (name === 'kin') render();  // names from the tree may have changed meanwhile
       if (scroll) $(name).scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
@@ -1568,7 +1630,10 @@
         showSection(a.dataset.sec, true);
       });
     });
-    function hashSec() { return location.hash === '#tree' ? 'tree' : location.hash === '#work' ? 'work' : 'kin'; }
+    function hashSec() {
+      var h = location.hash;
+      return h === '#tree' ? 'tree' : h === '#work' ? 'work' : h === '#friends' ? 'friends' : 'kin';
+    }
     window.addEventListener('hashchange', function () { showSection(hashSec(), hashSec() !== 'kin'); });
     showSection(hashSec(), false);
     if (hashSec() !== 'kin' && $(hashSec())) setTimeout(function () { $(hashSec()).scrollIntoView({ block: 'start' }); }, 0);

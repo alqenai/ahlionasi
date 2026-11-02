@@ -382,10 +382,10 @@
     .kin-gbtn { display: flex; justify-content: center; align-items: center; min-height: 52px; margin: 18px 0 6px; color: var(--muted); font-size: .9rem; }
     .kin-auth-err { font-size: .9rem; line-height: 1.6; color: var(--coral); text-align: center; margin-top: 6px; }
     .kin-auth-note { font-size: .8rem; line-height: 1.7; color: var(--muted); margin-top: 12px; padding: 0 6px; }
-    /* signing in from «شجرة دوامي»: the note says nothing about kinship */
+    /* signing in from «شجرة دوامي» or «ربعي»: the note says nothing about kinship */
     .kin-auth-note .for-work { display: none; }
-    body:has(main[data-sec="work"]) .kin-auth-note .for-kin { display: none; }
-    body:has(main[data-sec="work"]) .kin-auth-note .for-work { display: inline; }
+    body:has(main[data-sec="work"]) .kin-auth-note .for-kin, body:has(main[data-sec="friends"]) .kin-auth-note .for-kin { display: none; }
+    body:has(main[data-sec="work"]) .kin-auth-note .for-work, body:has(main[data-sec="friends"]) .kin-auth-note .for-work { display: inline; }
     .kin-auth-hint { font-size: .9rem; line-height: 1.75; color: var(--pearl); margin-top: 14px; padding: 10px 14px; border-radius: 14px; background: rgba(233, 196, 106, .1); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .28); }
     .kin-auth-local { display: block; min-height: 44px; margin: 2px auto 0; padding: 0 12px; border: 0; background: none; color: var(--sand); font-size: .92rem; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
     /* sign-in with a code by email, under Google's button */
@@ -456,11 +456,28 @@
     .kin-choice-text { flex: none; font-size: .95rem; font-weight: 500; }
     .kin-choice .kin-seg { flex: 1 1 auto; margin: 0; padding: 3px; gap: 2px; }
     .kin-choice .kin-seg button { flex: 1 1 auto; min-height: 34px; padding: 0 8px; font-size: .86rem; white-space: nowrap; }
+    /* «ربعي»: the groups that show in the picture, as chips beside their word */
+    .kin-picks {
+      display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; padding: 5px 14px 5px 5px;
+      border-radius: 16px; background: rgba(244, 239, 230, .05); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .1);
+    }
+    .kin-picks-text { flex: none; padding-top: 7px; font-size: .95rem; font-weight: 500; }
+    .kin-picks-row { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+    .kin-pick {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 11px; border: 0; border-radius: 999px;
+      background: rgba(244, 239, 230, .06); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .14); color: var(--muted);
+      font-size: .86rem; font-weight: 500; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .kin-pick i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+    .kin-pick[aria-pressed="true"] { background: var(--pearl); color: var(--navy); font-weight: 700; box-shadow: none; }
+    .kin-pick:disabled { cursor: progress; }
     .kin-modal.has-opt #kin-img { max-height: min(54vh, 520px); }
     .kin-modal.has-opt2 #kin-img { max-height: min(46vh, 440px); }
+    .kin-modal.has-opt3 #kin-img { max-height: min(40vh, 380px); }
     /* the tree's «انسخ رابط الشجرة كاملة» under the buttons: the picture gives it the room */
     .kin-modal.has-link #kin-img { max-height: min(54vh, 520px); }
     .kin-modal.has-opt.has-link #kin-img { max-height: min(48vh, 470px); }
+    .kin-modal.has-opt3.has-link #kin-img { max-height: min(36vh, 340px); }
     /* the PDF: a white page, shown like a sheet of paper */
     .kin-modal.is-page #kin-img { border-radius: 6px; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
     .kin-sheet-btns { display: flex; gap: 8px; margin-top: 14px; }
@@ -469,7 +486,7 @@
     .kin-mlink { display: flex; width: 100%; margin-top: 8px; }
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-    /* The two sections under the hero: «شنو يصير لك؟» and «شجرة عائلتي». */
+    /* The sections under the hero: «شنو يصير لك؟», «شجرة عائلتي», «شجرة دوامي» and «ربعي». */
     .secs {
       position: sticky; top: calc(10px + env(safe-area-inset-top)); z-index: 15;
       width: 100%; margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 5px;
@@ -491,12 +508,20 @@
     main .kin { scroll-margin-top: 84px; }
     main[data-sec="tree"] #kin, main[data-sec="tree"] #kin-wallet { display: none !important; }
     main[data-sec="work"] #kin, main[data-sec="work"] #kin-wallet { display: none !important; }
+    main[data-sec="friends"] #kin, main[data-sec="friends"] #kin-wallet { display: none !important; }
     main:not([data-sec="tree"]) #tree { display: none; }
     main:not([data-sec="work"]) #work { display: none; }
-    /* three sections in the switcher: on a phone the words alone, a little smaller */
-    .secs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    main:not([data-sec="friends"]) #friends { display: none; }
+    /* four sections in the switcher: their short names («يصير لك؟ · عائلتي · دوامي · ربعي»), and the full
+       ones on a computer, where the switcher gets wider than the column; on a phone the words alone */
+    .secs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .sec-l { display: none; }
+    @media (min-width: 760px) {
+      .secs { width: min(720px, calc(100vw - 48px)); }
+      .sec-l { display: inline; }
+    }
     @media (max-width: 459px) {
-      .sec { gap: 6px; padding: 0 6px; font-size: .9rem; }
+      .sec { gap: 6px; padding: 0 4px; font-size: .9rem; }
       .sec svg { display: none; }
     }
 
@@ -504,7 +529,7 @@
     .tree:focus { outline: none; }
     /* On a computer the tree gets the width of the screen; everything around it stays in the column. */
     @media (min-width: 760px) {
-      main[data-sec="tree"] .tree, main[data-sec="work"] .tree { width: min(1280px, calc(100vw - 48px)); max-width: none; }
+      main[data-sec="tree"] .tree, main[data-sec="work"] .tree, main[data-sec="friends"] .tree { width: min(1280px, calc(100vw - 48px)); max-width: none; }
       .tree > :not(.tr-wrap), .tr-wrap > :not(.tr-scroll) { max-width: 484px; margin-inline: auto; }
     }
     .tr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -690,6 +715,29 @@
     #wk-side button { white-space: nowrap; }
     @media (max-width: 399px) { #wk-tidy { width: 46px; padding: 0; justify-content: center; } #wk-tidy span { display: none; } }
 
+    /* «ربعي» (friends.js): a line for each group, like a metro map; me in sand. The map is SVG, with a
+       see-through button over each name, group and my bar. */
+    .fr-groups { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .fr-g-form, .fr-start-g, .fr-p-gform { margin-top: 10px; }
+    .fr-add { min-height: 44px; padding: 0 18px; background: rgba(46, 196, 182, .14); box-shadow: inset 0 0 0 1px rgba(46, 196, 182, .5); font-weight: 700; }
+    .fr-add:hover { background: rgba(46, 196, 182, .22); }
+    #fr-wrap .tr-bar { margin-top: 12px; }
+    .fr-map { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+    .fr-map g.is-new { animation: pop-in .5s cubic-bezier(.2, .9, .3, 1.25) both; transform-box: fill-box; transform-origin: center; }
+    .fr-hit { position: absolute; padding: 0; border: 0; border-radius: 14px; background: transparent; cursor: pointer; }
+    .fr-hit:hover { background: rgba(244, 239, 230, .07); }
+    .kin .fr-hit:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+    .fr-p-form { display: grid; }
+    .fr-p-form .tr-p-label { margin-top: 16px; }
+    .fr-p-form > .kin-btn { width: 100%; min-height: 48px; margin-top: 14px; }
+    .fr-p-form .wk-p-err { margin-top: 10px; }
+    .fr-g-dot { width: 22px; height: 22px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px rgba(244, 239, 230, .14); }
+    .fr-colors { display: grid; grid-template-columns: repeat(6, 40px); gap: 10px; justify-content: center; }
+    .fr-color { width: 40px; height: 40px; border: 0; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .fr-color[aria-pressed="true"] { box-shadow: 0 0 0 3px #0F2E4D, 0 0 0 5px var(--pearl); }
+    .fr-g-more { margin-top: 18px; }
+    #fr-g-err { margin-top: 8px; }
+
     /* One person's sheet */
     .tr-p-who { display: flex; align-items: center; gap: 12px; min-width: 0; padding-inline-start: 4px; }
     .tr-p-who .tr-av { width: 46px; height: 46px; font-size: 1.15rem; box-shadow: 0 0 0 3px var(--teal); }
@@ -812,7 +860,7 @@
         <button type="button" class="acct-item" id="acct-out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h10"/></svg><span>تسجيل الخروج</span></button>
         <button type="button" class="acct-item acct-danger" id="acct-del"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2M6.5 7l1 12.2a1.5 1.5 0 0 0 1.5 1.3h6a1.5 1.5 0 0 0 1.5-1.3l1-12.2M10 11v6M14 11v6"/></svg><span>حذف الحساب</span></button>
         <div class="acct-confirm" id="acct-confirm" hidden>
-          <p class="acct-warn">بينمسح حسابك وكل اللي حفظته فيه: صلات القرابة وشجرة عائلتك وشجرة دوامك، وما تقدر ترجعهم.</p>
+          <p class="acct-warn">بينمسح حسابك وكل اللي حفظته فيه: صلات القرابة وشجرة عائلتك وشجرة دوامك وربعك، وما تقدر ترجعهم.</p>
           <div class="acct-confirm-btns">
             <button type="button" class="acct-yes" id="acct-yes">احذف حسابي</button>
             <button type="button" class="acct-no" id="acct-no">تراجع</button>
@@ -828,9 +876,10 @@
     <div class="latin" lang="en">shorbaka</div>
 
     <nav class="secs" aria-label="أقسام شرباكة">
-      <a class="sec" href="#kin" data-sec="kin" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="7.5" r="3"/><circle cx="17.5" cy="16.5" r="3"/><path d="M9 9.6l6 4.8"/></svg><span>شنو يصير لك؟</span></a>
-      <a class="sec" href="#tree" data-sec="tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>شجرة عائلتي</span></a>
-      <a class="sec" href="#work" data-sec="work"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7V5.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V7M3 13h18"/></svg><span>شجرة دوامي</span></a>
+      <a class="sec" href="#kin" data-sec="kin" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="7.5" r="3"/><circle cx="17.5" cy="16.5" r="3"/><path d="M9 9.6l6 4.8"/></svg><span><span class="sec-l">شنو </span>يصير لك؟</span></a>
+      <a class="sec" href="#tree" data-sec="tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span><span class="sec-l">شجرة </span>عائلتي</span></a>
+      <a class="sec" href="#work" data-sec="work"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7V5.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V7M3 13h18"/></svg><span><span class="sec-l">شجرة </span>دوامي</span></a>
+      <a class="sec" href="#friends" data-sec="friends"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5v17M12 3.5v17M19 3.5v17"/><circle cx="5" cy="9" r="1.6"/><path d="M3.5 15.5h10"/><circle cx="19" cy="12" r="1.6"/></svg><span>ربعي</span></a>
     </nav>
 
     <section class="kin" id="kin" aria-labelledby="kin-title">
@@ -1012,6 +1061,57 @@
       </div>
       <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>شجرتك لك بروحك.</b> ما تنشر بالموقع ولا نشاركها مع أحد، وإنت اللي تقرر شنو تشارك. وتقدر تخفي الأسامي قبل لا تنشرها.</span></p>
     </section>
+
+    <section class="kin tree" id="friends" tabindex="-1" aria-labelledby="fr-title">
+      <div class="tr-head">
+        <div>
+          <h2 id="fr-title">ربعي</h2>
+          <p class="kin-en" lang="en">My friends</p>
+        </div>
+        <span class="tr-count" id="fr-count"></span>
+      </div>
+      <p class="kin-sub">اكتب قروباتك وربعك، واختار لكل صديق قروبه.</p>
+
+      <p class="tr-msg" id="fr-msg" role="status" hidden></p>
+      <button type="button" class="kin-btn tr-retry" id="fr-retry" hidden><span>جرّب مرة ثانية</span></button>
+
+      <form class="tr-start" id="fr-start" novalidate hidden>
+        <label class="tr-field"><span>اسمك</span><input class="tr-input" id="fr-me" type="text" maxlength="40" autocomplete="given-name" placeholder="مثال: علي" enterkeyhint="next"></label>
+        <div class="tr-field">
+          <span id="fr-sugg-label">قروباتك</span>
+          <div class="tr-p-adds" id="fr-sugg" role="group" aria-labelledby="fr-sugg-label"></div>
+          <div class="tr-fam-form fr-start-g">
+            <label><span>أو اكتب قروبك</span><input class="tr-input" id="fr-start-gname" type="text" maxlength="24" autocomplete="off" placeholder="مثال: ربع البر" enterkeyhint="done"></label>
+            <button type="button" class="kin-w-ok" id="fr-start-gadd"><span>ضيف</span></button>
+          </div>
+        </div>
+        <p class="tr-err" id="fr-start-err" role="alert" hidden></p>
+        <button type="submit" class="kin-btn kin-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 14.2c2.4-.3 4.4 1.2 5 4"/></svg><span>ابدأ ربعي</span></button>
+      </form>
+
+      <div class="tr-wrap" id="fr-wrap" hidden>
+        <div class="fr-groups" id="fr-groups" role="group" aria-label="قروباتك"></div>
+        <form class="tr-fam-form fr-g-form" id="fr-g-form" hidden>
+          <label><span>اسم القروب</span><input class="tr-input" id="fr-g-new" type="text" maxlength="24" autocomplete="off" placeholder="مثال: الديوانية" enterkeyhint="done"></label>
+          <button type="submit" class="kin-w-ok"><span>ضيف</span></button>
+        </form>
+        <div class="tr-bar">
+          <button type="button" class="tr-chip fr-add" id="fr-add">صديق</button>
+          <button type="button" class="tr-zoom" id="fr-zoom" aria-pressed="false" hidden></button>
+        </div>
+        <div class="tr-scroll" id="fr-scroll"><div class="tr-stage" id="fr-stage"><div class="tr-canvas" id="fr-canvas"></div></div></div>
+        <p class="tr-hint" id="fr-hint"></p>
+        <div class="tr-actions">
+          <button type="button" class="kin-btn kin-primary" id="fr-share"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شاركها ستوري</span></button>
+          <button type="button" class="kin-btn" id="fr-pdf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="8" rx="2"/><path d="M7 14.5h10V21H7z"/></svg><span>PDF للطباعة</span></button>
+          <button type="button" class="kin-btn tr-link-btn" id="fr-link-btn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3.2-3.2a4.2 4.2 0 0 0-6-6L11.6 6.4"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3.2 3.2a4.2 4.2 0 0 0 6 6l1.6-1.6"/></svg><span>رابط ربعي</span></button>
+        </div>
+        <p class="kin-w-note tr-note" id="fr-note"></p>
+        <button type="button" class="tr-link" id="fr-save-retry" hidden>جرّب مرة ثانية</button>
+        <button type="button" class="kin-w-in tr-in" id="fr-in" hidden>سجّل دخول عشان ينحفظون بحسابك</button>
+      </div>
+      <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>ربعك لك بروحك.</b> ما ينشرون بالموقع ولا نشاركهم مع أحد، وإنت اللي تقرر شنو تشارك. وتقدر تخفي أساميهم قبل لا تنشر.</span></p>
+    </section>
   </main>
 
   <footer>© <span id="y">2026</span> SHORBAKA.COM</footer>
@@ -1025,6 +1125,10 @@
       <div class="kin-seg" id="kin-seg" role="group" aria-label="مقاس الصورة">
         <button type="button" data-format="story" aria-pressed="true"><span>ستوري</span></button>
         <button type="button" data-format="post" aria-pressed="false"><span>بوست</span></button>
+      </div>
+      <div class="kin-picks" id="kin-picks" hidden>
+        <span class="kin-picks-text" id="kin-picks-text"></span>
+        <div class="kin-picks-row" id="kin-picks-row" role="group" aria-labelledby="kin-picks-text"></div>
       </div>
       <div class="kin-choice" id="kin-choice" hidden>
         <span class="kin-choice-text" id="kin-choice-text"></span>
@@ -1246,6 +1350,83 @@
     </div>
   </div>
 
+  <div class="kin-modal" id="fr-sheet" role="dialog" aria-modal="true" aria-labelledby="fr-p-title" hidden>
+    <div class="kin-sheet tr-psheet">
+      <div class="kin-sheet-head">
+        <h3 id="fr-p-title">صديق جديد</h3>
+        <button type="button" class="kin-x" id="fr-p-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <form class="fr-p-form" id="fr-p-form" novalidate>
+        <label class="tr-field"><span id="fr-p-name-label">الاسم</span><input class="tr-input" id="fr-p-name" type="text" maxlength="40" autocomplete="off" enterkeyhint="done"></label>
+        <div id="fr-p-gbox">
+          <p class="tr-p-label" id="fr-p-glabel">وين تعرفه؟</p>
+          <div class="tr-p-adds" id="fr-p-groups" role="group" aria-labelledby="fr-p-glabel"></div>
+          <div class="tr-fam-form fr-p-gform" id="fr-p-gform" hidden>
+            <label><span>اسم القروب</span><input class="tr-input" id="fr-p-gname" type="text" maxlength="24" autocomplete="off" placeholder="مثال: الديوانية" enterkeyhint="done"></label>
+            <button type="button" class="kin-w-ok" id="fr-p-gadd"><span>ضيف</span></button>
+          </div>
+        </div>
+        <p class="wk-p-err" id="fr-p-err" role="alert" hidden></p>
+        <button type="submit" class="kin-btn kin-primary" id="fr-p-save"><span>ضيف</span></button>
+      </form>
+      <p class="tr-p-done" id="fr-p-done" role="status"></p>
+      <button type="button" class="tr-p-del" id="fr-p-del" hidden><span></span></button>
+      <div class="tr-p-confirm" id="fr-p-confirm" hidden>
+        <p>متأكد؟</p>
+        <div><button type="button" class="tr-p-yes" id="fr-p-yes">امسح</button><button type="button" class="tr-p-no" id="fr-p-no">تراجع</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kin-modal" id="fr-gsheet" role="dialog" aria-modal="true" aria-labelledby="fr-g-title" hidden>
+    <div class="kin-sheet tr-psheet">
+      <div class="kin-sheet-head">
+        <div class="tr-p-who"><i class="fr-g-dot" id="fr-g-dot"></i><div class="tr-p-id"><h3 id="fr-g-title"></h3><p class="tr-p-rel" id="fr-g-count"></p></div></div>
+        <button type="button" class="kin-x" id="fr-g-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <form class="tr-p-rename" id="fr-g-rename">
+        <label><span>اسم القروب</span><input class="tr-input" id="fr-g-name" type="text" maxlength="24" autocomplete="off" enterkeyhint="done"></label>
+        <button type="submit" class="kin-w-ok" id="fr-g-save" disabled><span>حفظ</span></button>
+      </form>
+      <p class="wk-p-err" id="fr-g-err" role="alert" hidden></p>
+      <p class="tr-p-label" id="fr-g-colors-label">اللون</p>
+      <div class="fr-colors" id="fr-g-colors" role="group" aria-labelledby="fr-g-colors-label"></div>
+      <div class="tr-p-adds fr-g-more"><button type="button" class="tr-chip" id="fr-g-addf">صديق بهالقروب</button></div>
+      <button type="button" class="tr-p-del" id="fr-g-del"><span>امسح القروب</span></button>
+      <div class="tr-p-confirm" id="fr-g-confirm" hidden>
+        <p id="fr-g-warn"></p>
+        <div><button type="button" class="tr-p-yes" id="fr-g-yes">امسح</button><button type="button" class="tr-p-no" id="fr-g-no">تراجع</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kin-modal" id="fr-link" role="dialog" aria-modal="true" aria-labelledby="fr-l-title" hidden>
+    <div class="kin-sheet tr-lsheet">
+      <div class="kin-sheet-head">
+        <h3 id="fr-l-title">رابط ربعي</h3>
+        <button type="button" class="kin-x" id="fr-l-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <p class="tr-l-text">اللي عنده الرابط يشوف ربعك وقروباتهم، وما يقدر يغيّر فيها شي.</p>
+      <p class="tr-l-msg" id="fr-l-msg" hidden></p>
+      <button type="button" class="tr-link" id="fr-l-retry" hidden>جرّب مرة ثانية</button>
+      <button type="button" class="kin-btn kin-primary tr-l-in" id="fr-l-in" hidden><span>سجّل دخولك عشان تسوي الرابط</span></button>
+      <button type="button" class="kin-btn kin-primary tr-l-in" id="fr-l-make" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3.2-3.2a4.2 4.2 0 0 0-6-6L11.6 6.4"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3.2 3.2a4.2 4.2 0 0 0 6 6l1.6-1.6"/></svg><span>سوّ الرابط</span></button>
+      <div class="tr-l-on" id="fr-l-on" hidden>
+        <div class="tr-l-qr" id="fr-l-qr"></div>
+        <p class="tr-l-url" id="fr-l-url" dir="ltr"></p>
+        <button type="button" class="kin-btn kin-primary" id="fr-l-copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/></svg><span>انسخ الرابط</span></button>
+        <p class="tr-l-tip">حطه بستيكر الرابط بالستوري أو أرسله لربعك.</p>
+      </div>
+      <div class="tr-l-more" id="fr-l-more" hidden>
+        <button type="button" class="tr-link tr-l-stop" id="fr-l-stop">وقّف الرابط</button>
+      </div>
+      <div class="tr-p-confirm" id="fr-l-confirm" hidden>
+        <p>اللي عندهم الرابط ما يقدرون يفتحونه بعدها. وإذا سويت رابط جديد بعدين، بيكون رابط ثاني.</p>
+        <div><button type="button" class="tr-p-yes" id="fr-l-yes">وقّفه</button><button type="button" class="tr-p-no" id="fr-l-no">تراجع</button></div>
+      </div>
+    </div>
+  </div>
+
   <div class="kin-modal" id="app-sheet" role="dialog" aria-modal="true" aria-labelledby="app-title" hidden>
     <div class="kin-sheet">
       <div class="kin-sheet-head">
@@ -1267,11 +1448,12 @@
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=12" defer></script>
+  <script src="/account.js?v=13" defer></script>
   <script src="/flags.js?v=1" defer></script>
-  <script src="/kin.js?v=24" defer></script>
+  <script src="/kin.js?v=25" defer></script>
   <script src="/tree.js?v=21" defer></script>
   <script src="/work.js?v=3" defer></script>
+  <script src="/friends.js?v=1" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
