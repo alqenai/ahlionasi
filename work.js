@@ -541,6 +541,21 @@
 
   var PAGE = { land: { w: 842, h: 595 }, port: { w: 595, h: 842 } }, PK = 4;
   var PDF_LINK = 'https://shorbaka.com/#work';
+  // The QR in the page's corner: whoever scans it at work lands on «شجرة دوامي» to make their own.
+  var QR_WORDS = ['امسح الكود', 'وسوّ شجرة دوامك'];
+
+  // The QR library tree.js loads (/vendor/qrcode-generator), or null when it can't be had.
+  function qrLib() {
+    var T = root.TREE;
+    return T && T.loadQr && T.qrOf ? T.loadQr().catch(function () { return null; }) : Promise.resolve(null);
+  }
+
+  // The squares of the code in navy, size wide at (x, y), leaving a quiet edge inside it (as tree.js).
+  function drawQrCode(ctx, q, x, y, size) {
+    var cell = Math.floor(size / (q.n + 4)), w = cell * q.n, x0 = Math.round(x + (size - w) / 2), y0 = Math.round(y + (size - w) / 2);
+    ctx.fillStyle = '#0E2A47';
+    for (var r = 0; r < q.n; r++) for (var c = 0; c < q.n; c++) if (q.dark(r, c)) ctx.fillRect(x0 + c * cell, y0 + r * cell, cell, cell);
+  }
 
   function bytesOf(blob) {
     if (blob.arrayBuffer) return blob.arrayBuffer().then(function (b) { return new Uint8Array(b); });
@@ -589,7 +604,8 @@
   function makePdf(doc, orient, opts) {
     var hide = !!(opts && opts.hide), v = viewOf(doc, !!(opts && opts.mine)), D = KIN.draw, P = PAGE[orient] || PAGE.land, k = PK;
     var title = picTitle(doc), foot = 'سوّ شجرة دوامك على shorbaka.com', keys = legend(doc, v, 'paper');
-    return D.loadFonts(fontSample(doc, foot)).then(function () {
+    return Promise.all([D.loadFonts(fontSample(doc, foot + ' ' + QR_WORDS.join(' '))), qrLib()]).then(function (got) {
+      var qrcode = got[1];
       var W = P.w * k, H = P.h * k, c = document.createElement('canvas');
       c.width = W; c.height = H;
       var ctx = c.getContext('2d');
@@ -606,7 +622,8 @@
       D.setFont(ctx, '500', 11 * k);
       ctx.fillText(picSub(doc, v), W / 2, titleY + 22 * k);
       drawLegend(ctx, keys, W / 2, titleY + 42 * k, 9 * k, '#4A607A', W - 160 * k);
-      var boxW = W - 88 * k, boxY = titleY + (keys.length ? 62 : 48) * k, boxH = H - boxY - 74 * k;
+      // with the QR in the corner, the tree stops above it
+      var boxW = W - 88 * k, boxY = titleY + (keys.length ? 62 : 48) * k, boxH = H - boxY - (qrcode ? 116 : 74) * k;
       var pl = picLayout(doc, v, boxW, boxH, 1.7), L = pl.L, s = pl.s;
       var ox = W / 2 - L.W * s / 2, oy = boxY + Math.max(0, (boxH - L.H * s) / 2);
       drawWork(ctx, doc, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.paper, hide, true);
@@ -616,12 +633,23 @@
       ctx.fillStyle = '#4A607A';
       ctx.fillText(foot, right - tw / 2, fy + 3.5 * k);
       D.drawMark(ctx, left + markW / 2, fy, markH, true);
+      // the QR in the bottom left corner, «امسح الكود» / «وسوّ شجرة دوامك» beside it, all in navy
+      var qrSide = 68 * k, qx = 34 * k, qy = H - 34 * k - qrSide;
+      if (qrcode) {
+        drawQrCode(ctx, root.TREE.qrOf(qrcode, PDF_LINK), qx, qy, qrSide);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0E2A47'; D.setFont(ctx, '700', 9.5 * k);
+        ctx.fillText(QR_WORDS[0], qx + qrSide + 6 * k, qy + qrSide / 2 - 2 * k);
+        D.setFont(ctx, '500', 8.5 * k);
+        ctx.fillText(QR_WORDS[1], qx + qrSide + 6 * k, qy + qrSide / 2 + 11 * k);
+      }
       var preview = document.createElement('canvas'), pw = 1100, ph = Math.round(1100 * H / W);
       preview.width = pw; preview.height = ph;
       preview.getContext('2d').drawImage(c, 0, 0, pw, ph);
       var blob = function (cv, type, q) { return new Promise(function (res, rej) { cv.toBlob(function (b) { if (b) res(b); else rej(new Error('no picture')); }, type, q); }); };
       return Promise.all([blob(c, 'image/jpeg', 0.92).then(bytesOf), blob(preview, 'image/png')]).then(function (r) {
         var links = [{ rect: [left / k - 4, (H - fy) / k - 10, right / k + 4, (H - fy) / k + 12], uri: PDF_LINK }];
+        if (qrcode) links.push({ rect: [qx / k, (H - qy - qrSide) / k, (qx + qrSide) / k, (H - qy) / k], uri: PDF_LINK });
         var pdf = pdfOf(r[0], { w: W, h: H }, P, title, links);
         c.width = c.height = 0;
         return { file: pdf, name: 'shorbaka-work-tree.pdf', type: 'application/pdf', preview: r[1], w: pw, h: ph };
