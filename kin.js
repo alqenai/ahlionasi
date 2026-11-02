@@ -601,7 +601,7 @@
     };
     if (!ui.path) return;
 
-    var st = { trail: [], open: false, done: false, pending: null, added: null, them: ui.them.value.trim() }, file = null, url = null;
+    var st = { trail: [], open: false, done: false, pending: null, added: null, them: ui.them.value.trim() }, file = null, url = null, dlUrl = null;
     var sheet = null, sheetFrom = null, wSeq = 0, acctReady = !root.ACCOUNT;
 
     // The account system, when it is switched on and loaded; null otherwise.
@@ -1133,15 +1133,19 @@
 
     // The sheet makes the picture as a story or as a post; the toggle at its top switches between them.
     var SIZES = {
-      story: { title: 'ستوريك جاهز', tip: 'حطها ستوري', alt: 'ستوري', file: 'shorbaka-story.png' },
-      post: { title: 'بوستك جاهز', tip: 'نزّلها بوست', alt: 'بوست', file: 'shorbaka-post.png' }
+      story: { label: 'ستوري', title: 'ستوريك جاهز', tip: 'حطها ستوري', alt: 'ستوري' },
+      post: { label: 'بوست', title: 'بوستك جاهز', tip: 'نزّلها بوست', alt: 'بوست' }
     };
     var segs = ui.seg ? Array.prototype.slice.call(ui.seg.querySelectorAll('button')) : [];
 
     /* What the sheet is showing. A picture source is { file, make(format) -> Promise<Blob>, alt, mention }:
        the finder's relation here, or the family tree from tree.js. It can also bring one switch,
-       option: { label, hint, on, set(on) }, shown under the size toggle (the tree's «أخفي أسامي البنات»). */
+       option: { label, hint, on, set(on) }, shown under the size toggle (the tree's «أخفي أسامي البنات»).
+       A source can bring its own sizes instead of story and post ({ key: { label, title, alt, dl } },
+       sizesLabel), and make() can then resolve a file that isn't the picture shown: { file, name, type,
+       preview, w, h } (the tree's PDF, with a picture of the page). */
     var pic = null, shown = 'story';
+    function sizesOf(p) { return (p && p.sizes) || SIZES; }
 
     function finderPicture() {
       var n = names(), path = cur();
@@ -1155,17 +1159,24 @@
     }
 
     function showImage(format) {
-      var t = SIZES[format], p = pic, name = p.file + '-' + format + '.png';
-      return p.make(format).then(function (blob) {
-        if (!blob) throw new Error('no image');
+      var p = pic, t = sizesOf(p)[format];
+      return p.make(format).then(function (res) {
+        if (!res) throw new Error('no image');
+        var isPic = typeof Blob === 'undefined' || res instanceof Blob, shot = isPic ? res : res.preview, out = isPic ? res : res.file;
+        var name = isPic ? p.file + '-' + format + '.png' : res.name;
         if (url) URL.revokeObjectURL(url);
-        url = URL.createObjectURL(blob);
-        file = typeof File === 'function' ? new File([blob], name, { type: 'image/png' }) : null;
-        ui.img.setAttribute('height', FORMATS[format].H);
+        if (dlUrl && dlUrl !== url) URL.revokeObjectURL(dlUrl);
+        url = URL.createObjectURL(shot);
+        dlUrl = isPic ? url : URL.createObjectURL(out);
+        file = typeof File === 'function' ? new File([out], name, { type: isPic ? 'image/png' : res.type }) : null;
+        ui.img.setAttribute('width', isPic ? 1080 : res.w);
+        ui.img.setAttribute('height', isPic ? FORMATS[format].H : res.h);
         ui.img.src = url;
         ui.img.alt = t.alt + ': ' + p.alt;
-        ui.dl.href = url;
+        ui.dl.href = dlUrl;
         ui.dl.setAttribute('download', name);
+        label(ui.dl).textContent = t.dl || 'حمّل الصورة';
+        ui.modal.classList.toggle('is-page', !isPic);
         ui.share.hidden = !(file && navigator.canShare && navigator.canShare({ files: [file] }));
         if (ui.mTitle) ui.mTitle.textContent = t.title;
         ui.tip.textContent = p.tips && p.tips[format] ? p.tips[format] : t.tip + '، ولا تنسى ' + p.mention;
@@ -1191,13 +1202,27 @@
       ui.optHint.textContent = o.hint || '';
     }
 
-    // Opens the sheet with a story first; the button shows «لحظة…» while the picture is drawn.
+    // The size toggle shows the source's own sizes (story and post, or the page across and up and down).
+    function showSizes(p) {
+      var sizes = sizesOf(p), keys = Object.keys(sizes);
+      segs.forEach(function (b, i) {
+        b.hidden = i >= keys.length;
+        if (i >= keys.length) return;
+        b.dataset.format = keys[i];
+        label(b).textContent = sizes[keys[i]].label;
+      });
+      if (ui.seg) ui.seg.setAttribute('aria-label', p.sizesLabel || 'مقاس الصورة');
+      return keys[0];
+    }
+
+    // Opens the sheet with the first size (a story); the button shows «لحظة…» while the picture is drawn.
     function openShare(source, from) {
       var s = label(from), was = s.textContent;
       pic = source;
+      var first = showSizes(source);
       showOption(source.option);
       from.disabled = true; s.textContent = 'لحظة…';
-      return showImage('story').then(function () {
+      return showImage(first).then(function () {
         openSheet(ui.modal, from);
         s.textContent = was;
       }).catch(function () {

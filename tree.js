@@ -109,8 +109,13 @@
     var doc = { v: 1, me: raw.me, n: Math.max(n, Math.floor(+raw.n) || 0), p: p, f: f };
     var fn = typeof raw.fn === 'string' ? cleanFam(raw.fn) : '';
     if (fn) doc.fn = fn;
-    // settings: o.hideF hides girls' and women's names in the shared picture
-    if (raw.o && typeof raw.o === 'object' && raw.o.hideF === true) doc.o = { hideF: true };
+    // settings: o.hideF hides girls' and women's names in the shared picture, o.tidy lays it out with «ترتيب»
+    if (raw.o && typeof raw.o === 'object') {
+      var o = {};
+      if (raw.o.hideF === true) o.hideF = true;
+      if (raw.o.tidy === true) o.tidy = true;
+      if (Object.keys(o).length) doc.o = o;
+    }
     prune(doc);
     return doc;
   }
@@ -440,21 +445,196 @@
     });
   }
 
+  /* ---------- «ترتيب»: the tidy layout ---------- */
+
+  /* Brothers and sisters can stand in rows instead of one long line, eldest first, so the tree takes
+     the shape of the page instead of running sideways. Each row has its own bar. The line from the
+     parents carries on down to the next row through a gap in the middle of the row above: the spine.
+     opts.wrap is how wide a row may grow (Infinity: one row each, like the generations layout). */
+  var SPINE = 1.6;  // the spine's gap, in M.GG
+
+  /* Where the rows break: as few rows as fit in lim, and of the ways to do that, the one whose rows
+     get shorter going down («أصغر شيء ينزل تحت»), then the narrowest and most even. (The spine's gap isn't
+     counted, so it doesn't push a child down.) Returns [{ i, j }]. */
+  function rowsOf(items, M, lim) {
+    var n = items.length;
+    var cw = function (i, j) { var w = 0; for (var k = i; k < j; k++) w += items[k].w + (k > i ? M.SG : 0); return w; };
+    if (n < 2 || !(lim < Infinity) || cw(0, n) <= lim) return [{ i: 0, j: n }];
+    var greedy = [];
+    for (var i = 0; i < n;) {
+      var j = i + 1;
+      while (j < n && cw(i, j + 1) <= lim) j++;
+      greedy.push({ i: i, j: j });
+      i = j;
+    }
+    var R = greedy.length, best = null, tries = 0;
+    (function cut(i, r, rows) {
+      if (++tries > 20000) return;
+      if (r === R - 1) {
+        if (n - i > 1 && cw(i, n) > lim) return;
+        var all = rows.concat({ i: i, j: n }), ws = all.map(function (x) { return cw(x.i, x.j); });
+        var down = ws.every(function (w, k) { return !k || w <= ws[k - 1] + 0.5; }) ? 0 : 1;
+        var widest = Math.max.apply(null, ws), spread = widest - Math.min.apply(null, ws);
+        if (!best || down < best.down || (down === best.down && (widest < best.widest - 0.5 ||
+            (widest < best.widest + 0.5 && spread < best.spread - 0.5)))) best = { down: down, widest: widest, spread: spread, rows: all };
+        return;
+      }
+      for (var j = n - (R - 1 - r); j > i; j--) {  // longer rows first, so they win a tie
+        if (j - i > 1 && cw(i, j) > lim) continue;
+        cut(j, r + 1, rows.concat({ i: i, j: j }));
+      }
+    })(0, 0, []);
+    return best ? best.rows : greedy;
+  }
+
+  /* Sizes a block for the tidy layout. Every group of children gets rows; each row's places are kept
+     as offsets from the group's spine (g.rows[].x), and the group as how far it reaches either side
+     of it (g.L, g.R) and how tall it is (g.H). The block keeps its width W, height H, where its row
+     starts (rx), where each group's spine is (spines) and where its own person stands (hx). */
+  function measureTidy(b, M, lim) {
+    var flat = !b.row.length, gap = M.GG * SPINE;
+    b.rowW = flat ? 0 : b.row.length * M.NW + (b.row.length - 1) * M.CG;
+    b.groups.forEach(function (g) {
+      var items = g.kids.map(function (k) { measureTidy(k, M, lim); return { b: k, w: k.W, h: k.H, hx: k.hx }; });
+      if (g.more) items.push({ more: true, w: M.NW, h: M.NH, hx: M.NW / 2 });
+      var rows = rowsOf(items, M, lim), L = 0, R = 0, H = 0;
+      rows.forEach(function (r, ri) {
+        var its = items.slice(r.i, r.j), pos = [], x = 0, last = ri === rows.length - 1;
+        its.forEach(function (it, k) { if (k) x += M.SG; pos.push(x); x += it.w; });
+        if (last) {
+          // the bar's middle under the spine
+          var mid = (pos[0] + its[0].hx + pos[its.length - 1] + its[its.length - 1].hx) / 2;
+          r.x = pos.map(function (p) { return p - mid; });
+        } else {
+          // the spine passes between the two halves; the eldest side takes the extra one
+          var best = null;
+          for (var s = its.length; s >= 0; s--) {
+            var le = s ? pos[s - 1] + its[s - 1].w + gap / 2 : 0, re = s < its.length ? x - pos[s] + gap / 2 : 0;
+            if (!best || Math.abs(le - re) < best.d - 0.5) best = { s: s, d: Math.abs(le - re), le: le };
+          }
+          r.x = pos.map(function (p, k) { return k < best.s ? p - best.le : p - (best.s < its.length ? pos[best.s] : x) + gap / 2; });
+        }
+        r.items = its;
+        r.h = Math.max.apply(null, its.map(function (it) { return it.h; }));
+        L = Math.max(L, -r.x[0]);
+        R = Math.max(R, r.x[its.length - 1] + its[its.length - 1].w);
+        H += (ri ? M.RH - M.NH : 0) + r.h;
+      });
+      g.rows = rows; g.L = L; g.R = R; g.W = L + R; g.H = H;
+    });
+    var slot = function (i) { return M.NW / 2 + i * (M.NW + M.CG); };
+    b.spines = [];
+    if (!b.groups.length) {
+      b.W = b.rowW; b.rx = 0;
+    } else if (b.groups.length === 1) {
+      // the parents right above the spine, so the line drops straight down
+      var g = b.groups[0], a = 0;
+      g.from.forEach(function (i) { a += slot(i); });
+      a = flat ? 0 : a / (g.from.length || 1);
+      var left = Math.max(flat ? 0 : a, g.L), right = Math.max(flat ? 0 : b.rowW - a, g.R);
+      b.W = left + right; b.rx = left - a; b.spines.push(left);
+    } else {
+      // more than one marriage with children: their children side by side, the row over the middle
+      var kidsW = 0;
+      b.groups.forEach(function (g2, n) { kidsW += g2.W + (n ? M.GG : 0); });
+      b.W = Math.max(b.rowW, kidsW); b.rx = (b.W - b.rowW) / 2;
+      var gx = (b.W - kidsW) / 2;
+      b.groups.forEach(function (g2) { b.spines.push(gx + g2.L); gx += g2.W + M.GG; });
+    }
+    var kidsH = 0;
+    b.groups.forEach(function (g2) { kidsH = Math.max(kidsH, g2.H); });
+    b.H = flat ? kidsH : b.groups.length ? M.RH + kidsH : M.NH;
+    b.hx = flat ? b.W / 2 : b.rx + slot(b.head);
+    return b.W;
+  }
+
+  // Places a block measured by measureTidy with its left edge at x0 and its row at y.
+  function placeTidy(b, x0, y, M, out, depth) {
+    var flat = !b.row.length, ky = flat ? y : y + M.RH, kdepth = flat ? depth : depth + 1, gapY = M.RH - M.NH;
+    var slotX = function (i) { return x0 + b.rx + M.NW / 2 + i * (M.NW + M.CG); };
+    out.depth = Math.max(out.depth, depth);
+    b.row.forEach(function (s, i) {
+      out.nodes.push({ pid: s.pid || null, kind: s.ghost ? 'ghost' : s.kind, ghost: s.ghost || null, x: slotX(i), y: y });
+    });
+    b.row.forEach(function (s, i) {
+      if (i === b.head) return;
+      var ghost = !!(s.ghost || b.row[b.head].ghost);
+      out.links.push({ t: 'pair', x1: slotX(Math.min(i, b.head)), x2: slotX(Math.max(i, b.head)), y: y + M.AV / 2, ghost: ghost });
+    });
+    b.groups.forEach(function (g, gi) {
+      var sx = x0 + b.spines[gi], ty = ky, rows = [], count = 0;
+      g.rows.forEach(function (r) {
+        var heads = [];
+        r.items.forEach(function (it, k) {
+          var ix = sx + r.x[k];
+          if (it.more) {
+            out.nodes.push({ more: g.more, g: g.g, x: ix + M.NW / 2, y: ty });
+            out.depth = Math.max(out.depth, kdepth);
+          } else placeTidy(it.b, ix, ty, M, out, kdepth);
+          heads.push(ix + it.hx);
+          count++;
+        });
+        rows.push({ busY: ty - gapY / 2, kids: heads, ky: ty });
+        ty += r.h + gapY;
+      });
+      if (flat && count < 2) return;
+      var ax = sx, ay = rows[0].busY;
+      if (!flat) {
+        ax = 0;
+        g.from.forEach(function (i) { ax += slotX(i); });
+        ax /= g.from.length || 1;
+        ay = y + (g.from.length === 2 ? M.AV / 2 : M.NH + 2);
+      }
+      var ghostTop = !flat && g.from.length > 0 && g.from.every(function (i) { return b.row[i].ghost; });
+      out.links.push({ t: 'kids', ax: ax, ay: ay, sx: sx, rows: rows, busY: rows[0].busY, kids: rows[0].kids, ky: rows[0].ky, ghost: ghostTop });
+    });
+  }
+
   // Everything needed to draw one view at sizes M: nodes and lines, in a W x H box, eldest on the right.
   function layout(doc, idx, view, M, opts) {
-    var bl = blocks(doc, idx, view, opts), out = { nodes: [], links: [], depth: 0 };
-    measure(bl.root, M);
-    var R = bl.root, top = !R.row.length && R.groups[0] && R.groups[0].kids.length > 1 ? (M.RH - M.NH) / 2 : 0;
-    place(R, 0, top, M, out, 0);
-    var W = R.W, H = top + out.depth * M.RH + M.NH;
+    var bl = blocks(doc, idx, view, opts), out = { nodes: [], links: [], depth: 0 }, R = bl.root, W, H;
+    var many = !R.row.length && R.groups[0] && R.groups[0].kids.length + (R.groups[0].more ? 1 : 0) > 1;
+    var top = many ? (M.RH - M.NH) / 2 : 0;
+    if (opts.wrap) {
+      measureTidy(R, M, opts.wrap);
+      placeTidy(R, 0, top, M, out, 0);
+      W = R.W; H = top + R.H;
+    } else {
+      measure(R, M);
+      place(R, 0, top, M, out, 0);
+      W = R.W; H = top + out.depth * M.RH + M.NH;
+    }
     var X = function (x) { return W - x; };
     out.nodes.forEach(function (n) { n.x = X(n.x); });
     out.links.forEach(function (l) {
-      if (l.t === 'pair') { var a = X(l.x1), b = X(l.x2); l.x1 = Math.min(a, b); l.x2 = Math.max(a, b); }
-      else { l.ax = X(l.ax); l.kids = l.kids.map(X); }
+      if (l.t === 'pair') { var a = X(l.x1), b = X(l.x2); l.x1 = Math.min(a, b); l.x2 = Math.max(a, b); return; }
+      l.ax = X(l.ax);
+      if (l.rows) {
+        l.sx = X(l.sx);
+        l.rows = l.rows.map(function (r) { return { busY: r.busY, kids: r.kids.map(X), ky: r.ky }; });
+        l.kids = l.rows[0].kids;
+      } else l.kids = l.kids.map(X);
     });
-    out.W = W; out.H = H; out.heads = bl.heads; out.levels = out.depth + 1;
+    out.W = W; out.H = H; out.heads = bl.heads; out.levels = out.depth + 1; out.tidy = !!opts.wrap;
     return out;
+  }
+
+  /* The tidy layout that shows a view biggest in a boxW x boxH box, no bigger than maxS: rows are
+     tried narrower and narrower and the best kept (the widest of the equals, so a tree that already
+     fits stays as it is). Returns { L, s }. */
+  function fitLayout(doc, idx, view, M, opts, boxW, boxH, maxS) {
+    var o = {}, k;
+    for (k in opts) o[k] = opts[k];
+    o.wrap = Infinity;
+    var L = layout(doc, idx, view, M, o), best = { L: L, s: Math.min(boxW / L.W, boxH / L.H, maxS) }, lim = L.W;
+    for (var i = 0; i < 48 && lim > M.NW * 1.5; i++) {
+      lim *= 0.9;
+      o.wrap = lim;
+      L = layout(doc, idx, view, M, o);
+      var s = Math.min(boxW / L.W, boxH / L.H, maxS);
+      if (s > best.s * 1.0001) best = { L: L, s: s };
+    }
+    return best;
   }
 
   // Who can be added to a person, so that everyone added still shows on one of the views.
@@ -546,17 +726,64 @@
     return out;
   }
 
+  /* A line through points that only go across or down, turning with round corners of size R (smaller
+     where the pieces are short). Same steps as kidLines. */
+  function roundLine(pts, R) {
+    var p = [];
+    pts.forEach(function (q) {
+      var n = p.length;
+      if (n && Math.abs(q[0] - p[n - 1][0]) < 1 && Math.abs(q[1] - p[n - 1][1]) < 1) return;
+      if (n > 1) {
+        var a = p[n - 2], b = p[n - 1];
+        if ((Math.abs(a[0] - b[0]) < 1 && Math.abs(b[0] - q[0]) < 1) || (Math.abs(a[1] - b[1]) < 1 && Math.abs(b[1] - q[1]) < 1)) { p[n - 1] = q; return; }
+      }
+      p.push(q);
+    });
+    var out = [['M', p[0][0], p[0][1]]], len = function (a, b) { return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]); };
+    for (var i = 1; i < p.length - 1; i++) {
+      var a = p[i - 1], b = p[i], c = p[i + 1];
+      var l1 = len(a, b), l2 = len(b, c);
+      var r = Math.max(0, Math.min(R, i > 1 ? l1 / 2 : l1, i < p.length - 2 ? l2 / 2 : l2));
+      var u = [(b[0] - a[0]) / l1, (b[1] - a[1]) / l1], v = [(c[0] - b[0]) / l2, (c[1] - b[1]) / l2];
+      out.push(['L', b[0] - u[0] * r, b[1] - u[1] * r]);
+      if (r > 0) out.push(['Q', b[0], b[1], b[0] + v[0] * r, b[1] + v[1] * r]);
+    }
+    if (p.length > 1) out.push(['L', p[p.length - 1][0], p[p.length - 1][1]]);
+    return out;
+  }
+
+  /* The lines of one 'kids' link, ready to draw: X and Y turn layout places into drawing places, and
+     each child's line stops cut short of their circle. A tidy link with rows goes down the spine:
+     to the first bar, along it to the spine, down to its own bar, then to the child. */
+  function linkLines(l, R, cut, X, Y) {
+    X = X || function (v) { return v; };
+    Y = Y || function (v) { return v; };
+    if (!l.rows) return kidLines(X(l.ax), Y(l.ay), Y(l.busY), l.kids.map(X), Y(l.ky) - cut, R);
+    var ax = X(l.ax), ay = Y(l.ay), sx = X(l.sx), b0 = Y(l.rows[0].busY), out = [];
+    l.rows.forEach(function (r, ri) {
+      var busY = Y(r.busY), ky = Y(r.ky) - cut;
+      r.kids.forEach(function (k) {
+        var kx = X(k), pts = [[ax, ay]];
+        if (ri) pts.push([ax, b0], [sx, b0], [sx, busY]);
+        else pts.push([ax, busY]);
+        pts.push([kx, busY], [kx, ky]);
+        out = out.concat(roundLine(pts, R));
+      });
+    });
+    return out;
+  }
+
   var TREE = {
     blank: blank, clean: clean, cleanFam: cleanFam, famTitle: famTitle, copy: copy, index: index, count: count, addRelative: addRelative, rename: rename,
     removePerson: removePerson, move: move, relations: relations, relName: relName, views: views, climb: climb,
     lineSet: lineSet, lineUnions: lineUnions, layout: layout, choices: choices, kidLines: kidLines, SCREEN: SCREEN,
-    allHeads: allHeads, canAdd: canAdd, kinOf: kinOf, addWalk: addWalk
+    allHeads: allHeads, canAdd: canAdd, kinOf: kinOf, addWalk: addWalk, fitLayout: fitLayout, linkLines: linkLines, rowsOf: rowsOf
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = TREE;
   root.TREE = TREE;
   if (typeof document === 'undefined') return;
 
-  /* ---------- Picture (story 1080 x 1920, post 1080 x 1350) ---------- */
+  /* ---------- Picture (story 1080 x 1920, post 1080 x 1350) and the A4 page ---------- */
 
   var PIC = { NW: 150, AV: 96, NH: 196, CG: 18, SG: 16, GG: 40, RH: 270 };
   var PICFMT = {
@@ -581,9 +808,11 @@
     return set;
   }
 
-  /* Fits a view into the picture. When it is too wide to read, the children of the families furthest
-     from me fold into a count («+٤ عياله»), the most distant relatives first, until it fits. */
-  function pictureLayout(doc, idx, view, boxW, boxH) {
+  /* Fits a view into a boxW x boxH box at the picture's sizes. When it would come out smaller than
+     minS, the children of the families furthest from me fold into a count («+٤ عياله»), the most
+     distant relatives first, until it fits. tidy: laid out with «ترتيب». */
+  function pictureLayout(doc, idx, view, boxW, boxH, tidy, minS, maxS) {
+    minS = minS || MIN_SCALE; maxS = maxS || MAX_SCALE;
     var collapse = {}, keep = mineUp(doc, idx), rels = relations(doc, idx), L, s;
     var kidsOf = function (pid) {
       var k = [];
@@ -591,9 +820,10 @@
       return k;
     };
     for (var round = 0; round < 400; round++) {
-      L = layout(doc, idx, view, PIC, { ghosts: false, mates: 'line', collapse: collapse });
-      s = Math.min(boxW / L.W, boxH / L.H, MAX_SCALE);
-      if (s >= MIN_SCALE) break;
+      var o = { ghosts: false, mates: 'line', collapse: collapse };
+      if (tidy) { var f = fitLayout(doc, idx, view, PIC, o, boxW, boxH, maxS); L = f.L; s = f.s; }
+      else { L = layout(doc, idx, view, PIC, o); s = Math.min(boxW / L.W, boxH / L.H, maxS); }
+      if (s >= minS) break;
       var pick = null, best = -1;
       L.nodes.forEach(function (n) {
         if (!n.pid || n.kind === 'mate' || collapse[n.pid] || keep[n.pid] || !L.heads[n.pid]) return;
@@ -618,8 +848,8 @@
   }
 
   // A small pearl, drawn where a hidden name's first letter would be.
-  function pearl(ctx, cx, cy, pr, onPearl) {
-    if (onPearl) ctx.fillStyle = '#0E2A47';
+  function pearl(ctx, cx, cy, pr, dark) {
+    if (dark) ctx.fillStyle = '#0E2A47';
     else {
       var g = ctx.createRadialGradient(cx - pr * 0.35, cy - pr * 0.4, pr * 0.05, cx, cy, pr);
       g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.55, '#F4EFE6'); g.addColorStop(1, '#C9BCA8');
@@ -628,23 +858,97 @@
     ctx.beginPath(); ctx.arc(cx, cy, pr, 0, Math.PI * 2); ctx.fill();
   }
 
-  /* opts.hideF: girls and women show what they are to me («أختي») instead of their name, and a pearl
+  /* The colours of a tree drawing: on the navy sea of a story, or on the white of a printed page.
+     min: the smallest sizes in pixels on a story (fitName, fitRel: how far a long name may shrink). */
+  var INK = {
+    sea: { line: 'rgba(244, 239, 230, 0.4)', boy: '#2EC4B6', girl: '#FF8A80', me: '#E9C46A', more: 'rgba(244, 239, 230, 0.45)',
+      fill: '#12385E', meFill: '#F4EFE6', letter: '#F4EFE6', meLetter: '#0E2A47', name: '#F4EFE6', moreName: '#9DB2C8',
+      rel: '#E9C46A', meRel: '#F4EFE6', relSize: 25, min: { line: 2.5, ring: 4, name: 22, rel: 18, gap: 26, fitName: 16, fitRel: 14 } },
+    paper: { line: '#BFCAD6', boy: '#1FAFA2', girl: '#F0796D', me: '#D9AE45', more: '#A9B7C6',
+      fill: '#FFFFFF', meFill: '#0E2A47', letter: '#0E2A47', meLetter: '#FFFFFF', name: '#0E2A47', moreName: '#6C8096',
+      rel: '#A3801F', meRel: '#0E2A47', relSize: 27, min: { line: 0, ring: 0, name: 0, rel: 0, gap: 0, fitName: 0, fitRel: 0 } }
+  };
+
+  /* Draws the people and lines of L, a layout at the picture's sizes: X and Y place it, s is its scale.
+     hideF: girls and women show what they are to me («أختي») instead of their name, and a pearl
      instead of their first letter. */
+  function drawTree(ctx, doc, rels, L, X, Y, s, ink, hideF) {
+    var D = KIN.draw, m = ink.min, AV = PIC.AV * s, NW = PIC.NW * s, r = AV / 2, ring = Math.max(m.ring, 6 * s);
+    ctx.save();
+    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = ink.line; ctx.lineWidth = Math.max(m.line, 3.5 * s);
+    L.links.forEach(function (l) {
+      ctx.beginPath();
+      if (l.t === 'pair') {
+        ctx.moveTo(X(l.x1) + r + ring, Y(l.y)); ctx.lineTo(X(l.x2) - r - ring, Y(l.y));
+      } else {
+        linkLines(l, 24 * s, ring, X, Y).forEach(function (c) {
+          if (c[0] === 'M') ctx.moveTo(c[1], c[2]);
+          else if (c[0] === 'L') ctx.lineTo(c[1], c[2]);
+          else ctx.quadraticCurveTo(c[1], c[2], c[3], c[4]);
+        });
+      }
+      ctx.stroke();
+    });
+
+    L.nodes.forEach(function (n) {
+      var cx = X(n.x), cy = Y(n.y) + r, isMe = n.pid === doc.me;
+      // me in sand, girls and women in coral, boys and men in teal
+      var col = isMe ? ink.me : n.more ? ink.more : doc.p[n.pid].g === 'f' ? ink.girl : ink.boy;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = isMe ? ink.meFill : ink.fill; ctx.fill();
+      ctx.lineWidth = ring; ctx.strokeStyle = col;
+      if (n.more) ctx.setLineDash([ring * 1.6, ring * 1.4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      var hidden = !n.more && hideF && doc.p[n.pid].g === 'f', nameless = !n.more && !doc.p[n.pid].n;
+      if (hidden) pearl(ctx, cx, cy, r * 0.3, isMe && ink.meFill === '#F4EFE6');
+      else {
+        var top = n.more ? '+' + n.more : initial(doc.p[n.pid].n);
+        ctx.fillStyle = isMe ? ink.meLetter : ink.letter;
+        D.setFont(ctx, '700', Math.round(AV * (n.more ? 0.36 : 0.42)));
+        var mt = ctx.measureText(top), ink2 = (mt.actualBoundingBoxAscent || AV * 0.3) - (mt.actualBoundingBoxDescent || 0);
+        ctx.direction = n.more ? 'ltr' : 'rtl';  // «+3», not «3+»
+        ctx.fillText(top, cx, cy + ink2 / 2);
+        ctx.direction = 'rtl';
+      }
+
+      var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : hidden || nameless ? relName(rels[n.pid]) : doc.p[n.pid].n;
+      var ny = Y(n.y) + AV + 22 * s + 34 * s;
+      ctx.fillStyle = n.more ? ink.moreName : ink.name;
+      D.fit(ctx, name, n.more ? '500' : '700', Math.round(Math.max(m.name, 34 * s)), NW + 6, m.fitName || 17 * s);
+      ctx.fillText(name, cx, ny);
+      if (!n.more && !hidden && !nameless) {
+        var rel = relName(rels[n.pid]);
+        ctx.fillStyle = isMe ? ink.meRel : ink.rel;
+        D.fit(ctx, rel, '500', Math.round(Math.max(m.rel, ink.relSize * s)), NW + 6, m.fitRel || ink.relSize * s * 0.55);
+        ctx.fillText(rel, cx, ny + Math.max(m.gap, 36 * s));
+      }
+    });
+    ctx.restore();
+  }
+
+  function fontSample(doc, rels, more) {
+    return famTitle(doc) + ' أهل أبوي أمي عياله عيالها +0123456789 ' + GENS.join(' ') + ' ' + (more || '') + ' ' +
+      Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relName(rels[id]); }).join(' ');
+  }
+
+  /* opts.hideF: as in drawTree. opts.tidy: laid out with «ترتيب». */
   function makePicture(doc, viewKey, format, opts) {
-    var hideF = !!(opts && opts.hideF);
+    var hideF = !!(opts && opts.hideF), tidy = !!(opts && opts.tidy);
     var D = KIN.draw, F = PICFMT[format] || PICFMT.story, H = KIN.FORMATS[format === 'post' ? 'post' : 'story'].H;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
     var title = famTitle(doc);
-    var sample = title + ' أهل أبوي أمي عياله عيالها +0123456789 ' + GENS.join(' ') + ' ' + Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relName(rels[id]); }).join(' ');
-    return D.loadFonts(sample).then(function () {
+    return D.loadFonts(fontSample(doc, rels)).then(function () {
       var c = document.createElement('canvas');
       c.width = 1080; c.height = H;
       var ctx = c.getContext('2d');
       D.background(ctx, 1080, H);
       ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
 
-      var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH), L = pl.L, s = pl.s;
+      var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH, tidy), L = pl.L, s = pl.s;
       ctx.fillStyle = '#F4EFE6';
       D.fit(ctx, title, '700', F.title, 960, 60);
       ctx.fillText(title, 540, F.titleY);
@@ -652,69 +956,117 @@
       D.setFont(ctx, '500', F.sub);
       ctx.fillText((view.label ? view.label + ' · ' : '') + gens(L.levels), 540, F.subY);
 
-      var M = {};
-      Object.keys(PIC).forEach(function (k) { M[k] = PIC[k] * s; });
       var ox = 540 - L.W * s / 2, oy = F.boxY + Math.max(0, (F.boxH - L.H * s) / 2);
-      var X = function (x) { return ox + x * s; }, Y = function (y) { return oy + y * s; };
-      var r = M.AV / 2, ring = Math.max(4, 6 * s);
-
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'rgba(244, 239, 230, 0.4)'; ctx.lineWidth = Math.max(2.5, 3.5 * s);
-      L.links.forEach(function (l) {
-        ctx.beginPath();
-        if (l.t === 'pair') {
-          ctx.moveTo(X(l.x1) + r + ring, Y(l.y)); ctx.lineTo(X(l.x2) - r - ring, Y(l.y));
-        } else {
-          kidLines(X(l.ax), Y(l.ay), Y(l.busY), l.kids.map(X), Y(l.ky) - ring, 24 * s).forEach(function (c) {
-            if (c[0] === 'M') ctx.moveTo(c[1], c[2]);
-            else if (c[0] === 'L') ctx.lineTo(c[1], c[2]);
-            else ctx.quadraticCurveTo(c[1], c[2], c[3], c[4]);
-          });
-        }
-        ctx.stroke();
-      });
-
-      L.nodes.forEach(function (n) {
-        var cx = X(n.x), cy = Y(n.y) + r, isMe = n.pid === doc.me;
-        // me in sand, girls and women in coral, boys and men in teal
-        var col = isMe ? '#E9C46A' : n.more ? 'rgba(244, 239, 230, 0.45)' : doc.p[n.pid].g === 'f' ? '#FF8A80' : '#2EC4B6';
-        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = isMe ? '#F4EFE6' : '#12385E'; ctx.fill();
-        ctx.lineWidth = ring; ctx.strokeStyle = col;
-        if (n.more) ctx.setLineDash([ring * 1.6, ring * 1.4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        var hidden = !n.more && hideF && doc.p[n.pid].g === 'f', nameless = !n.more && !doc.p[n.pid].n;
-        if (hidden) pearl(ctx, cx, cy, r * 0.3, isMe);
-        else {
-          var top = n.more ? '+' + n.more : initial(doc.p[n.pid].n);
-          ctx.fillStyle = isMe ? '#0E2A47' : '#F4EFE6';
-          D.setFont(ctx, '700', Math.round(M.AV * (n.more ? 0.36 : 0.42)));
-          var m = ctx.measureText(top), ink = (m.actualBoundingBoxAscent || M.AV * 0.3) - (m.actualBoundingBoxDescent || 0);
-          ctx.direction = n.more ? 'ltr' : 'rtl';  // «+3», not «3+»
-          ctx.fillText(top, cx, cy + ink / 2);
-          ctx.direction = 'rtl';
-        }
-
-        var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : hidden || nameless ? relName(rels[n.pid]) : doc.p[n.pid].n;
-        var ny = Y(n.y) + M.AV + 22 * s + 34 * s;
-        ctx.fillStyle = n.more ? '#9DB2C8' : '#F4EFE6';
-        D.fit(ctx, name, n.more ? '500' : '700', Math.round(Math.max(22, 34 * s)), M.NW + 6, 16);
-        ctx.fillText(name, cx, ny);
-        if (!n.more && !hidden && !nameless) {
-          var rel = relName(rels[n.pid]);
-          ctx.fillStyle = isMe ? '#F4EFE6' : '#E9C46A';
-          D.fit(ctx, rel, '500', Math.round(Math.max(18, 25 * s)), M.NW + 6, 14);
-          ctx.fillText(rel, cx, ny + Math.max(26, 36 * s));
-        }
-      });
+      drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.sea, hideF);
 
       D.drawSticker(ctx, KIN.FORMATS[format === 'post' ? 'post' : 'story'].sticker);
       return new Promise(function (res) { c.toBlob(res, 'image/png'); });
     });
   }
 
+  /* ---------- The tree on an A4 page, as a PDF to print ---------- */
+
+  var PAGE = { land: { w: 842, h: 595 }, port: { w: 595, h: 842 } };  // A4 in points
+  var PK = 4;  // canvas pixels per point: 288 dots an inch
+  var PDF_MIN = 0.72, PDF_MAX = 1.7;  // names from 6pt to 14pt
+  var PDF_LINK = 'https://shorbaka.com/#tree';
+
+  function bytesOf(blob) {
+    if (blob.arrayBuffer) return blob.arrayBuffer().then(function (b) { return new Uint8Array(b); });
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () { res(new Uint8Array(fr.result)); };
+      fr.onerror = rej;
+      fr.readAsArrayBuffer(blob);
+    });
+  }
+
+  /* A one-page PDF that is the picture of the page (a JPEG), with a link over the address at its foot.
+     page: { w, h } in points; px: { w, h } of the JPEG; link: { rect: [x1, y1, x2, y2] in points, uri }. */
+  function pdfOf(jpeg, px, page, title, link) {
+    var enc = new TextEncoder(), parts = [], at = 0, offs = [];
+    var put = function (x) { var b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); at += b.length; };
+    var obj = function (n, body) { offs[n] = at; put(n + ' 0 obj\n' + body + '\nendobj\n'); };
+    var text = function (t) {
+      var h = 'FEFF';
+      for (var i = 0; i < t.length; i++) h += ('000' + t.charCodeAt(i).toString(16).toUpperCase()).slice(-4);
+      return '<' + h + '>';
+    };
+    var num = function (v) { return String(Math.round(v * 100) / 100); };
+    put('%PDF-1.4\n'); put(new Uint8Array([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + page.w + ' ' + page.h + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R /Annots [6 0 R] >>');
+    offs[4] = at;
+    put('4 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + px.w + ' /Height ' + px.h +
+      ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpeg.length + ' >>\nstream\n');
+    put(jpeg);
+    put('\nendstream\nendobj\n');
+    var paint = 'q ' + page.w + ' 0 0 ' + page.h + ' 0 0 cm /Im0 Do Q';
+    obj(5, '<< /Length ' + paint.length + ' >>\nstream\n' + paint + '\nendstream');
+    obj(6, '<< /Type /Annot /Subtype /Link /Rect [' + link.rect.map(num).join(' ') + '] /Border [0 0 0] /A << /S /URI /URI (' + link.uri + ') >> >>');
+    obj(7, '<< /Title ' + text(title) + ' /Creator (shorbaka.com) /Producer (shorbaka.com) >>');
+    var xref = at;
+    put('xref\n0 8\n0000000000 65535 f \n' + offs.slice(1, 8).map(function (o) { return ('000000000' + o).slice(-10) + ' 00000 n \n'; }).join(''));
+    put('trailer\n<< /Size 8 /Root 1 0 R /Info 7 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+
+  /* The tree on a white A4 page, always laid out with «ترتيب», ready to print: orient is 'land' or
+     'port'. Resolves { file: the PDF, name, type, preview: a PNG of the page, w, h }. */
+  function makePdf(doc, viewKey, orient, opts) {
+    var hideF = !!(opts && opts.hideF), D = KIN.draw, P = PAGE[orient] || PAGE.land, k = PK;
+    var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
+    var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
+    var title = famTitle(doc), foot = 'سوّ شجرة عائلتك على shorbaka.com';
+    return D.loadFonts(fontSample(doc, rels, foot)).then(function () {
+      var W = P.w * k, H = P.h * k, c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      var ctx = c.getContext('2d');
+      if (!ctx) throw new Error('no canvas');
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+      // a thin gold frame
+      D.roundRect(ctx, 20 * k, 20 * k, W - 40 * k, H - 40 * k, 16 * k);
+      ctx.lineWidth = 1.2 * k; ctx.strokeStyle = '#E4D3A6'; ctx.stroke();
+
+      ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      var titleY = (orient === 'port' ? 78 : 66) * k;
+      ctx.fillStyle = '#0E2A47';
+      D.fit(ctx, title, '700', 26 * k, W - 120 * k, 14 * k);
+      ctx.fillText(title, W / 2, titleY);
+
+      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - 74 * k;
+      var pl = pictureLayout(doc, idx, view, boxW, boxH, true, PDF_MIN, PDF_MAX), L = pl.L, s = pl.s;
+      ctx.fillStyle = '#A3801F';
+      D.setFont(ctx, '500', 11 * k);
+      ctx.fillText((view.label ? view.label + ' · ' : '') + gens(L.levels), W / 2, titleY + 22 * k);
+
+      var ox = W / 2 - L.W * s / 2, oy = boxY + Math.max(0, (boxH - L.H * s) / 2);
+      drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.paper, hideF);
+
+      // the sign-off at the foot: the mark and «سوّ شجرة عائلتك على shorbaka.com», a link in the PDF
+      var fy = H - 44 * k, markH = 15 * k, markW = markH * 102 / 72, gap = 7 * k;
+      D.setFont(ctx, '500', 10 * k);
+      var tw = ctx.measureText(foot).width, total = markW + gap + tw, right = W / 2 + total / 2, left = W / 2 - total / 2;
+      ctx.fillStyle = '#4A607A';
+      ctx.fillText(foot, right - tw / 2, fy + 3.5 * k);
+      D.drawMark(ctx, left + markW / 2, fy, markH, true);
+
+      var preview = document.createElement('canvas'), pw = 1100, ph = Math.round(1100 * H / W);
+      preview.width = pw; preview.height = ph;
+      preview.getContext('2d').drawImage(c, 0, 0, pw, ph);
+      var blob = function (cv, type, q) { return new Promise(function (res, rej) { cv.toBlob(function (b) { if (b) res(b); else rej(new Error('no picture')); }, type, q); }); };
+      return Promise.all([blob(c, 'image/jpeg', 0.92).then(bytesOf), blob(preview, 'image/png')]).then(function (r) {
+        var rect = [left / k - 4, (H - fy) / k - 10, right / k + 4, (H - fy) / k + 12];
+        var pdf = pdfOf(r[0], { w: W, h: H }, P, title, { rect: rect, uri: PDF_LINK });
+        c.width = c.height = 0;  // let the big canvas go
+        return { file: pdf, name: 'shorbaka-family-tree.pdf', type: 'application/pdf', preview: r[1], w: pw, h: ph };
+      });
+    });
+  }
+
   TREE.makePicture = makePicture;
+  TREE.makePdf = makePdf;
   TREE.viewHasF = viewHasF;
   TREE.pictureLayout = pictureLayout;
 
@@ -758,8 +1110,8 @@
     var ui = {
       sec: $('tree'), count: $('tr-count'), msg: $('tr-msg'), retry: $('tr-retry'),
       start: $('tr-start'), meName: $('tr-me'), gSeg: $('tr-g'), go: $('tr-go'), startErr: $('tr-start-err'),
-      wrap: $('tr-wrap'), side: $('tr-side'), zoom: $('tr-zoom'), scroll: $('tr-scroll'), stage: $('tr-stage'),
-      canvas: $('tr-canvas'), share: $('tr-share'), note: $('tr-note'), saveRetry: $('tr-save-retry'), signIn: $('tr-in'),
+      wrap: $('tr-wrap'), side: $('tr-side'), zoom: $('tr-zoom'), tidy: $('tr-tidy'), scroll: $('tr-scroll'), stage: $('tr-stage'),
+      canvas: $('tr-canvas'), share: $('tr-share'), pdf: $('tr-pdf'), note: $('tr-note'), saveRetry: $('tr-save-retry'), signIn: $('tr-in'),
       sheet: $('tr-sheet'), pAv: $('tr-p-av'), pTitle: $('tr-p-title'), pRel: $('tr-p-rel'), pClose: $('tr-p-close'),
       pRename: $('tr-p-rename'), pName: $('tr-p-name'), pSave: $('tr-p-save'), pLabel: $('tr-p-label'), pAdds: $('tr-p-adds'),
       pForm: $('tr-p-form'), pFormLabel: $('tr-p-form-label'), pNew: $('tr-p-new'), pUnions: $('tr-p-unions'), pAdd: $('tr-p-add'),
@@ -772,7 +1124,7 @@
 
     var st = {
       doc: null, where: 'local', loaded: false, failed: false, seq: 0,
-      view: null, L: null, zl: 0, z: 1, center: true, lastAdded: null, focus: null,
+      view: null, L: null, zl: 0, z: 1, center: true, lastAdded: null, focus: null, boxW: 0, boxH: 0, fitNext: false,
       person: null, from: null, adding: null, union: null, g: '',
       saving: null, again: false, saveErr: false, pending: false
     };
@@ -940,6 +1292,22 @@
       if (!ui.sheet.hidden) fillSheet();
     }
 
+    /* The room the tree has on screen: the width of its box, and about the height of the screen (taken
+       when the width changes, so the bar of a phone's browser coming and going doesn't move the tree). */
+    function screenBox() {
+      var w = Math.max(240, ui.scroll.clientWidth - 36);
+      if (w !== st.boxW || !st.boxH) { st.boxW = w; st.boxH = Math.max(340, (window.innerHeight || 700) - 170); }
+      return { w: w, h: st.boxH };
+    }
+
+    // A setting kept with the tree (o.hideF, o.tidy).
+    function setOpt(key, on) {
+      if (!st.doc) return;
+      var o = st.doc.o || {};
+      if (on) o[key] = true; else delete o[key];
+      if (Object.keys(o).length) st.doc.o = o; else delete st.doc.o;
+    }
+
     function draw() {
       var doc = st.doc, idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
       var view = vs.filter(function (v) { return v.key === st.view; })[0] || vs[0];
@@ -947,7 +1315,15 @@
       ui.side.hidden = vs.length < 2;
       sideBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.side === view.key)); });
 
-      var L = layout(doc, idx, view, SCREEN, { ghosts: true, mates: 'all' });
+      // «ترتيب» shows once the tree is wider than the screen: then it can gather it to the screen's shape
+      var base = { ghosts: true, mates: 'all' }, L = layout(doc, idx, view, SCREEN, base), box = screenBox();
+      var tidy = !!(doc.o && doc.o.tidy), canTidy = L.W > box.w + 1;
+      if (ui.tidy) {
+        ui.tidy.hidden = !canTidy;
+        ui.tidy.setAttribute('aria-pressed', String(tidy));
+        ui.tidy.setAttribute('aria-label', tidy ? 'رجّع الشجرة بالأجيال' : 'رتّب الشجرة على قد الشاشة');
+      }
+      if (tidy && canTidy) L = fitLayout(doc, idx, view, SCREEN, base, box.w, box.h, 1).L;
       st.L = L;
       ui.canvas.textContent = '';
       ui.canvas.style.width = L.W + 'px';
@@ -963,7 +1339,7 @@
         var d;
         if (l.t === 'pair') d = 'M' + (l.x1 + r) + ' ' + l.y + 'H' + (l.x2 - r);
         else {
-          d = kidLines(l.ax, l.ay, l.busY, l.kids, l.ky - 4, 14).map(function (c) {
+          d = linkLines(l, 14, 4).map(function (c) {
             return c[0] + c.slice(1).map(function (v) { return Math.round(v * 10) / 10; }).join(' ');
           }).join('');
         }
@@ -1024,9 +1400,11 @@
     function sizeStage() {
       var L = st.L;
       if (!L || ui.scroll.clientWidth - 36 <= 0) return;
-      var zs = zooms(), last = zs.length > 1 && st.zl >= zs.length - 1;
-      ui.zoom.hidden = zs.length < 2;
+      var zs = zooms();
+      if (st.fitNext) { st.fitNext = false; st.zl = zs.length - 1; }
       st.zl = Math.min(st.zl, zs.length - 1);
+      var last = zs.length > 1 && st.zl >= zs.length - 1;
+      ui.zoom.hidden = zs.length < 2;
       var z = zs[st.zl];
       st.z = z;
       ui.canvas.style.transform = z === 1 ? '' : 'scale(' + z + ')';
@@ -1308,7 +1686,7 @@
       if (!st.doc || !KIN.openShare) return;
       var doc = copy(st.doc), key = st.view, vs = views(doc, index(doc));
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
-      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF) };
+      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), tidy: !!(st.doc.o && st.doc.o.tidy) };
       KIN.openShare({
         file: 'shorbaka-tree',
         make: function (format) { return makePicture(doc, key, format, opts); },
@@ -1317,23 +1695,55 @@
         tips: { story: 'انشرها بقروب العائلة، أو حطها ستوري ومنشن أهلك', post: 'انشرها بقروب العائلة، أو نزّلها بوست ومنشن أهلك' },
         text: 'سويت شجرة عائلتي على شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
         // remembered with the tree, so the next picture comes out the same way
-        option: !viewHasF(doc, key) ? null : {
-          label: 'أخفي أسامي البنات', hint: 'يطلع «أختي» و«أمي» بدال الأسامي', on: opts.hideF,
-          set: function (on) {
-            opts.hideF = on;
-            if (!st.doc) return;
-            var o = st.doc.o || {};
-            if (on) o.hideF = true; else delete o.hideF;
-            if (Object.keys(o).length) st.doc.o = o; else delete st.doc.o;
-            changed();
-          }
-        }
+        option: hideOption(doc, key, opts)
       }, ui.share);
+    });
+
+    // The switch «أخفي أسامي البنات», remembered with the tree so the next picture comes out the same way.
+    function hideOption(doc, key, opts) {
+      return !viewHasF(doc, key) ? null : {
+        label: 'أخفي أسامي البنات', hint: 'يطلع «أختي» و«أمي» بدال الأسامي', on: opts.hideF,
+        set: function (on) { opts.hideF = on; if (st.doc) { setOpt('hideF', on); changed(); } }
+      };
+    }
+
+    // The tree on an A4 page to print, across or up and down; always gathered with «ترتيب».
+    if (ui.pdf) ui.pdf.addEventListener('click', function () {
+      if (!st.doc || !KIN.openShare) return;
+      var doc = copy(st.doc), key = st.view, vs = views(doc, index(doc));
+      var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
+      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF) };
+      var size = function (label, alt) {
+        return { label: label, title: 'جاهزة للطباعة', alt: alt, dl: 'حمّل ملف PDF', tip: '' };
+      };
+      KIN.openShare({
+        file: 'shorbaka-family-tree',
+        sizes: { land: size('بالعرض', 'صفحة A4 بالعرض'), port: size('بالطول', 'صفحة A4 بالطول') },
+        sizesLabel: 'اتجاه الصفحة',
+        make: function (orient) { return makePdf(doc, key, orient, opts); },
+        alt: famTitle(doc) + (view.label ? '، ' + view.label : ''),
+        tips: { land: 'اطبعها على ورقة A4، أو أرسلها بقروب العائلة', port: 'اطبعها على ورقة A4، أو أرسلها بقروب العائلة' },
+        text: 'شجرة عائلتي من شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
+        option: hideOption(doc, key, opts)
+      }, ui.pdf);
+    });
+
+    // «ترتيب»: gathers a wide tree into the shape of the screen (and of the pictures), or back to generations.
+    if (ui.tidy) ui.tidy.addEventListener('click', function () {
+      if (!st.doc) return;
+      var on = !(st.doc.o && st.doc.o.tidy);
+      setOpt('tidy', on);
+      st.zl = 0; st.fitNext = on; st.center = true;
+      changed();
     });
     var resizeT = null;
     window.addEventListener('resize', function () {
       clearTimeout(resizeT);
-      resizeT = setTimeout(function () { if (st.L) sizeStage(); }, 120);
+      resizeT = setTimeout(function () {
+        if (!st.L) return;
+        // a tidy tree takes the shape of the screen, so a new width lays it out again
+        if (st.doc && shown() && Math.max(240, ui.scroll.clientWidth - 36) !== st.boxW) draw(); else sizeStage();
+      }, 120);
     });
 
     // kin.js calls this when the page switches between «شنو يصير لك؟» and the tree.
