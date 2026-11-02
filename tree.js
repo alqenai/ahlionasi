@@ -1314,7 +1314,7 @@
         make: function (format) { return makePicture(doc, key, format, opts); },
         alt: famTitle(doc) + (view.label ? '، ' + view.label : ''),
         mention: 'تمنشن أهلك',
-        tips: { story: 'انشرها بجروب العائلة، أو حطها ستوري وتمنشن أهلك', post: 'انشرها بجروب العائلة، أو نزّلها بوست وتمنشن أهلك' },
+        tips: { story: 'انشرها بقروب العائلة، أو حطها ستوري ومنشن أهلك', post: 'انشرها بقروب العائلة، أو نزّلها بوست ومنشن أهلك' },
         text: 'سويت شجرة عائلتي على شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
         // remembered with the tree, so the next picture comes out the same way
         option: !viewHasF(doc, key) ? null : {
