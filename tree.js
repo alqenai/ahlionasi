@@ -986,9 +986,9 @@
      «امسح الكود» / «وشوف الشجرة كاملة» over the shorbaka.com mark on its right (see drawQrPanel). */
   var PICFMT = {
     story: { title: 120, titleY: 300, sub: 46, subY: 384, boxY: 470, boxH: 1000, boxW: 960,
-      qr: { boxH: 885, y: 1521, qr: 214, pad: 24, gap: 34, r: 40, t1: 46, t2: 36, t3: 34, mark: 46, t4: 28, foot: 59 } },
+      qr: { boxH: 885, y: 1521, qr: 214, pad: 24, gap: 34, r: 40, t1: 46, t2: 36, t3: 34, mark: 46, t4: 28, foot: 59, open: { boxH: 940, y: 1580 } } },
     post: { title: 92, titleY: 168, sub: 38, subY: 232, boxY: 292, boxH: 812, boxW: 960,
-      qr: { boxH: 722, y: 1146, qr: 172, pad: 20, gap: 28, r: 34, t1: 38, t2: 30, t3: 28, mark: 38, t4: 24, foot: 50 } }
+      qr: { boxH: 722, y: 1146, qr: 172, pad: 20, gap: 28, r: 34, t1: 38, t2: 30, t3: 28, mark: 38, t4: 24, foot: 50, open: { boxH: 770, y: 1196 } } }
   };
   var MIN_SCALE = 0.72, MAX_SCALE = 1.25;
 
@@ -1192,24 +1192,26 @@
     ctx.direction = 'rtl';
     D.setFont(ctx, '700', Z.t1); var w1 = ctx.measureText(QR_WORDS[0]).width;
     D.setFont(ctx, '500', Z.t2); var w2 = ctx.measureText(QR_WORDS[1]).width;
-    D.setFont(ctx, '500', Z.t4); var w4 = ctx.measureText(pwText).width;
+    D.setFont(ctx, '500', Z.t4); var w4 = pwText ? ctx.measureText(pwText).width : 0;
     ctx.direction = 'ltr';
     D.setFont(ctx, '500', Z.t3); var m3 = ctx.measureText(STICKER_LABEL), w3 = mw + mg + m3.width;
-    var tw = Math.max(w1, w2, w3), top = Z.qr + 2 * Z.pad, H = top + Z.foot;
+    var tw = Math.max(w1, w2, w3), top = Z.qr + 2 * Z.pad, H = top + (pwText ? Z.foot : 0);
     var W = Math.round(Math.min(1000, Math.max(Z.pad + Z.qr + Z.gap + tw + Z.pad * 1.4, w4 + Z.pad * 3)));
     var x0 = Math.round(540 - W / 2), y0 = Math.round(Z.y - top / 2), right = x0 + W - Z.pad * 1.4;
     D.roundRect(ctx, x0, y0, W, H, Z.r);
     ctx.fillStyle = 'rgba(244, 239, 230, 0.07)'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.2)'; ctx.stroke();
 
-    // the small print under a thin line: «خذ الباسورد من علي»
-    var yd = y0 + top;
-    ctx.beginPath(); ctx.moveTo(x0 + Z.pad, yd); ctx.lineTo(x0 + W - Z.pad, yd);
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.14)'; ctx.stroke();
-    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(244, 239, 230, 0.8)';
-    D.fit(ctx, pwText, '500', Z.t4, W - Z.pad * 2, Math.round(Z.t4 * 0.7));
-    ctx.fillText(pwText, x0 + W / 2, yd + Z.foot / 2);
+    // the small print under a thin line: «خذ الباسورد من علي» (none when the link needs no password)
+    if (pwText) {
+      var yd = y0 + top;
+      ctx.beginPath(); ctx.moveTo(x0 + Z.pad, yd); ctx.lineTo(x0 + W - Z.pad, yd);
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.14)'; ctx.stroke();
+      ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(244, 239, 230, 0.8)';
+      D.fit(ctx, pwText, '500', Z.t4, W - Z.pad * 2, Math.round(Z.t4 * 0.7));
+      ctx.fillText(pwText, x0 + W / 2, yd + Z.foot / 2);
+    }
 
     D.roundRect(ctx, x0 + Z.pad, y0 + Z.pad, Z.qr, Z.qr, Math.round(Z.qr * 0.1));
     ctx.fillStyle = QR_BG; ctx.fill();
@@ -1228,6 +1230,15 @@
     ctx.restore();
   }
   var STICKER_LABEL = 'shorbaka.com';
+
+  // The panel's sizes and place in a format: a link without a password has no line under the QR.
+  function qrZone(F, pwText) {
+    if (pwText) return F.qr;
+    var Z = {}, k;
+    for (k in F.qr) Z[k] = F.qr[k];
+    Z.y = F.qr.open.y; Z.boxH = F.qr.open.boxH;
+    return Z;
+  }
 
   /* Who the password comes from: me, the one who made the tree and set it («خذ الباسورد من علي»).
      When girls' names are hidden and I'm a girl, my name stays out too. */
@@ -1254,7 +1265,7 @@
 
   /* opts.hideF: as in drawTree. opts.tidy: laid out with «ترتيب». opts.qr: the «رابط الشجرة كاملة»; when
      the picture leaves people out (families folded into «+3 عياله», or the other side of the family),
-     a QR to it goes at the foot. */
+     a QR to it goes at the foot. opts.qrOpen: the link needs no password (no «خذ الباسورد من …»). */
   function makePicture(doc, viewKey, format, opts) {
     var hideF = !!(opts && opts.hideF), tidy = !!(opts && opts.tidy), link = opts && opts.qr;
     var D = KIN.draw, F = PICFMT[format] || PICFMT.story, H = KIN.FORMATS[format === 'post' ? 'post' : 'story'].H;
@@ -1264,10 +1275,10 @@
     var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH, tidy), boxH = F.boxH;
     // the QR goes on when the picture leaves people out: families folded into «+3», or the other side
     var qrLib = link && (pl.folded || vs.length > 1) ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
-    var pwText = pwFrom(doc, hideF);
-    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? QR_WORDS.join(' ') + ' ' + pwText : '')), qrLib]).then(function (got) {
+    var pwText = opts && opts.qrOpen ? '' : pwFrom(doc, hideF), QZ = qrZone(F, pwText);
+    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? [QR_WORDS.join(' '), pwText].filter(Boolean).join(' ') : '')), qrLib]).then(function (got) {
       var qrcode = got[1];
-      if (qrcode) { boxH = F.qr.boxH; pl = pictureLayout(doc, idx, view, F.boxW, boxH, tidy); }
+      if (qrcode) { boxH = QZ.boxH; pl = pictureLayout(doc, idx, view, F.boxW, boxH, tidy); }
       var c = document.createElement('canvas');
       c.width = 1080; c.height = H;
       var ctx = c.getContext('2d');
@@ -1285,7 +1296,7 @@
       var ox = 540 - L.W * s / 2, oy = F.boxY + Math.max(0, (boxH - L.H * s) / 2);
       drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.sea, hideF);
 
-      if (qrcode) drawQrPanel(ctx, qrOf(qrcode, link), F.qr, pwText);
+      if (qrcode) drawQrPanel(ctx, qrOf(qrcode, link), QZ, pwText);
       else D.drawSticker(ctx, KIN.FORMATS[format === 'post' ? 'post' : 'story'].sticker);
       return new Promise(function (res) { c.toBlob(res, 'image/png'); });
     });
@@ -1346,14 +1357,16 @@
 
   /* The tree on a white A4 page, always laid out with «ترتيب», ready to print: orient is 'land' or
      'port'. opts.hideF as in drawTree; opts.qr: the «رابط الشجرة كاملة», as a QR in the corner at the
-     foot (a link in the PDF too). Resolves { file: the PDF, name, type, preview: a PNG of the page, w, h }. */
+     foot (a link in the PDF too), with «خذ الباسورد من …» under it unless opts.qrOpen (no password).
+     Resolves { file: the PDF, name, type, preview: a PNG of the page, w, h }. */
   function makePdf(doc, viewKey, orient, opts) {
     var hideF = !!(opts && opts.hideF), link = opts && opts.qr, D = KIN.draw, P = PAGE[orient] || PAGE.land, k = PK;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
     var title = famTitle(doc), foot = 'سوّ شجرة عائلتك على shorbaka.com';
-    var qrLib = link ? loadQr().catch(function () { return null; }) : Promise.resolve(null), pwText = pwFrom(doc, hideF);
-    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? foot + ' ' + QR_WORDS.join(' ') + ' ' + pwText : foot)), qrLib]).then(function (got) {
+    var qrLib = link ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
+    var pwText = opts && opts.qrOpen ? '' : pwFrom(doc, hideF);
+    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? [foot, QR_WORDS.join(' '), pwText].filter(Boolean).join(' ') : foot)), qrLib]).then(function (got) {
       var qrcode = got[1];
       var W = P.w * k, H = P.h * k, c = document.createElement('canvas');
       c.width = W; c.height = H;
@@ -1371,7 +1384,7 @@
       ctx.fillText(title, W / 2, titleY);
 
       // with the QR in the corner, the tree stops above it
-      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? 128 : 74) * k;
+      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? (pwText ? 128 : 116) : 74) * k;
       var pl = pictureLayout(doc, idx, view, boxW, boxH, true, PDF_MIN, PDF_MAX), L = pl.L, s = pl.s;
       ctx.fillStyle = '#A3801F';
       D.setFont(ctx, '500', 11 * k);
@@ -1390,7 +1403,7 @@
 
       // the QR to the whole tree in the bottom left corner, «امسح الكود» / «وشوف الشجرة كاملة» beside
       // it, and under it in small print who to take the password from
-      var qrSide = 68 * k, qx = 34 * k, qy = H - 50 * k - qrSide;
+      var qrSide = 68 * k, qx = 34 * k, qy = H - (pwText ? 50 : 34) * k - qrSide;
       if (qrcode) {
         drawQrCode(ctx, qrOf(qrcode, link), qx, qy, qrSide);
         ctx.textAlign = 'left';
@@ -1398,8 +1411,10 @@
         ctx.fillText(QR_WORDS[0], qx + qrSide + 6 * k, qy + qrSide / 2 - 2 * k);
         ctx.fillStyle = '#4A607A'; D.setFont(ctx, '500', 8.5 * k);
         ctx.fillText(QR_WORDS[1], qx + qrSide + 6 * k, qy + qrSide / 2 + 11 * k);
-        ctx.fillStyle = '#A3801F'; D.fit(ctx, pwText, '500', 7.5 * k, 140 * k, 5.5 * k);
-        ctx.fillText(pwText, qx + 4 * k, fy + 3.5 * k);  // on the same line as the address at the foot
+        if (pwText) {
+          ctx.fillStyle = '#A3801F'; D.fit(ctx, pwText, '500', 7.5 * k, 140 * k, 5.5 * k);
+          ctx.fillText(pwText, qx + 4 * k, fy + 3.5 * k);  // on the same line as the address at the foot
+        }
       }
 
       var preview = document.createElement('canvas'), pw = 1100, ph = Math.round(1100 * H / W);
@@ -1641,7 +1656,8 @@
       linkBtn: $('tr-link-btn'), link: $('tr-link'), lClose: $('tr-l-close'), lText: $('tr-l-text'), lMsg: $('tr-l-msg'),
       lRetry: $('tr-l-retry'), lIn: $('tr-l-in'), lOn: $('tr-l-on'), lQr: $('tr-l-qr'), lUrl: $('tr-l-url'), lCopy: $('tr-l-copy'),
       lForm: $('tr-l-form'), lLabel: $('tr-l-label'), lPass: $('tr-l-pass'), lSave: $('tr-l-save'), lCancel: $('tr-l-cancel'),
-      lMore: $('tr-l-more'), lChange: $('tr-l-change'), lStop: $('tr-l-stop'), lConfirm: $('tr-l-confirm'), lYes: $('tr-l-yes'), lNo: $('tr-l-no')
+      lMore: $('tr-l-more'), lChange: $('tr-l-change'), lStop: $('tr-l-stop'), lConfirm: $('tr-l-confirm'), lYes: $('tr-l-yes'), lNo: $('tr-l-no'),
+      lOpen: $('tr-l-open'), lFree: $('tr-l-free'), lAsk: $('tr-l-ask'), lTip: $('tr-l-tip')
     };
     if (!ui.sec || !ui.canvas || !KIN) return;
 
@@ -2207,19 +2223,21 @@
       var doc = copy(st.doc), key = st.view, vs = views(doc, index(doc));
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
       // with a «رابط الشجرة كاملة», a picture that leaves people out carries its QR, and the sheet can copy it
-      var link = st.link && signedIn() ? linkUrl(st.link) : null;
-      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), tidy: !!(st.doc.o && st.doc.o.tidy), qr: link };
+      var link = st.link && signedIn() ? linkUrl(st.link) : null, open = !!(link && st.linkOpen);
+      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), tidy: !!(st.doc.o && st.doc.o.tidy), qr: link, qrOpen: open };
       KIN.openShare({
         file: 'shorbaka-tree',
         make: function (format) { return makePicture(doc, key, format, opts); },
         alt: famTitle(doc) + (view.label ? '، ' + view.label : ''),
         mention: 'تمنشن أهلك',
         link: link,
-        tips: link
+        tips: open
+          ? { story: 'حطها ستوري مع ستيكر الرابط، ومنشن أهلك', post: 'انشرها بقروب العائلة مع الرابط، أو نزّلها بوست ومنشن أهلك' }
+          : link
           ? { story: 'حطها ستوري مع ستيكر الرابط، ومنشن أهلك وعطهم الباسورد', post: 'انشرها بقروب العائلة مع الرابط والباسورد، أو نزّلها بوست ومنشن أهلك' }
           : { story: 'انشرها بقروب العائلة، أو حطها ستوري ومنشن أهلك', post: 'انشرها بقروب العائلة، أو نزّلها بوست ومنشن أهلك' },
         text: link
-          ? 'سويت شجرة عائلتي على شرباكة 🌳 شوفوها كاملة هني: ' + link + '\nواطلبوا مني الباسورد'
+          ? 'سويت شجرة عائلتي على شرباكة 🌳 شوفوها كاملة هني: ' + link + (open ? '' : '\nواطلبوا مني الباسورد')
           : 'سويت شجرة عائلتي على شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
         // remembered with the tree, so the next picture comes out the same way
         option: hideOption(doc, key, opts)
@@ -2237,7 +2255,7 @@
     // With a «رابط الشجرة كاملة», the PDF can carry its QR in the corner, or not.
     function pdfQrOption(link, opts) {
       return !link ? null : {
-        label: 'حط كيو آر الشجرة كاملة', hint: 'اللي يمسحه يشوف الشجرة كاملة بالباسورد', on: !!opts.qr,
+        label: 'حط كيو آر الشجرة كاملة', hint: 'اللي يمسحه يشوف الشجرة كاملة' + (opts.qrOpen ? '' : ' بالباسورد'), on: !!opts.qr,
         set: function (on) { opts.qr = on ? link : null; if (st.doc) { setOpt('pdfNoQr', !on); changed(); } }
       };
     }
@@ -2249,7 +2267,7 @@
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
       // the QR to the whole tree goes in the corner unless it was switched off (remembered with the tree)
       var link = st.link && signedIn() ? linkUrl(st.link) : null;
-      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), qr: link && !(st.doc.o && st.doc.o.pdfNoQr) ? link : null };
+      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), qr: link && !(st.doc.o && st.doc.o.pdfNoQr) ? link : null, qrOpen: !!(link && st.linkOpen) };
       var size = function (label, alt) {
         return { label: label, title: 'جاهزة للطباعة', alt: alt, dl: 'حمّل ملف PDF', tip: '' };
       };
@@ -2268,7 +2286,9 @@
     /* --- «رابط الشجرة كاملة»: the whole tree at shorbaka.com/t/#code, opened with a password I set ---
        It needs the account: the page shows the tree as it is saved there. The sheet shows one of
        out (not signed in), wait, err, none (no link yet: set a password), on (the link, its QR and a way
-       to copy it), change (a new password) or stop (are you sure). */
+       to copy it), change (a new password), stop (are you sure) or open (are you sure about taking the
+       password off: then the link opens for anyone who has it, st.linkOpen). st.linkFree: the database
+       can take a password off. */
 
     var linkSeq = 0, linkMode = '', linkNote = null;  // linkNote: what the sheet says after a change, in one state
 
@@ -2283,8 +2303,11 @@
       if (!a || !a.treeLink) { st.link = null; showLinkBtn(); fillLink(); return; }
       st.link = undefined;
       showLinkBtn(); fillLink();
-      a.treeLink().then(function (code) {
-        if (seq === linkSeq) st.link = code || null;
+      (a.treeLinkState ? a.treeLinkState() : a.treeLink().then(function (code) { return { code: code, old: true }; })).then(function (r) {
+        if (seq !== linkSeq) return;
+        st.link = (r && r.code) || null;
+        st.linkOpen = !!(st.link && r.open);
+        st.linkFree = !(r && r.old);
       }, function (e) {
         if (seq !== linkSeq) return;
         st.link = null;
@@ -2303,23 +2326,32 @@
       if (!signedIn()) return 'out';
       if (st.linkErr) return 'err';
       if (st.link === undefined) return 'wait';
-      if (!st.link) return 'none';
+      if (!st.link) return linkMode === 'open' ? 'open' : 'none';
       return linkMode || 'on';
     }
 
     function fillLink() {
       if (!ui.link || ui.link.hidden) return;
-      var s = linkState(), url = st.link ? linkUrl(st.link) : '';
+      var s = linkState(), url = st.link ? linkUrl(st.link) : '', open = !!(st.link && st.linkOpen);
       ui.lIn.hidden = s !== 'out';
       ui.lRetry.hidden = s !== 'err';
       ui.lOn.hidden = ui.lMore.hidden = s !== 'on';
       ui.lForm.hidden = s !== 'none' && s !== 'change';
-      ui.lConfirm.hidden = s !== 'stop';
+      ui.lConfirm.hidden = s !== 'stop' && s !== 'open';
       ui.lCancel.hidden = s !== 'change';
-      ui.lText.textContent = s === 'change' ? 'الرابط نفسه ما يتغيّر، بس الباسورد القديم يوقف.'
+      if (ui.lFree) ui.lFree.hidden = s !== 'none' || !st.linkFree;
+      if (ui.lOpen) ui.lOpen.hidden = open || !st.linkFree;
+      ui.lChange.textContent = open ? 'حط باسورد' : 'غيّر الباسورد';
+      ui.lText.textContent = s === 'change' ? (open ? 'الرابط نفسه ما يتغيّر، بس بعدها ما ينفتح إلا بالباسورد.' : 'الرابط نفسه ما يتغيّر، بس الباسورد القديم يوقف.')
+        : open ? 'اللي عنده الرابط يشوف شجرتك كاملة بدون باسورد، وما يقدر يغيّر فيها شي.'
         : 'اللي عنده الرابط والباسورد يشوف شجرتك كاملة، وما يقدر يغيّر فيها شي.';
-      ui.lLabel.textContent = s === 'change' ? 'الباسورد الجديد' : 'حط باسورد للرابط';
-      btnText(ui.lSave).textContent = s === 'change' ? 'غيّر الباسورد' : 'سوّ الرابط';
+      ui.lLabel.textContent = s === 'change' && !open ? 'الباسورد الجديد' : 'حط باسورد للرابط';
+      btnText(ui.lSave).textContent = s !== 'change' ? 'سوّ الرابط' : open ? 'حط الباسورد' : 'غيّر الباسورد';
+      if (ui.lTip) ui.lTip.textContent = 'حطه بستيكر الرابط بالستوري أو أرسله بقروب العائلة' + (open ? '.' : '، وعطهم الباسورد.');
+      if (ui.lAsk) ui.lAsk.textContent = s === 'open'
+        ? 'أي أحد عنده الرابط أو يمسح الكيو آر بيشوف شجرتك كاملة بدون باسورد. وتقدر ترجّع الباسورد متى ما تبي.'
+        : 'اللي عندهم الرابط ما يقدرون يفتحونه بعدها' + (open ? '' : '، حتى بالباسورد') + '. وإذا سويت رابط جديد بعدين، بيكون رابط ثاني.';
+      ui.lYes.textContent = s === 'open' ? 'شيل الباسورد' : 'وقّفه';
 
       var m = s === 'wait' ? { a: 'لحظة…' }
         : s === 'err' ? { err: true, a: 'ما قدرنا نجيب رابط شجرتك الحين. تأكد من النت.' }
@@ -2406,11 +2438,12 @@
           return a.setTreeLink(pw);
         }).then(function (code) {
           busyLink([ui.lSave, ui.lCancel], false); s.textContent = text;
-          var b = signedIn();
+          var b = signedIn(), wasOpen = !!st.linkOpen;
           if (!b || b.user().id !== uid || !code) return;
-          st.link = code; st.linkErr = false; linkMode = '';
+          st.link = code; st.linkErr = false; st.linkOpen = false; linkMode = '';
           ui.lPass.value = '';
-          if (was === 'change') sayLink('on', false, 'تغيّر الباسورد إلى ', typed, '. اللي عندهم الرابط يحتاجون الباسورد الجديد.');
+          if (was === 'change' && !wasOpen) sayLink('on', false, 'تغيّر الباسورد إلى ', typed, '. اللي عندهم الرابط يحتاجون الباسورد الجديد.');
+          else if (was === 'change') sayLink('on', false, 'انحفظ الباسورد ', typed, '. من الحين الرابط ما ينفتح إلا فيه، فعطه أهلك.');
           else sayLink('on', false, 'انحفظ الباسورد ', typed, '. احفظه عندك، لأنه ينحفظ مشفّر وما نقدر نرجّعه لك.');
           ui.lCopy.focus({ preventScroll: true });
         }, function () {
@@ -2426,15 +2459,44 @@
       ui.lChange.addEventListener('click', function () { linkMode = 'change'; linkNote = null; fillLink(); ui.lPass.focus(); });
       ui.lCancel.addEventListener('click', function () { linkMode = ''; linkNote = null; ui.lPass.value = ''; fillLink(); ui.lChange.focus(); });
       ui.lStop.addEventListener('click', function () { linkMode = 'stop'; linkNote = null; fillLink(); ui.lNo.focus(); });
-      ui.lNo.addEventListener('click', function () { linkMode = ''; fillLink(); ui.lStop.focus(); });
+      // taking the password off, or making the link without one: asks first
+      var askOpen = function () { linkMode = 'open'; linkNote = null; fillLink(); ui.lNo.focus(); };
+      if (ui.lOpen) ui.lOpen.addEventListener('click', askOpen);
+      if (ui.lFree) ui.lFree.addEventListener('click', askOpen);
+      ui.lNo.addEventListener('click', function () {
+        var back = linkMode === 'open' ? (st.link ? ui.lOpen : ui.lFree) : ui.lStop;
+        linkMode = ''; fillLink();
+        if (back && !back.hidden) back.focus();
+      });
       ui.lYes.addEventListener('click', function () {
-        var a = signedIn();
-        if (!a) return;
+        var a = signedIn(), was = linkState();
+        if (!a || (was !== 'stop' && was !== 'open')) return;
         busyLink([ui.lYes, ui.lNo], true);
+        if (was === 'open') {
+          var uid = a.user().id, made = !st.link;
+          // the link shows the tree saved in the account, so the last change goes first
+          (st.pending || st.saving ? save() : Promise.resolve(true)).then(function () {
+            return a.openTreeLink();
+          }).then(function (code) {
+            busyLink([ui.lYes, ui.lNo], false);
+            var b = signedIn();
+            if (!b || b.user().id !== uid || !code) return;
+            st.link = code; st.linkErr = false; st.linkOpen = true; linkMode = '';
+            sayLink('on', false, made ? 'سوّينا الرابط بدون باسورد. أي أحد عنده الرابط يشوف شجرتك كاملة.'
+              : 'شلنا الباسورد. الحين أي أحد عنده الرابط يشوف شجرتك كاملة.');
+            ui.lCopy.focus({ preventScroll: true });
+          }, function () {
+            busyLink([ui.lYes, ui.lNo], false);
+            linkMode = '';
+            sayLink(st.link ? 'on' : 'none', true, 'ما زبطت. تأكد من النت وجرّب مرة ثانية.');
+          });
+          return;
+        }
         a.stopTreeLink().then(function () {
           busyLink([ui.lYes, ui.lNo], false);
-          st.link = null; linkMode = '';
-          sayLink('none', false, 'وقّفنا الرابط، وما عاد ينفتح حتى بالباسورد.');
+          var wasOpen = st.linkOpen;
+          st.link = null; st.linkOpen = false; linkMode = '';
+          sayLink('none', false, wasOpen ? 'وقّفنا الرابط، وما عاد ينفتح.' : 'وقّفنا الرابط، وما عاد ينفتح حتى بالباسورد.');
           ui.lClose.focus();
         }, function () {
           busyLink([ui.lYes, ui.lNo], false);

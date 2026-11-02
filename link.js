@@ -1,10 +1,11 @@
-/* شرباكة: the page a «رابط الشجرة» opens (shorbaka.com/t/#code). It asks for the password the owner gave,
-   then shows the whole tree to look at (tree.js draws it). The password stays with this tab only, so a
-   reload doesn't ask again. */
+/* شرباكة: the page a «رابط الشجرة» opens (shorbaka.com/t/#code). A link without a password shows the
+   whole tree to look at straight away (tree.js draws it); otherwise the page asks for the password the
+   owner gave. The password stays with this tab only, so a reload doesn't ask again. */
 (function (root) {
   'use strict';
 
   var API = 'https://jfvbubrhghmivdjfbcku.supabase.co/rest/v1/rpc/open_tree_link';
+  var FREE = 'https://jfvbubrhghmivdjfbcku.supabase.co/rest/v1/rpc/open_free_tree_link';
   var KEY = 'sb_publishable_nom1uzSkzypbyYisBt2-dQ_psJfSZEe';  // public key: the password is what guards the tree
   var KEPT = 'shorbaka.link.';
 
@@ -56,17 +57,42 @@
     root.TREE.viewer({ side: ui.side, tidy: ui.tidy, zoom: ui.zoom, scroll: ui.scroll, stage: ui.stage, canvas: ui.canvas }, doc);
   }
 
-  function open(pw, quiet) {
-    busy(true);
-    say('');
-    return fetch(API, {
+  function rpc(url, body) {
+    return fetch(url, {
       method: 'POST',
       headers: { apikey: KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ link: code, password: pw })
+      body: JSON.stringify(body)
     }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
-    }).then(function (res) {
+    });
+  }
+
+  /* First: a link without a password opens straight away. A link with one, or a database from before
+     links without one, or no answer: the password form, as always. Resolves true when that's settled. */
+  function tryFree() {
+    var was = ui.sub.textContent;
+    ui.form.hidden = true;
+    ui.sub.textContent = 'لحظة…';
+    return rpc(FREE, { link: code }).then(function (res) {
+      var doc = res && res.tree ? root.TREE.clean(res.tree) : null;
+      ui.sub.textContent = was;
+      if (doc) { show(doc); return true; }
+      if (res && res.error === 'gone') { gone(); return true; }
+      if (res && res.error === 'empty') { ui.sub.textContent = 'الشجرة فاضية للحين.'; return true; }
+      ui.form.hidden = false;
+      return false;
+    }, function () {
+      ui.sub.textContent = was;
+      ui.form.hidden = false;
+      return false;
+    });
+  }
+
+  function open(pw, quiet) {
+    busy(true);
+    say('');
+    return rpc(API, { link: code, password: pw }).then(function (res) {
       busy(false);
       var doc = res && res.tree ? root.TREE.clean(res.tree) : null;
       if (doc) { keep(pw); show(doc); return; }
@@ -104,6 +130,9 @@
     ui.form.hidden = true;
     return;
   }
-  var pw = kept();
-  if (pw) open(pw, true); else setTimeout(function () { ui.pass.focus(); }, 300);
+  tryFree().then(function (done) {
+    if (done) return;
+    var pw = kept();
+    if (pw) open(pw, true); else setTimeout(function () { ui.pass.focus(); }, 300);
+  });
 })(window);

@@ -918,7 +918,7 @@
         <div class="tr-l-qr" id="tr-l-qr"></div>
         <p class="tr-l-url" id="tr-l-url" dir="ltr"></p>
         <button type="button" class="kin-btn kin-primary" id="tr-l-copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/></svg><span>انسخ الرابط</span></button>
-        <p class="tr-l-tip">حطه بستيكر الرابط بالستوري أو أرسله بقروب العائلة، وعطهم الباسورد.</p>
+        <p class="tr-l-tip" id="tr-l-tip">حطه بستيكر الرابط بالستوري أو أرسله بقروب العائلة، وعطهم الباسورد.</p>
       </div>
       <form class="tr-l-form" id="tr-l-form" hidden>
         <label><span id="tr-l-label">حط باسورد للرابط</span><input class="tr-input tr-l-pass" id="tr-l-pass" type="text" maxlength="64" autocomplete="off" autocapitalize="none" spellcheck="false" dir="ltr" enterkeyhint="done"></label>
@@ -927,21 +927,23 @@
           <button type="submit" class="kin-btn kin-primary" id="tr-l-save"><span>سوّ الرابط</span></button>
           <button type="button" class="kin-btn" id="tr-l-cancel" hidden><span>تراجع</span></button>
         </div>
+        <button type="button" class="tr-link" id="tr-l-free" hidden>سوّه بدون باسورد</button>
       </form>
       <div class="tr-l-more" id="tr-l-more" hidden>
         <button type="button" class="tr-link" id="tr-l-change">غيّر الباسورد</button>
+        <button type="button" class="tr-link" id="tr-l-open" hidden>شيل الباسورد</button>
         <button type="button" class="tr-link tr-l-stop" id="tr-l-stop">وقّف الرابط</button>
       </div>
       <div class="tr-p-confirm" id="tr-l-confirm" hidden>
-        <p>اللي عندهم الرابط ما يقدرون يفتحونه بعدها، حتى بالباسورد. وإذا سويت رابط جديد بعدين، بيكون رابط ثاني.</p>
+        <p id="tr-l-ask">اللي عندهم الرابط ما يقدرون يفتحونه بعدها، حتى بالباسورد. وإذا سويت رابط جديد بعدين، بيكون رابط ثاني.</p>
         <div><button type="button" class="tr-p-yes" id="tr-l-yes">وقّفه</button><button type="button" class="tr-p-no" id="tr-l-no">تراجع</button></div>
       </div>
     </div>
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=7" defer></script>
+  <script src="/account.js?v=8" defer></script>
   <script src="/kin.js?v=20" defer></script>
-  <script src="/tree.js?v=13" defer></script>
+  <script src="/tree.js?v=14" defer></script>
 </body>
 </html>

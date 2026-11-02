@@ -224,6 +224,16 @@
   function setTreeLink(password) { return client.rpc('set_tree_link', { password: password }).then(one); }
   // The link stops opening, even with the password.
   function stopTreeLink() { return client.rpc('stop_tree_link').then(one); }
+  /* My link and whether it opens without a password: { code, open }, or null when I have none. A
+     database from before links without a password answers { code, open: false, old: true }. */
+  function treeLinkState() {
+    return client.rpc('my_tree_link_state').then(one).catch(function (e) {
+      if (!e || (e.code !== 'PGRST202' && e.code !== '42883')) throw e;
+      return treeLink().then(function (code) { return { code: code, open: false, old: true }; });
+    });
+  }
+  // Takes the password off (making the link the first time): whoever has the link sees the tree.
+  function openTreeLink() { return client.rpc('open_my_tree_link').then(one); }
 
   // Deletes the account and everything saved in it (the database function cascades).
   function deleteAccount() {
@@ -250,6 +260,8 @@
     treeLink: treeLink,
     setTreeLink: setTreeLink,
     stopTreeLink: stopTreeLink,
+    treeLinkState: treeLinkState,
+    openTreeLink: openTreeLink,
     deleteAccount: deleteAccount
   };
 })(window);
