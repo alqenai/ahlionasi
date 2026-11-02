@@ -712,7 +712,7 @@
 
     var st = {
       doc: null, where: 'local', loaded: false, failed: false, seq: 0,
-      view: null, L: null, fit: false, z: 1, center: true, lastAdded: null,
+      view: null, L: null, zl: 0, z: 1, center: true, lastAdded: null,
       person: null, from: null, adding: null, union: null, g: '',
       saving: null, again: false, saveErr: false, pending: false
     };
@@ -957,20 +957,31 @@
     }
 
     // Big trees can be zoomed out to see all of it at once.
-    function sizeStage() {
+    /* The sizes the zoom button steps through: as drawn, then smaller. A big tree gets two steps down,
+       the second showing it all (or as much as stays visible). */
+    function zooms() {
       var L = st.L, avail = ui.scroll.clientWidth - 36;
-      if (!L || avail <= 0) return;
-      var fitZ = Math.max(0.35, Math.min(1, avail / L.W));
-      ui.zoom.hidden = fitZ > 0.98;
-      if (ui.zoom.hidden) st.fit = false;
-      var z = st.fit ? fitZ : 1;
+      if (!L || avail <= 0) return [1];
+      var fit = Math.max(0.16, Math.min(1, avail / L.W));
+      if (fit > 0.98) return [1];
+      if (fit >= 0.62) return [1, fit];
+      return [1, Math.min(0.75, Math.sqrt(fit)), fit];
+    }
+
+    function sizeStage() {
+      var L = st.L;
+      if (!L || ui.scroll.clientWidth - 36 <= 0) return;
+      var zs = zooms(), last = zs.length > 1 && st.zl >= zs.length - 1;
+      ui.zoom.hidden = zs.length < 2;
+      st.zl = Math.min(st.zl, zs.length - 1);
+      var z = zs[st.zl];
       st.z = z;
       ui.canvas.style.transform = z === 1 ? '' : 'scale(' + z + ')';
       ui.stage.style.width = Math.ceil(L.W * z) + 'px';
       ui.stage.style.height = Math.ceil(L.H * z) + 'px';
-      ui.zoom.setAttribute('aria-label', st.fit ? 'كبّر الشجرة' : 'شوف الشجرة كلها');
-      ui.zoom.setAttribute('aria-pressed', String(st.fit));
-      ui.zoom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (st.fit ? ZOOM.in : ZOOM.out) + '</svg>';
+      ui.zoom.setAttribute('aria-label', last ? 'رجّع الشجرة لحجمها' : st.zl ? 'صغّرها أكثر' : 'صغّر الشجرة');
+      ui.zoom.setAttribute('aria-pressed', String(st.zl > 0));
+      ui.zoom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (last ? ZOOM.in : ZOOM.out) + '</svg>';
     }
 
     function centerOn(pid) {
@@ -1226,10 +1237,13 @@
         render();
       });
     });
+    // Each tap goes a step smaller, keeping the middle of what's on screen in the middle; after the smallest, back to normal.
     ui.zoom.addEventListener('click', function () {
-      st.fit = !st.fit;
+      var mid = (ui.scroll.scrollLeft + ui.scroll.clientWidth / 2 - 18) / st.z;
+      st.zl = (st.zl + 1) % zooms().length;
       sizeStage();
-      if (!st.fit) centerOn(st.doc.me);
+      if (!st.zl) centerOn(st.doc.me);
+      else ui.scroll.scrollLeft = Math.max(0, 18 + mid * st.z - ui.scroll.clientWidth / 2);
     });
     ui.retry.addEventListener('click', function () { sync(true); });
     ui.saveRetry.addEventListener('click', function () { save(); });
