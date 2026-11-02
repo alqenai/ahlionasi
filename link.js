@@ -6,6 +6,7 @@
 
   var API = 'https://jfvbubrhghmivdjfbcku.supabase.co/rest/v1/rpc/open_tree_link';
   var FREE = 'https://jfvbubrhghmivdjfbcku.supabase.co/rest/v1/rpc/open_free_tree_link';
+  var SUGGEST = 'https://jfvbubrhghmivdjfbcku.supabase.co/rest/v1/rpc/suggest_to_tree';
   var KEY = 'sb_publishable_nom1uzSkzypbyYisBt2-dQ_psJfSZEe';  // public key: the password is what guards the tree
   var KEPT = 'shorbaka.link.';
 
@@ -39,7 +40,7 @@
 
   function people(n) { return n === 1 ? 'شخص واحد' : n === 2 ? 'شخصين' : n <= 10 ? n + ' أشخاص' : n + ' شخص'; }
 
-  function show(doc) {
+  function show(doc, pw) {
     var me = doc.p[doc.me], name = (me && me.n) || '';
     ui.title.textContent = doc.fn ? 'شجرة عائلة ' + doc.fn : name ? 'شجرة عائلة ' + name : 'شجرة عائلة';
     document.title = ui.title.textContent + ' | شرباكة';
@@ -54,7 +55,10 @@
     ui.form.hidden = true;
     ui.bar.hidden = false; ui.scroll.hidden = false; ui.only.hidden = false;
     ui.main.classList.add('is-open');
-    root.TREE.viewer({ side: ui.side, tidy: ui.tidy, zoom: ui.zoom, scroll: ui.scroll, stage: ui.stage, canvas: ui.canvas }, doc);
+    var els = { side: ui.side, tidy: ui.tidy, zoom: ui.zoom, scroll: ui.scroll, stage: ui.stage, canvas: ui.canvas };
+    // a link with a password also takes suggestions («اقترح إضافة»); one without only shows the tree
+    if (pw && root.SUGGEST) root.SUGGEST.start(doc, els, { code: code, password: pw, api: SUGGEST, key: KEY });
+    else root.TREE.viewer(els, doc);
   }
 
   function rpc(url, body) {
@@ -95,7 +99,7 @@
     return rpc(API, { link: code, password: pw }).then(function (res) {
       busy(false);
       var doc = res && res.tree ? root.TREE.clean(res.tree) : null;
-      if (doc) { keep(pw); show(doc); return; }
+      if (doc) { keep(pw); show(doc, pw); return; }
       keep('');
       var e = res && res.error;
       if (e === 'wrong') say(quiet ? '' : 'الباسورد غلط. تأكد منه من صاحب الشجرة.');

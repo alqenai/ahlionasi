@@ -10,6 +10,8 @@
        f: { f2: { a: 'p3', b: 'p4', k: ['p1', 'p5'] }, ... },   families: husband, wife, children eldest first
                                                                (x: true, divorced)
        fn: 'القناعي',                                          the family name (left out when not given)
+       h: ['خالد', 'سارة'],                                     who helped finish it: names of people whose
+                                                               suggestions the owner added (left out when none)
        o: { hideF: true } }                                    settings (left out when none is on)
    A family can be missing its husband or wife (not added yet). Brothers and sisters whose parents
    aren't added yet share a family with neither. A man can have up to four wives: his families are in
@@ -36,6 +38,17 @@
   function cleanFam(s) {
     var x = cleanName(s).replace(/^(ال)?(عائلة|عايلة)\s+/, '').slice(0, FAM).trim();
     return /^(ال)?(عائلة|عايلة)$/.test(x) ? '' : x;
+  }
+
+  // «ساعدوني بإتمام هذه الشجرة»: up to 30 names, each once, in the order they helped.
+  var MAXH = 30;
+  function helpers(list) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (x) {
+      var n = typeof x === 'string' ? cleanName(x) : '';
+      if (n && out.indexOf(n) < 0 && out.length < MAXH) out.push(n);
+    });
+    return out;
   }
 
   function famTitle(doc) { return doc && doc.fn ? 'شجرة عائلة ' + doc.fn : 'شجرة عائلتي'; }
@@ -114,6 +127,8 @@
     var doc = { v: 1, me: raw.me, n: Math.max(n, Math.floor(+raw.n) || 0), p: p, f: f };
     var fn = typeof raw.fn === 'string' ? cleanFam(raw.fn) : '';
     if (fn) doc.fn = fn;
+    var h = helpers(raw.h);
+    if (h.length) doc.h = h;
     // settings: o.hideF hides girls' and women's names in the shared picture, o.tidy lays it out with «ترتيب»,
     // o.pdfNoQr leaves the «رابط الشجرة كاملة» QR out of the PDF
     if (raw.o && typeof raw.o === 'object') {
@@ -893,6 +908,73 @@
     return { doc: d, pid: cur, added: added, pids: pids };
   }
 
+  /* ---------- «اقترح إضافة»: additions suggested through the tree's link ---------- */
+
+  /* A suggestion is the steps its sender took on a copy of the tree, in order:
+       [{ id: 'p57', of: 'p3', t: 'S', n: 'سعود', mate: 'p9' }, ...]
+     add a t (F M B Z S D H W) of person `of`, named n. id names the new person so a later step can build
+     on them (of or mate can be an earlier step's id); mate picks which marriage a child belongs to
+     (null: the one without a husband or wife). */
+  var STEP = /^[FMBZSDHW]$/;
+  function cleanSteps(ops) {
+    var out = [], ids = {};
+    (Array.isArray(ops) ? ops : []).forEach(function (op) {
+      if (out.length >= 100 || !op || typeof op !== 'object') return;
+      var id = String(op.id || ''), of = String(op.of || ''), mate = op.mate == null ? null : String(op.mate);
+      if (!/^p\d{1,6}$/.test(id) || ids[id] || !/^p\d{1,6}$/.test(of) || !STEP.test(op.t)) return;
+      if (mate && !/^p\d{1,6}$/.test(mate)) mate = null;
+      var n = cleanName(op.n);
+      if (!n) return;
+      ids[id] = 1;
+      out.push({ id: id, of: of, t: op.t, n: n, mate: mate });
+    });
+    return out;
+  }
+
+  // The steps a step stands on: the earlier steps that added its person or its marriage's other parent.
+  function stepNeeds(ops, op) {
+    var ids = ops.map(function (o) { return o.id; });
+    return [op.of, op.mate].filter(function (x) { return x && ids.indexOf(x) >= 0 && x !== op.id; });
+  }
+
+  /* Puts the steps whose ids are in pick (all of them when pick is missing) on a copy of doc, as it is
+     now. A step whose person is gone, or that no longer fits on the tree, is left out, and so are the
+     steps built on it. Returns { doc, map: { stepId: new id in doc }, done: [stepIds], left: [stepIds] }. */
+  function replay(doc, ops, pick) {
+    var d = copy(doc), steps = cleanSteps(ops), stepIds = {}, map = {}, done = [], left = [];
+    steps.forEach(function (op) { stepIds[op.id] = 1; });
+    function who(x) { return !x ? null : stepIds[x] ? (map[x] || false) : (d.p[x] ? x : false); }
+    steps.forEach(function (op) {
+      if (pick && pick.indexOf(op.id) < 0) return;
+      var of = who(op.of), mate = op.mate ? who(op.mate) : null, np = null;
+      if (of && mate !== false) {
+        var idx = index(d);
+        if (canAdd(d, idx, of, op.t)) {
+          var fid = null;
+          if (op.t === 'S' || op.t === 'D') {
+            var us = idx.unions[of] || [];
+            fid = us.filter(function (u) { var x = d.f[u]; return mate ? (x.a === mate || x.b === mate) : !(x.a && x.b); })[0] || null;
+            if (!fid && us.length > 1) fid = us[0];
+            if (!fid && mate && us.length === 1) fid = us[0];
+          }
+          np = addRelative(d, of, op.t, op.n, fid);
+        }
+      }
+      if (np) { map[op.id] = np; done.push(op.id); } else left.push(op.id);
+    });
+    return { doc: d, map: map, done: done, left: left };
+  }
+
+  /* What each step would add, for the owner to pick from: [{ id, n, rel, needs }] (rel: what the new
+     person is to the owner, «ولد عمي»; '' when the step no longer fits). */
+  function describeSteps(doc, ops) {
+    var steps = cleanSteps(ops), r = replay(doc, steps), idx = index(r.doc), rels = relations(r.doc, idx);
+    return steps.map(function (op) {
+      var id = r.map[op.id];
+      return { id: op.id, n: op.n, rel: id ? relLabel(r.doc, idx, rels, id) : '', needs: stepNeeds(steps, op) };
+    });
+  }
+
   /* The line from parents down to each child, turning with round corners instead of square ones:
      a list of ['M', x, y], ['L', x, y] and ['Q', cx, cy, x, y] steps (the screen draws it as SVG, the
      picture on a canvas). All the children's lines are one path, so where they overlap the line
@@ -972,7 +1054,8 @@
     lineSet: lineSet, lineUnions: lineUnions, layout: layout, choices: choices, kidLines: kidLines, SCREEN: SCREEN,
     allHeads: allHeads, canAdd: canAdd, kinOf: kinOf, addWalk: addWalk, fitLayout: fitLayout, linkLines: linkLines, rowsOf: rowsOf,
     canMarry: canMarry, wivesOf: wivesOf, wifeIn: wifeIn, moveWife: moveWife, relLabel: relLabel, marriageOf: marriageOf,
-    spreadRow: spreadRow, exMark: exMark, rip: rip
+    spreadRow: spreadRow, exMark: exMark, rip: rip, cleanName: cleanName, helpers: helpers,
+    cleanSteps: cleanSteps, stepNeeds: stepNeeds, replay: replay, describeSteps: describeSteps, thanksLine: thanksLine
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = TREE;
   root.TREE = TREE;
@@ -1230,6 +1313,15 @@
     ctx.restore();
   }
   var STICKER_LABEL = 'shorbaka.com';
+  var QR_ASK = 'وعندك إضافة؟ اقترحها';
+
+  // «خالد وسارة ساعدوني بإتمام هذه الشجرة», or '' when nobody's suggestions were added.
+  function thanksLine(doc) {
+    var h = (doc && doc.h) || [];
+    if (!h.length) return '';
+    var names = h.length === 1 ? h[0] : h.slice(0, -1).join('، ') + ' و' + h[h.length - 1];
+    return names + (h.length === 1 ? ' ساعدني' : ' ساعدوني') + ' بإتمام هذه الشجرة';
+  }
 
   // The panel's sizes and place in a format: a link without a password has no line under the QR.
   function qrZone(F, pwText) {
@@ -1366,7 +1458,10 @@
     var title = famTitle(doc), foot = 'سوّ شجرة عائلتك على shorbaka.com';
     var qrLib = link ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
     var pwText = opts && opts.qrOpen ? '' : pwFrom(doc, hideF);
-    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? [foot, QR_WORDS.join(' '), pwText].filter(Boolean).join(' ') : foot)), qrLib]).then(function (got) {
+    // a link with a password takes suggestions: the QR also asks for them
+    var askText = link && pwText ? QR_ASK : '', thanks = thanksLine(doc);
+    var more = [foot, thanks].concat(link ? [QR_WORDS.join(' '), pwText, askText] : []).filter(Boolean).join(' ');
+    return Promise.all([D.loadFonts(fontSample(doc, rels, more)), qrLib]).then(function (got) {
       var qrcode = got[1];
       var W = P.w * k, H = P.h * k, c = document.createElement('canvas');
       c.width = W; c.height = H;
@@ -1384,7 +1479,7 @@
       ctx.fillText(title, W / 2, titleY);
 
       // with the QR in the corner, the tree stops above it
-      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? (pwText ? 128 : 116) : 74) * k;
+      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? (pwText ? 128 : 116) : 74) * k - (thanks ? 16 * k : 0);
       var pl = pictureLayout(doc, idx, view, boxW, boxH, true, PDF_MIN, PDF_MAX), L = pl.L, s = pl.s;
       ctx.fillStyle = '#A3801F';
       D.setFont(ctx, '500', 11 * k);
@@ -1401,6 +1496,14 @@
       ctx.fillText(foot, right - tw / 2, fy + 3.5 * k);
       D.drawMark(ctx, left + markW / 2, fy, markH, true);
 
+      // «خالد وسارة ساعدوني بإتمام هذه الشجرة»: whose suggestions the owner added, over the sign-off
+      if (thanks) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#A3801F';
+        D.fit(ctx, thanks, '500', 10 * k, W - 2 * (qrcode ? 210 : 60) * k, 7 * k);
+        ctx.fillText(thanks, W / 2, fy - 18 * k);
+      }
+
       // the QR to the whole tree in the bottom left corner, «امسح الكود» / «وشوف الشجرة كاملة» beside
       // it, and under it in small print who to take the password from
       var qrSide = 68 * k, qx = 34 * k, qy = H - (pwText ? 50 : 34) * k - qrSide;
@@ -1411,6 +1514,10 @@
         ctx.fillText(QR_WORDS[0], qx + qrSide + 6 * k, qy + qrSide / 2 - 2 * k);
         ctx.fillStyle = '#4A607A'; D.setFont(ctx, '500', 8.5 * k);
         ctx.fillText(QR_WORDS[1], qx + qrSide + 6 * k, qy + qrSide / 2 + 11 * k);
+        if (askText) {
+          ctx.fillStyle = '#1E8C82'; D.setFont(ctx, '500', 8.5 * k);
+          ctx.fillText(askText, qx + qrSide + 6 * k, qy + qrSide / 2 + 24 * k);
+        }
         if (pwText) {
           ctx.fillStyle = '#A3801F'; D.fit(ctx, pwText, '500', 7.5 * k, 140 * k, 5.5 * k);
           ctx.fillText(pwText, qx + 4 * k, fy + 3.5 * k);  // on the same line as the address at the foot
@@ -1538,6 +1645,7 @@
     b.classList.add(isMe ? 'is-me' : n.kind === 'mate' ? 'is-mate' : 'is-blood');
     if (!isMe && p.g === 'f') b.classList.add('is-f');
     if (opts.fresh && n.pid === opts.fresh) b.classList.add('is-new');
+    if (opts.marked && opts.marked[n.pid]) b.classList.add('is-sugg');
     b.dataset.pid = n.pid;
     var av = el('span', 'tr-av', hidden ? null : initial(p.n));
     if (hidden) { av.classList.add('is-pearl'); av.appendChild(el('i')); }
@@ -1561,7 +1669,8 @@
   /* Shows doc in els ({ side, tidy, zoom, scroll, stage, canvas }, laid out as on the tree page): both
      sides, «ترتيب» and zoom, and nobody can be tapped or added. When the owner hides girls' and women's
      names, they come without them and show what they are, as in the pictures. */
-  function viewer(els, doc) {
+  function viewer(els, doc, vopts) {
+    vopts = vopts || {};
     var idx = index(doc), vs = views(doc, idx), hideF = !!(doc.o && doc.o.hideF);
     var st = { view: vs[0].key, tidy: !!(doc.o && doc.o.tidy), zl: 0, z: 1, L: null, boxW: 0, boxH: 0, center: true, fitNext: false };
     var sideBtns = Array.prototype.slice.call(els.side.querySelectorAll('button'));
@@ -1582,9 +1691,10 @@
       els.tidy.setAttribute('aria-label', st.tidy ? 'رجّع الشجرة بالأجيال' : 'رتّب الشجرة على قد الشاشة');
       if (st.tidy && canTidy) L = fitLayout(doc, idx, view, SCREEN, base, box.w, box.h, 1).L;
       st.L = L;
-      paint(els.canvas, L, doc, { hideF: hideF });
+      paint(els.canvas, L, doc, { hideF: hideF, tap: vopts.tap, marked: vopts.marked, fresh: st.fresh });
+      st.fresh = null;
       size();
-      if (st.center) { st.center = false; centerOn(doc.me); }
+      if (st.center) { st.center = false; centerOn(st.focus || doc.me); st.focus = null; }
     }
     function steps() { return zoomSteps(st.L && st.L.W, els.scroll.clientWidth - 36); }
     function size() {
@@ -1634,6 +1744,24 @@
       }, 120);
     });
     draw();
+
+    /* The tree changed (someone suggested an addition): draw the new one, on a side that shows `fresh`,
+       keeping the place on screen. */
+    return {
+      set: function (next, fresh) {
+        doc = next; idx = index(doc); vs = views(doc, idx);
+        if (fresh) {
+          var on = function (v) { return layout(doc, idx, v, SCREEN, { ghosts: false, mates: 'all' }).nodes.some(function (n) { return n.pid === fresh; }); };
+          var cur = vs.filter(function (v) { return v.key === st.view; })[0];
+          if (!cur || !on(cur)) { var other = vs.filter(on)[0]; if (other) { st.view = other.key; st.center = true; st.focus = fresh; } }
+          st.fresh = fresh;
+        }
+        var left = els.scroll.scrollLeft;
+        draw();
+        if (!st.center) els.scroll.scrollLeft = left;
+      },
+      doc: function () { return doc; }
+    };
   }
 
   TREE.viewer = viewer;
@@ -1657,7 +1785,8 @@
       lRetry: $('tr-l-retry'), lIn: $('tr-l-in'), lOn: $('tr-l-on'), lQr: $('tr-l-qr'), lUrl: $('tr-l-url'), lCopy: $('tr-l-copy'),
       lForm: $('tr-l-form'), lLabel: $('tr-l-label'), lPass: $('tr-l-pass'), lSave: $('tr-l-save'), lCancel: $('tr-l-cancel'),
       lMore: $('tr-l-more'), lChange: $('tr-l-change'), lStop: $('tr-l-stop'), lConfirm: $('tr-l-confirm'), lYes: $('tr-l-yes'), lNo: $('tr-l-no'),
-      lOpen: $('tr-l-open'), lFree: $('tr-l-free'), lAsk: $('tr-l-ask'), lTip: $('tr-l-tip')
+      lOpen: $('tr-l-open'), lFree: $('tr-l-free'), lAsk: $('tr-l-ask'), lTip: $('tr-l-tip'),
+      sgBar: $('tr-sg-bar'), sgBarText: $('tr-sg-bar-text'), sg: $('tr-sg'), sgClose: $('tr-sg-close'), sgList: $('tr-sg-list'), sgMsg: $('tr-sg-msg')
     };
     if (!ui.sec || !ui.canvas || !KIN) return;
 
@@ -1704,7 +1833,9 @@
       st.failed = false;
       if (!a) {
         st.where = 'local'; st.doc = loadLocal(); st.loaded = true; st.center = true;
+        sugg.list = [];
         render();
+        showSuggBar();
         return;
       }
       st.where = 'account'; st.loaded = false; st.doc = null;
@@ -1713,6 +1844,7 @@
         if (seq !== st.seq) return;
         var doc = clean(data), local = loadLocal(), mine = unsaved(uid);
         st.loaded = true; st.center = true;
+        setTimeout(function () { if (seq === st.seq) loadSuggestions(true); }, 0);
         if (mine) {
           // this tab closed with a save on its way: its copy is at least as new as the account's
           st.doc = mine;
@@ -2295,6 +2427,143 @@
     function linkUrl(code) {
       var site = /(^|\.)shorbaka\.com$/.test(location.hostname) ? 'https://shorbaka.com' : location.origin;
       return site + '/t/#' + code;
+    }
+
+    /* --- «اقتراحات على شجرتك»: what family suggested through «رابط الشجرة كاملة» --- */
+
+    var sugg = { list: [], at: 0, busy: false };
+    function loadSuggestions(force) {
+      var a = signedIn();
+      if (!ui.sgBar || !a || !a.treeSuggestions || st.where !== 'account' || !st.loaded || !st.doc) { showSuggBar(); return; }
+      if (!force && Date.now() - sugg.at < 60000) return;
+      sugg.at = Date.now();
+      var uid = a.user().id;
+      a.treeSuggestions().then(function (list) {
+        if (!signedIn() || signedIn().user().id !== uid) return;
+        sugg.list = Array.isArray(list) ? list : [];
+        showSuggBar();
+        if (!ui.sg.hidden) fillSugg();
+      }, function () {});
+    }
+    function showSuggBar() {
+      if (!ui.sgBar) return;
+      var n = st.where === 'account' && st.doc ? sugg.list.length : 0;
+      ui.sgBar.hidden = !n;
+      if (n) ui.sgBarText.textContent = n === 1 ? 'عندك اقتراح من ' + sugg.list[0].from + ' على شجرتك' : n === 2 ? 'عندك اقتراحين على شجرتك' : 'عندك ' + n + (n <= 10 ? ' اقتراحات' : ' اقتراح') + ' على شجرتك';
+    }
+    function sayDate(s) {
+      var m = Math.round((Date.now() - Date.parse(s)) / 60000);
+      if (!(m >= 0)) return '';
+      if (m < 1) return 'الحين';
+      if (m < 60) return 'قبل ' + m + ' دقيقة';
+      var h = Math.round(m / 60);
+      if (h < 24) return 'قبل ' + h + (h === 1 ? ' ساعة' : ' ساعات');
+      var d = Math.round(h / 24);
+      return d === 1 ? 'أمس' : 'قبل ' + d + ' أيام';
+    }
+    function sgSay(text, bad) {
+      ui.sgMsg.textContent = text || '';
+      ui.sgMsg.hidden = !text;
+      ui.sgMsg.classList.toggle('is-err', !!bad);
+    }
+    function fillSugg() {
+      ui.sgList.textContent = '';
+      if (!sugg.list.length) { ui.sgList.appendChild(el('p', 'tr-sg-text', 'ما فيه اقتراحات ثانية.')); return; }
+      sugg.list.forEach(function (sg) {
+        var item = el('div', 'tr-sg-item'), head = el('p', 'tr-sg-from');
+        head.appendChild(el('span', null, 'من ' + sg.from));
+        head.appendChild(el('small', null, sayDate(sg.at)));
+        item.appendChild(head);
+        var steps = describeSteps(st.doc, sg.ops), boxes = {};
+        steps.forEach(function (x) {
+          var row = el('label', 'tr-sg-op' + (x.rel ? '' : ' is-off')), box = el('input'), words = el('span');
+          box.type = 'checkbox';
+          box.checked = !!x.rel;
+          box.disabled = !x.rel;
+          boxes[x.id] = box;
+          row.appendChild(box);
+          row.appendChild(el('b', null, x.n));
+          words.textContent = x.rel ? ' ' + x.rel : ' ما يركب على الشجرة الحين';
+          row.appendChild(words);
+          // picking someone picks who they're built on; leaving someone out leaves out who is built on them
+          box.addEventListener('change', function () {
+            var walk = function (id, on) {
+              var b = boxes[id];
+              if (!b || b.disabled) return;
+              b.checked = on;
+              if (on) (steps.filter(function (y) { return y.id === id; })[0] || { needs: [] }).needs.forEach(function (n) { walk(n, true); });
+              else steps.forEach(function (y) { if (y.needs.indexOf(id) >= 0 && boxes[y.id].checked) walk(y.id, false); });
+            };
+            walk(x.id, box.checked);
+            addBtn.disabled = !steps.some(function (y) { return boxes[y.id].checked; });
+          });
+          item.appendChild(row);
+        });
+        var btns = el('div', 'tr-sg-btns'), addBtn = el('button', 'kin-btn kin-primary', 'ضيف المختار'), noBtn = el('button', 'kin-btn', 'لا، شكرًا');
+        addBtn.type = noBtn.type = 'button';
+        addBtn.disabled = !steps.some(function (y) { return boxes[y.id].checked; });
+        addBtn.addEventListener('click', function () {
+          var pick = steps.filter(function (y) { return boxes[y.id].checked; }).map(function (y) { return y.id; });
+          takeSugg(sg, pick);
+        });
+        noBtn.addEventListener('click', function () { takeSugg(sg, []); });
+        btns.appendChild(addBtn); btns.appendChild(noBtn);
+        item.appendChild(btns);
+        ui.sgList.appendChild(item);
+      });
+    }
+    // Adds the picked steps of one suggestion (none: it's turned down), then lets it go.
+    function takeSugg(sg, pick) {
+      var a = signedIn();
+      if (!a || sugg.busy || !st.doc) return;
+      var added = 0;
+      if (pick.length) {
+        var r = replay(st.doc, sg.ops, pick);
+        added = r.done.length;
+        if (added) {
+          var h = helpers((r.doc.h || []).concat(sg.from));
+          if (h.length) r.doc.h = h;
+          st.doc = r.doc;
+          st.lastAdded = r.map[r.done[r.done.length - 1]];
+          changed();
+        }
+      }
+      sugg.busy = true;
+      sgSay('');
+      a.dropTreeSuggestion(sg.id).then(function () {
+        sugg.busy = false;
+        sugg.list = sugg.list.filter(function (x) { return x.id !== sg.id; });
+        showSuggBar();
+        fillSugg();
+        sgSay(!pick.length ? 'تمام، ما انضاف شي من اقتراح ' + sg.from + '.' :
+          added ? 'انضاف ' + (added === 1 ? 'شخص واحد' : added === 2 ? 'شخصين' : added + ' أشخاص') + ' من اقتراح ' + sg.from + '، وانكتب اسم ' + sg.from + ' مع اللي ساعدوا.' :
+          'ما قدرنا نضيفهم، الشجرة تغيّرت.', pick.length && !added);
+        if (!sugg.list.length) setTimeout(closeSugg, 1600);
+      }, function () {
+        sugg.busy = false;
+        sgSay('ما قدرنا نشيل الاقتراح من القائمة. تأكد من النت وجرّب مرة ثانية.', true);
+      });
+    }
+    function openSugg() {
+      if (!st.doc) return;
+      sgSay('');
+      fillSugg();
+      ui.sg.hidden = false;
+      document.documentElement.classList.add('kin-lock');
+      ui.sgClose.focus();
+    }
+    function closeSugg() {
+      if (!ui.sg || ui.sg.hidden) return;
+      ui.sg.hidden = true;
+      document.documentElement.classList.remove('kin-lock');
+      if (!ui.sgBar.hidden) ui.sgBar.focus({ preventScroll: true });
+    }
+    if (ui.sgBar) {
+      ui.sgBar.addEventListener('click', openSugg);
+      ui.sgClose.addEventListener('click', closeSugg);
+      ui.sg.addEventListener('click', function (e) { if (e.target === ui.sg) closeSugg(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSugg(); });
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') loadSuggestions(); });
     }
 
     function loadLink() {

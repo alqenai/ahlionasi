@@ -589,6 +589,31 @@
     .tr-link { display: block; margin: 4px auto 0; min-height: 40px; padding: 0 12px; border: 0; background: none; color: var(--sand); font-family: inherit; font-size: .9rem; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
     .tr-in { display: flex; align-items: center; justify-content: center; }
 
+    /* «اقتراحات على شجرتك»: what family suggested through the tree's link, to add all or some */
+    .tr-sgbar {
+      display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; margin: 8px 0 14px; padding: 8px 14px; border: 0; border-radius: 16px;
+      background: rgba(233, 196, 106, .12); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .45); color: var(--pearl);
+      font-family: inherit; font-size: .95rem; text-align: start; cursor: pointer; animation: pop-in .4s ease-out both;
+    }
+    .tr-sgbar svg { width: 22px; height: 22px; flex: none; fill: none; stroke: var(--sand); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .tr-sgbar span { flex: 1; }
+    .tr-sgbar b { color: var(--sand); font-weight: 700; }
+    .tr-sg-text { font-size: .88rem; line-height: 1.75; color: var(--muted); padding: 0 4px; }
+    .tr-sg-list { display: grid; gap: 12px; margin-top: 14px; }
+    .tr-sg-item { padding: 12px; border-radius: 18px; background: rgba(244, 239, 230, .05); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .12); }
+    .tr-sg-from { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 4px 8px; font-weight: 700; }
+    .tr-sg-from small { font-size: .78rem; font-weight: 400; color: var(--muted); }
+    .tr-sg-op { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 6px; border-radius: 12px; cursor: pointer; }
+    .tr-sg-op input { width: 20px; height: 20px; flex: none; accent-color: var(--teal); }
+    .tr-sg-op b { font-weight: 700; }
+    .tr-sg-op span { color: var(--sand); font-size: .85rem; }
+    .tr-sg-op.is-off { opacity: .55; cursor: default; }
+    .tr-sg-btns { display: flex; gap: 8px; margin-top: 10px; }
+    .tr-sg-btns .kin-btn { flex: 1; min-height: 46px; }
+    .tr-sg-btns .kin-btn:first-child { flex: 2; }
+    .tr-sg-msg { margin-top: 12px; font-size: .9rem; color: var(--teal); text-align: center; }
+    .tr-sg-msg.is-err { color: var(--coral); }
+
     /* One person's sheet */
     .tr-p-who { display: flex; align-items: center; gap: 12px; min-width: 0; padding-inline-start: 4px; }
     .tr-p-who .tr-av { width: 46px; height: 46px; font-size: 1.15rem; box-shadow: 0 0 0 3px var(--teal); }
@@ -799,6 +824,7 @@
       </form>
 
       <div class="tr-wrap" id="tr-wrap" hidden>
+        <button type="button" class="tr-sgbar" id="tr-sg-bar" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16v10H9l-5 4z"/><path d="M12 9v5M9.5 11.5h5"/></svg><span id="tr-sg-bar-text"></span><b>شوفها</b></button>
         <div class="tr-fam">
           <button type="button" class="tr-fam-btn" id="tr-fam-btn"><span id="tr-fam-text"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>
           <form class="tr-fam-form" id="tr-fam-form" hidden>
@@ -927,6 +953,18 @@
     </div>
   </div>
 
+  <div class="kin-modal" id="tr-sg" role="dialog" aria-modal="true" aria-labelledby="tr-sg-title" hidden>
+    <div class="kin-sheet tr-sgsheet">
+      <div class="kin-sheet-head">
+        <h3 id="tr-sg-title">اقتراحات على شجرتك</h3>
+        <button type="button" class="kin-x" id="tr-sg-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <p class="tr-sg-text">أهلك اقترحوا يضيفون على شجرتك من رابط الشجرة كاملة. اختار اللي تبيه وينضاف، والباقي يروح. واللي توافق على اقتراحه ينكتب اسمه مع اللي ساعدوا بإتمام الشجرة.</p>
+      <div class="tr-sg-list" id="tr-sg-list"></div>
+      <p class="tr-sg-msg" id="tr-sg-msg" role="status" hidden></p>
+    </div>
+  </div>
+
   <div class="kin-modal" id="tr-link" role="dialog" aria-modal="true" aria-labelledby="tr-l-title" hidden>
     <div class="kin-sheet tr-lsheet">
       <div class="kin-sheet-head">
@@ -985,9 +1023,9 @@
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=9" defer></script>
+  <script src="/account.js?v=10" defer></script>
   <script src="/kin.js?v=20" defer></script>
-  <script src="/tree.js?v=14" defer></script>
+  <script src="/tree.js?v=15" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
