@@ -235,6 +235,17 @@
   // Takes the password off (making the link the first time): whoever has the link sees the tree.
   function openTreeLink() { return client.rpc('open_my_tree_link').then(one); }
 
+  /* «اقتراحات على شجرتك»: additions suggested through my tree's link. [{ id, from, at, ops }], oldest
+     first; [] when the database doesn't have them yet. */
+  function treeSuggestions() {
+    return client.rpc('my_tree_suggestions').then(one).then(function (r) { return r || []; }).catch(function (e) {
+      if (e && (e.code === 'PGRST202' || e.code === '42883')) return [];
+      throw e;
+    });
+  }
+  // Done with a suggestion (added what I picked, or none): it goes.
+  function dropTreeSuggestion(id) { return client.rpc('drop_tree_suggestion', { sid: id }).then(one); }
+
   // Deletes the account and everything saved in it (the database function cascades).
   function deleteAccount() {
     return client.rpc('delete_my_account').then(rows).then(signOut);
@@ -262,6 +273,8 @@
     stopTreeLink: stopTreeLink,
     treeLinkState: treeLinkState,
     openTreeLink: openTreeLink,
+    treeSuggestions: treeSuggestions,
+    dropTreeSuggestion: dropTreeSuggestion,
     deleteAccount: deleteAccount
   };
 })(window);

@@ -141,6 +141,71 @@
     .tr-node.is-me .tr-rel { color: var(--pearl); }
     .t-only { margin-top: 10px; font-size: .85rem; line-height: 1.6; color: var(--muted); text-align: center; }
 
+    /* «اقترح إضافة»: add people as suggestions and send them to the tree's owner */
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pop-in { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+    html.kin-lock { overflow: hidden; }
+    button.tr-node { border: 0; background: none; padding: 0; font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .tr-node.is-new .tr-av { animation: pop-in .5s cubic-bezier(.2, .9, .3, 1.25) both; }
+    .tr-node.is-sugg .tr-av { outline: 2px dashed var(--sand); outline-offset: 4px; }
+    .tr-node.is-sugg .tr-rel::before { content: "مقترح · "; color: var(--pearl); }
+    .sg { margin-top: 16px; padding: 16px; border-radius: 20px; background: rgba(233, 196, 106, .07); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .28); text-align: center; }
+    .sg p { font-size: .95rem; line-height: 1.75; }
+    .sg .sg-small { margin-top: 6px; font-size: .82rem; color: var(--muted); }
+    .sg .kin-btn { width: 100%; margin-top: 12px; }
+    .sg form { display: grid; gap: 10px; margin-top: 12px; text-align: start; }
+    .sg label > span { display: block; font-size: .82rem; color: var(--muted); margin: 0 4px 6px; }
+    .sg-row { display: flex; gap: 8px; margin-top: 12px; }
+    .sg-row .kin-btn { margin-top: 0; }
+    .sg-row .kin-btn:first-child { flex: 2; }
+    .sg-row .kin-btn:last-child { flex: 1; }
+    .sg-ok { color: var(--teal); font-weight: 500; }
+    .tr-input {
+      width: 100%; padding: 11px 14px; border: 0; border-radius: 14px;
+      background: rgba(244, 239, 230, .07); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .18);
+      color: var(--pearl); font: 500 1.05rem/28px "Readex Pro", system-ui, sans-serif;
+      outline: none; -webkit-appearance: none; appearance: none;
+    }
+    .tr-input::placeholder { color: #6F86A0; font-weight: 400; }
+    .tr-input:focus { box-shadow: inset 0 0 0 2px var(--teal); }
+    .kin-modal {
+      position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+      padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+      background: rgba(5, 16, 29, .84); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+      animation: fade .2s ease-out both; text-align: start;
+    }
+    .kin-sheet {
+      width: 100%; max-width: 400px; max-height: 100%; overflow-y: auto; padding: 12px 14px 16px; border-radius: 24px;
+      background: #0F2E4D; box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .12), 0 30px 80px rgba(0, 0, 0, .5);
+    }
+    .kin-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+    .kin-x { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(244, 239, 230, .08); color: var(--pearl); display: grid; place-items: center; cursor: pointer; }
+    .kin-x svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+    .tr-p-who { display: flex; align-items: center; gap: 12px; min-width: 0; padding-inline-start: 4px; }
+    .tr-p-who .tr-av { width: 46px; height: 46px; font-size: 1.15rem; box-shadow: 0 0 0 3px var(--teal); }
+    .tr-p-who.is-me .tr-av { background: var(--pearl); color: var(--navy); box-shadow: 0 0 0 3px var(--sand); }
+    .tr-p-who.is-f .tr-av { box-shadow: 0 0 0 3px var(--coral); }
+    .tr-p-id { min-width: 0; }
+    .tr-p-who h3 { font-size: 1.15rem; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tr-p-rel { font-size: .88rem; line-height: 1.5; color: var(--sand); }
+    .tr-p-label { font-size: .85rem; color: var(--muted); margin: 14px 4px 8px; }
+    .tr-p-adds { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tr-chip {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border: 0; border-radius: 999px;
+      background: rgba(244, 239, 230, .07); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .18);
+      color: var(--pearl); font-family: inherit; font-size: .92rem; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .tr-chip::before { content: "+"; font-size: 1.1rem; font-weight: 700; color: var(--teal); }
+    .tr-chip[aria-pressed="true"] { background: var(--pearl); color: var(--navy); box-shadow: none; font-weight: 700; }
+    .tr-chip[aria-pressed="true"]::before { color: var(--navy); }
+    .tr-chip-sm { min-height: 36px; padding: 0 12px; font-size: .88rem; }
+    .tr-chip-sm::before { content: none; }
+    .tr-p-form { display: grid; gap: 10px; margin-top: 12px; padding: 12px; border-radius: 18px; background: rgba(46, 196, 182, .08); box-shadow: inset 0 0 0 1px rgba(46, 196, 182, .3); }
+    .tr-p-form label > span { display: block; font-size: .82rem; color: var(--muted); margin: 0 4px 6px; }
+    .tr-p-form .kin-btn { width: 100%; min-height: 48px; }
+    .tr-p-unions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); }
+    .tr-p-done { min-height: 1.4em; margin-top: 8px; font-size: .88rem; color: var(--teal); text-align: center; }
+    .tr-p-del { display: block; min-height: 44px; margin: 10px auto 0; padding: 0 14px; border: 0; background: none; color: var(--coral); font-family: inherit; font-size: .92rem; font-weight: 500; cursor: pointer; }
     .t-cta { margin-top: 22px; width: 100%; max-width: 360px; }
     footer { position: relative; z-index: 1; margin-top: 34px; direction: ltr; font-size: .8rem; letter-spacing: .14em; color: var(--muted); }
     footer a { color: inherit; text-decoration: none; }
@@ -178,15 +243,56 @@
       </div>
       <div class="tr-scroll" id="t-scroll" hidden><div class="tr-stage" id="t-stage"><div class="tr-canvas" id="t-canvas"></div></div></div>
       <p class="t-only" id="t-only" hidden>هذي شجرة تشوفها بس، وما تقدر تغيّر فيها شي.</p>
+
+      <div class="sg" id="sg" hidden>
+        <div id="sg-ask">
+          <p id="sg-ask-text"></p>
+          <button type="button" class="kin-btn kin-primary" id="sg-start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>اقترح إضافة</span></button>
+        </div>
+        <form id="sg-who" autocomplete="off" hidden>
+          <label><span>اسمك</span><input class="tr-input" id="sg-name" type="text" maxlength="40" autocomplete="name" enterkeyhint="go" placeholder="مثال: خالد"></label>
+          <p class="sg-small" id="sg-who-note"></p>
+          <button type="submit" class="kin-btn kin-primary"><span>ابدأ</span></button>
+        </form>
+        <div id="sg-on" hidden>
+          <p id="sg-on-text">دوس على أي شخص بالشجرة، وضيف أهله.</p>
+          <p class="sg-small" id="sg-count"></p>
+          <div class="sg-row">
+            <button type="button" class="kin-btn kin-primary" id="sg-send"><span></span></button>
+            <button type="button" class="kin-btn" id="sg-stop"><span>إلغاء</span></button>
+          </div>
+          <p class="t-err" id="sg-err" role="alert" hidden></p>
+        </div>
+        <p class="sg-ok" id="sg-ok" role="status" hidden></p>
+      </div>
     </section>
 
     <a class="kin-btn t-cta" href="https://shorbaka.com/#tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>سوّ شجرة عائلتك على شرباكة</span></a>
   </main>
 
+  <div class="kin-modal" id="sg-sheet" role="dialog" aria-modal="true" aria-labelledby="sg-p-title" hidden>
+    <div class="kin-sheet">
+      <div class="kin-sheet-head">
+        <div class="tr-p-who" id="sg-p-who"><span class="tr-av" id="sg-p-av"></span><div class="tr-p-id"><h3 id="sg-p-title"></h3><p class="tr-p-rel" id="sg-p-rel"></p></div></div>
+        <button type="button" class="kin-x" id="sg-p-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <p class="tr-p-label" id="sg-p-label"></p>
+      <div class="tr-p-adds" id="sg-p-adds"></div>
+      <form class="tr-p-form" id="sg-p-form" hidden>
+        <div class="tr-p-unions" id="sg-p-unions" role="group" hidden></div>
+        <label><span id="sg-p-form-label"></span><input class="tr-input" id="sg-p-new" type="text" maxlength="40" autocomplete="off" enterkeyhint="done"></label>
+        <button type="submit" class="kin-btn kin-primary"><span>ضيف</span></button>
+      </form>
+      <p class="tr-p-done" id="sg-p-done" role="status"></p>
+      <button type="button" class="tr-p-del" id="sg-p-del" hidden></button>
+    </div>
+  </div>
+
   <footer><a href="https://shorbaka.com/">© SHORBAKA.COM</a></footer>
 
   <script src="/kin.js?v=20"></script>
-  <script src="/tree.js?v=14"></script>
-  <script src="/link.js?v=2"></script>
+  <script src="/tree.js?v=15"></script>
+  <script src="/suggest.js?v=1"></script>
+  <script src="/link.js?v=3"></script>
 </body>
 </html>
