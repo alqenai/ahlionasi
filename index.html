@@ -408,11 +408,15 @@
     .kin-toggle input:disabled + .kin-switch { opacity: .6; }
     .kin-toggle:has(input:disabled) { cursor: progress; }
     .kin-modal.has-opt #kin-img { max-height: min(54vh, 520px); }
+    /* the tree's «انسخ رابط الشجرة كاملة» under the buttons: the picture gives it the room */
+    .kin-modal.has-link #kin-img { max-height: min(54vh, 520px); }
+    .kin-modal.has-opt.has-link #kin-img { max-height: min(48vh, 470px); }
     /* the PDF: a white page, shown like a sheet of paper */
     .kin-modal.is-page #kin-img { border-radius: 6px; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
     .kin-sheet-btns { display: flex; gap: 8px; margin-top: 14px; }
     .kin-sheet-btns .kin-btn { flex: 1; }
     .kin-tip { font-size: .85rem; color: var(--muted); margin-top: 10px; }
+    .kin-mlink { display: flex; width: 100%; margin-top: 8px; }
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
     /* The two sections under the hero: «شنو يصير لك؟» and «شجرة عائلتي». */
@@ -546,7 +550,7 @@
     .tr-actions .kin-btn { flex: 1 1 190px; white-space: nowrap; }
     .tr-note { text-align: center; }
     .tr-link { display: block; margin: 4px auto 0; min-height: 40px; padding: 0 12px; border: 0; background: none; color: var(--sand); font-family: inherit; font-size: .9rem; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
-    .tr-in { display: flex; }
+    .tr-in { display: flex; align-items: center; justify-content: center; }
 
     /* One person's sheet */
     .tr-p-who { display: flex; align-items: center; gap: 12px; min-width: 0; padding-inline-start: 4px; }
@@ -591,6 +595,29 @@
     .tr-p-confirm button { flex: 1; min-height: 44px; border: 0; border-radius: 12px; font-family: inherit; font-size: .92rem; font-weight: 700; cursor: pointer; }
     .tr-p-yes { background: var(--coral); color: #3B0D08; }
     .tr-p-no { background: rgba(244, 239, 230, .08); color: var(--pearl); }
+
+    /* «رابط الشجرة كاملة»: a link to the whole tree with a password */
+    .tr-actions .tr-link-btn { flex-basis: 100%; }
+    .tr-l-text { font-size: .95rem; line-height: 1.75; color: var(--muted); padding: 0 6px; }
+    .tr-l-msg { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(46, 196, 182, .1); box-shadow: inset 0 0 0 1px rgba(46, 196, 182, .3); font-size: .9rem; line-height: 1.7; }
+    .tr-l-msg.is-err { background: rgba(255, 138, 128, .08); box-shadow: inset 0 0 0 1px rgba(255, 138, 128, .3); color: #F6DCD8; }
+    .tr-l-msg b { font-weight: 700; direction: ltr; unicode-bidi: isolate; }
+    .tr-l-in { display: flex; width: 100%; margin-top: 14px; }
+    .tr-l-on { display: grid; gap: 10px; justify-items: center; margin-top: 14px; }
+    .tr-l-qr { width: 168px; height: 168px; padding: 10px; border-radius: 18px; background: var(--pearl); }
+    .tr-l-qr svg { display: block; width: 100%; height: 100%; }
+    .tr-l-url { max-width: 100%; font-size: .88rem; color: var(--sand); overflow-wrap: anywhere; text-align: center; user-select: all; -webkit-user-select: all; }
+    .tr-l-on .kin-btn { width: 100%; }
+    .tr-l-tip { font-size: .82rem; line-height: 1.7; color: var(--muted); text-align: center; }
+    .tr-l-form { display: grid; gap: 8px; margin-top: 14px; }
+    .tr-l-form label > span { display: block; font-size: .85rem; color: var(--muted); margin: 0 4px 6px; }
+    .tr-l-pass { text-align: center; letter-spacing: .04em; }
+    .tr-l-hint { font-size: .8rem; line-height: 1.7; color: var(--muted); padding: 0 4px; }
+    .tr-l-form-btns { display: flex; gap: 8px; }
+    .tr-l-form-btns .kin-btn { flex: 1; }
+    .tr-l-more { display: flex; justify-content: center; gap: 4px 18px; flex-wrap: wrap; margin-top: 6px; }
+    .tr-l-more .tr-link { margin: 0; }
+    .tr-l-stop { color: var(--coral); }
 
     footer {
       position: relative; z-index: 1;
@@ -754,12 +781,13 @@
         <div class="tr-actions">
           <button type="button" class="kin-btn kin-primary" id="tr-share"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شاركها ستوري</span></button>
           <button type="button" class="kin-btn" id="tr-pdf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="8" rx="2"/><path d="M7 14.5h10V21H7z"/></svg><span>PDF للطباعة</span></button>
+          <button type="button" class="kin-btn tr-link-btn" id="tr-link-btn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3.2-3.2a4.2 4.2 0 0 0-6-6L11.6 6.4"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3.2 3.2a4.2 4.2 0 0 0 6 6l1.6-1.6"/></svg><span>رابط الشجرة كاملة</span></button>
         </div>
         <p class="kin-w-note tr-note" id="tr-note"></p>
         <button type="button" class="tr-link" id="tr-save-retry" hidden>جرّب مرة ثانية</button>
         <button type="button" class="kin-w-in tr-in" id="tr-in" hidden>سجّل دخول عشان تنحفظ بحسابك</button>
       </div>
-      <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>شجرتك لك بروحك.</b> ما تنشر بالموقع ولا نشاركها مع أحد، وإنت اللي تقرر إذا تبي تشاركها صورة. وتقدر تمسح أي أحد منها متى ما تبي.</span></p>
+      <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>شجرتك لك بروحك.</b> ما تنشر بالموقع ولا نشاركها مع أحد، وإنت اللي تقرر إذا تبي تشاركها صورة أو رابط بباسورد. وتقدر تمسح أي أحد منها متى ما تبي.</span></p>
     </section>
   </main>
 
@@ -785,6 +813,7 @@
         <button type="button" class="kin-btn kin-primary" id="kin-share" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3.5M7.5 8L12 3.5 16.5 8"/><path d="M5 12.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6.5"/></svg><span>شارك</span></button>
         <a class="kin-btn" id="kin-dl" href="#" download="shorbaka-story.png"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/></svg><span>حمّل الصورة</span></a>
       </div>
+      <button type="button" class="kin-btn kin-mlink" id="kin-mlink" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3.2-3.2a4.2 4.2 0 0 0-6-6L11.6 6.4"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3.2 3.2a4.2 4.2 0 0 0 6 6l1.6-1.6"/></svg><span>انسخ رابط الشجرة كاملة</span></button>
       <p class="kin-tip" id="kin-tip"></p>
     </div>
   </div>
@@ -841,9 +870,44 @@
     </div>
   </div>
 
+  <div class="kin-modal" id="tr-link" role="dialog" aria-modal="true" aria-labelledby="tr-l-title" hidden>
+    <div class="kin-sheet tr-lsheet">
+      <div class="kin-sheet-head">
+        <h3 id="tr-l-title">رابط الشجرة كاملة</h3>
+        <button type="button" class="kin-x" id="tr-l-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <p class="tr-l-text" id="tr-l-text">اللي عنده الرابط والباسورد يشوف شجرتك كاملة، وما يقدر يغيّر فيها شي.</p>
+      <p class="tr-l-msg" id="tr-l-msg" hidden></p>
+      <button type="button" class="tr-link" id="tr-l-retry" hidden>جرّب مرة ثانية</button>
+      <button type="button" class="kin-btn kin-primary tr-l-in" id="tr-l-in" hidden><span>سجّل دخولك عشان تسوي الرابط</span></button>
+      <div class="tr-l-on" id="tr-l-on" hidden>
+        <div class="tr-l-qr" id="tr-l-qr"></div>
+        <p class="tr-l-url" id="tr-l-url" dir="ltr"></p>
+        <button type="button" class="kin-btn kin-primary" id="tr-l-copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/></svg><span>انسخ الرابط</span></button>
+        <p class="tr-l-tip">حطه بستيكر الرابط بالستوري أو أرسله بقروب العائلة، وعطهم الباسورد.</p>
+      </div>
+      <form class="tr-l-form" id="tr-l-form" hidden>
+        <label><span id="tr-l-label">حط باسورد للرابط</span><input class="tr-input tr-l-pass" id="tr-l-pass" type="text" maxlength="64" autocomplete="off" autocapitalize="none" spellcheck="false" dir="ltr" enterkeyhint="done"></label>
+        <p class="tr-l-hint">4 حروف أو أرقام على الأقل. ينحفظ مشفّر، فإذا نسيته حط واحد جديد.</p>
+        <div class="tr-l-form-btns">
+          <button type="submit" class="kin-btn kin-primary" id="tr-l-save"><span>سوّ الرابط</span></button>
+          <button type="button" class="kin-btn" id="tr-l-cancel" hidden><span>تراجع</span></button>
+        </div>
+      </form>
+      <div class="tr-l-more" id="tr-l-more" hidden>
+        <button type="button" class="tr-link" id="tr-l-change">غيّر الباسورد</button>
+        <button type="button" class="tr-link tr-l-stop" id="tr-l-stop">وقّف الرابط</button>
+      </div>
+      <div class="tr-p-confirm" id="tr-l-confirm" hidden>
+        <p>اللي عندهم الرابط ما يقدرون يفتحونه بعدها، حتى بالباسورد. وإذا سويت رابط جديد بعدين، بيكون رابط ثاني.</p>
+        <div><button type="button" class="tr-p-yes" id="tr-l-yes">وقّفه</button><button type="button" class="tr-p-no" id="tr-l-no">تراجع</button></div>
+      </div>
+    </div>
+  </div>
+
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=5" defer></script>
-  <script src="/kin.js?v=18" defer></script>
-  <script src="/tree.js?v=10" defer></script>
+  <script src="/account.js?v=6" defer></script>
+  <script src="/kin.js?v=19" defer></script>
+  <script src="/tree.js?v=11" defer></script>
 </body>
 </html>

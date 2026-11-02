@@ -979,9 +979,11 @@
   /* ---------- Picture (story 1080 x 1920, post 1080 x 1350) and the A4 page ---------- */
 
   var PIC = { NW: 150, AV: 96, NH: 196, CG: 18, SG: 16, GG: 40, RH: 270, RIP: 32 };
+  /* qr: when the picture leaves people out and the tree has a «رابط الشجرة كاملة», the box gets shorter
+     (boxH), and a QR card w wide stands beside the shorbaka.com sticker, the two of them around y. */
   var PICFMT = {
-    story: { title: 120, titleY: 300, sub: 46, subY: 384, boxY: 470, boxH: 1000, boxW: 960 },
-    post: { title: 92, titleY: 168, sub: 38, subY: 232, boxY: 292, boxH: 812, boxW: 960 }
+    story: { title: 120, titleY: 300, sub: 46, subY: 384, boxY: 470, boxH: 1000, boxW: 960, qr: { boxH: 920, w: 236, y: 1560 } },
+    post: { title: 92, titleY: 168, sub: 38, subY: 232, boxY: 292, boxH: 812, boxW: 960, qr: { boxH: 792, w: 184, y: 1214 } }
   };
   var MIN_SCALE = 0.72, MAX_SCALE = 1.25;
 
@@ -1029,7 +1031,7 @@
       if (!pick) break;
       collapse[pick] = 1;
     }
-    return { L: L, s: s };
+    return { L: L, s: s, folded: Object.keys(collapse).length > 0 };
   }
 
   // Does this view show any girl or woman? (The switch that hides their names only shows when it does.)
@@ -1135,21 +1137,91 @@
       Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relLabel(doc, idx, rels, id); }).join(' ');
   }
 
-  /* opts.hideF: as in drawTree. opts.tidy: laid out with «ترتيب». */
+  /* ---------- QR codes: the «رابط الشجرة كاملة» in the pictures and on the page ---------- */
+
+  var QR_JS = '/vendor/qrcode-generator-2.0.4.js', QR_CAPTION = 'الشجرة كاملة', qrLoading = null;
+  function loadQr() {
+    if (root.qrcode) return Promise.resolve(root.qrcode);
+    if (!qrLoading) {
+      qrLoading = new Promise(function (resolve, reject) {
+        var sc = document.createElement('script');
+        sc.src = QR_JS; sc.async = true;
+        sc.onload = function () { if (root.qrcode) resolve(root.qrcode); else reject(new Error('no qrcode')); };
+        sc.onerror = function () { qrLoading = null; sc.remove(); reject(new Error('could not load ' + QR_JS)); };
+        document.head.appendChild(sc);
+      });
+    }
+    return qrLoading;
+  }
+
+  // The squares of a QR code for text: n x n, dark(row, col).
+  function qrOf(qrcode, text) {
+    var q = qrcode(0, 'M');
+    q.addData(text);
+    q.make();
+    return { n: q.getModuleCount(), dark: function (r, c) { return q.isDark(r, c); } };
+  }
+
+  // The code as an SVG (navy squares, no background), for the page.
+  function qrSvg(q) {
+    var d = '';
+    for (var r = 0; r < q.n; r++) for (var c = 0; c < q.n; c++) if (q.dark(r, c)) d += 'M' + c + ' ' + r + 'h1v1h-1z';
+    return '<svg xmlns="' + NS + '" viewBox="0 0 ' + q.n + ' ' + q.n + '" shape-rendering="crispEdges" role="img" aria-label="QR"><path fill="#0E2A47" d="' + d + '"/></svg>';
+  }
+
+  /* A pearl card w wide at x, its middle at y: the code in navy with a quiet edge of two squares, and
+     «الشجرة كاملة» under it. */
+  function drawQrCard(ctx, q, x, y, w) {
+    var D = KIN.draw, cap = Math.round(w * 0.2), h = w + cap, top = y - h / 2, cell = Math.floor(w / (q.n + 4)), size = cell * q.n;
+    var qx = Math.round(x + (w - size) / 2), qy = Math.round(top + (w - size) / 2);
+    ctx.save();
+    D.roundRect(ctx, x, top, w, h, Math.round(w * 0.1));
+    ctx.fillStyle = '#F4EFE6'; ctx.fill();
+    ctx.fillStyle = '#0E2A47';
+    for (var r = 0; r < q.n; r++) for (var c = 0; c < q.n; c++) if (q.dark(r, c)) ctx.fillRect(qx + c * cell, qy + r * cell, cell, cell);
+    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    D.fit(ctx, QR_CAPTION, '700', Math.round(w * 0.115), w - 20, 14);
+    ctx.fillText(QR_CAPTION, x + w / 2, top + w + cap * 0.42);
+    ctx.restore();
+  }
+
+  TREE.loadQr = loadQr;
+  TREE.qrOf = qrOf;
+  TREE.qrSvg = qrSvg;
+
+  /* A «رابط الشجرة» password as it's kept, the same whichever keyboard typed it: Arabic and Persian
+     digits as 0-9, capitals as small letters, and the Arabic letters written more than one way
+     (أ إ آ ا، ى ي، ة ه) one way, without tashkeel or ـ. The page that opens the link does the same. */
+  function plainPw(s) {
+    return String(s || '').trim().toLowerCase()
+      .replace(/[٠-٩۰-۹]/g, function (d) { return String(d.charCodeAt(0) & 0xF); })
+      .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
+      .replace(/[أإآٱ]/g, 'ا').replace(/[ىی]/g, 'ي').replace(/ة/g, 'ه').replace(/ک/g, 'ك');
+  }
+  TREE.plainPw = plainPw;
+
+  /* opts.hideF: as in drawTree. opts.tidy: laid out with «ترتيب». opts.qr: the «رابط الشجرة كاملة»; when
+     the picture leaves people out (families folded into «+3 عياله», or the other side of the family),
+     a QR to it goes at the foot. */
   function makePicture(doc, viewKey, format, opts) {
-    var hideF = !!(opts && opts.hideF), tidy = !!(opts && opts.tidy);
+    var hideF = !!(opts && opts.hideF), tidy = !!(opts && opts.tidy), link = opts && opts.qr;
     var D = KIN.draw, F = PICFMT[format] || PICFMT.story, H = KIN.FORMATS[format === 'post' ? 'post' : 'story'].H;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
     var title = famTitle(doc);
-    return D.loadFonts(fontSample(doc, rels)).then(function () {
+    var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH, tidy), boxH = F.boxH;
+    // the QR goes on when the picture leaves people out: families folded into «+3», or the other side
+    var qrLib = link && (pl.folded || vs.length > 1) ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
+    return Promise.all([D.loadFonts(fontSample(doc, rels, QR_CAPTION)), qrLib]).then(function (got) {
+      var qrcode = got[1];
+      if (qrcode) { boxH = F.qr.boxH; pl = pictureLayout(doc, idx, view, F.boxW, boxH, tidy); }
       var c = document.createElement('canvas');
       c.width = 1080; c.height = H;
       var ctx = c.getContext('2d');
       D.background(ctx, 1080, H);
       ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
 
-      var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH, tidy), L = pl.L, s = pl.s;
+      var L = pl.L, s = pl.s;
       ctx.fillStyle = '#F4EFE6';
       D.fit(ctx, title, '700', F.title, 960, 60);
       ctx.fillText(title, 540, F.titleY);
@@ -1157,10 +1229,16 @@
       D.setFont(ctx, '500', F.sub);
       ctx.fillText((view.label ? view.label + ' · ' : '') + gens(L.levels), 540, F.subY);
 
-      var ox = 540 - L.W * s / 2, oy = F.boxY + Math.max(0, (F.boxH - L.H * s) / 2);
+      var ox = 540 - L.W * s / 2, oy = F.boxY + Math.max(0, (boxH - L.H * s) / 2);
       drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.sea, hideF);
 
-      D.drawSticker(ctx, KIN.FORMATS[format === 'post' ? 'post' : 'story'].sticker);
+      var stickerY = KIN.FORMATS[format === 'post' ? 'post' : 'story'].sticker;
+      if (qrcode) {
+        // the sticker on the right, the QR card on its left, the two in the middle together
+        var q = F.qr, gap = 40, sw = D.stickerWidth(ctx), x0 = 540 - (sw + gap + q.w) / 2;
+        D.drawSticker(ctx, q.y, x0 + q.w + gap + sw / 2);
+        drawQrCard(ctx, qrOf(qrcode, link), x0, q.y, q.w);
+      } else D.drawSticker(ctx, stickerY);
       return new Promise(function (res) { c.toBlob(res, 'image/png'); });
     });
   }
@@ -1306,6 +1384,173 @@
     in: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20M7.5 10.5h6M10.5 7.5v6"/>'
   };
 
+  /* The sizes a zoom button steps through for a tree W wide in a box avail wide: as drawn, then smaller.
+     A big tree gets two steps down, the second showing it all (or as much as stays readable). */
+  function zoomSteps(W, avail) {
+    if (!W || avail <= 0) return [1];
+    var fit = Math.max(0.16, Math.min(1, avail / W));
+    if (fit > 0.98) return [1];
+    if (fit >= 0.62) return [1, fit];
+    return [1, Math.min(0.75, Math.sqrt(fit)), fit];
+  }
+
+  /* Draws the layout L into canvas, an element on the page: the lines in one SVG, everyone in a box.
+     opts.tap(n, box): what tapping someone (or a «+» place) does; without it nobody can be tapped.
+     opts.fresh: who was just added (pops in). opts.hideF: girls and women show what they are to me
+     instead of their name, with a pearl for a letter, as in the pictures. */
+  function paint(canvas, L, doc, opts) {
+    opts = opts || {};
+    var idx = index(doc), rels = relations(doc, idx);
+    canvas.textContent = '';
+    canvas.style.width = L.W + 'px';
+    canvas.style.height = L.H + 'px';
+
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'tr-lines');
+    svg.setAttribute('width', L.W); svg.setAttribute('height', L.H);
+    svg.setAttribute('viewBox', '0 0 ' + L.W + ' ' + L.H);
+    svg.setAttribute('aria-hidden', 'true');
+    var r = SCREEN.AV / 2 + 3;
+    L.links.forEach(function (l) {
+      var d;
+      if (l.t === 'pair') {
+        d = 'M' + (l.x1 + r) + ' ' + l.y + 'H' + (l.x2 - r);
+        if (l.ex) exMark(l.x1, l.x2, l.y, 6).forEach(function (q) { d += 'M' + q.slice(0, 2).join(' ') + 'L' + q.slice(2).join(' '); });
+      } else {
+        d = linkLines(l, 14, 4).map(function (c) {
+          return c[0] + c.slice(1).map(function (v) { return Math.round(v * 10) / 10; }).join(' ');
+        }).join('');
+      }
+      var p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d);
+      if (l.ghost) p.setAttribute('class', 'is-ghost');
+      svg.appendChild(p);
+    });
+    canvas.appendChild(svg);
+    L.nodes.forEach(function (n) {
+      if (n.pid || (n.ghost && opts.tap)) canvas.appendChild(nodeBox(n, doc, idx, rels, opts));
+    });
+  }
+
+  function nodeBox(n, doc, idx, rels, opts) {
+    var tap = opts.tap, b = el(tap ? 'button' : 'div', 'tr-node');
+    if (tap) b.type = 'button';
+    b.style.left = (n.x - SCREEN.NW / 2) + 'px';
+    b.style.top = n.y + 'px';
+    if (n.ghost) {
+      var label = relName(rels[n.ghost.of].concat(n.ghost.t));
+      b.classList.add('is-ghost');
+      b.appendChild(el('span', 'tr-av', '+'));
+      b.appendChild(el('span', 'tr-name', label));
+      b.setAttribute('aria-label', 'ضيف ' + label);
+      b.addEventListener('click', function () { tap(n, b); });
+      return b;
+    }
+    var p = doc.p[n.pid], isMe = n.pid === doc.me, rel = relLabel(doc, idx, rels, n.pid);
+    var hidden = !!opts.hideF && p.g === 'f';
+    b.classList.add(isMe ? 'is-me' : n.kind === 'mate' ? 'is-mate' : 'is-blood');
+    if (!isMe && p.g === 'f') b.classList.add('is-f');
+    if (opts.fresh && n.pid === opts.fresh) b.classList.add('is-new');
+    b.dataset.pid = n.pid;
+    var av = el('span', 'tr-av', hidden ? null : initial(p.n));
+    if (hidden) { av.classList.add('is-pearl'); av.appendChild(el('i')); }
+    b.appendChild(av);
+    if (hidden) b.appendChild(el('span', 'tr-name', rel));
+    else {
+      // someone added from «شنو يصير لك؟» on the way to a relative may have no name yet
+      b.appendChild(el('span', 'tr-name' + (p.n ? '' : ' is-noname'), p.n || 'بدون اسم'));
+      b.appendChild(el('span', 'tr-rel', rel));
+    }
+    if (p.d) b.appendChild(el('span', 'tr-rip', rip(p)));
+    if (tap) {
+      b.setAttribute('aria-label', isMe ? p.n + '، هذا إنت' : (p.n || 'بدون اسم') + '، ' + KIN.verb(rels[n.pid]) + ' ' + rel + (p.d ? '، ' + rip(p) : ''));
+      b.addEventListener('click', function () { tap(n, b); });
+    }
+    return b;
+  }
+
+  /* ---------- A tree to look at only: the page a «رابط الشجرة» opens ---------- */
+
+  /* Shows doc in els ({ side, tidy, zoom, scroll, stage, canvas }, laid out as on the tree page): both
+     sides, «ترتيب» and zoom, and nobody can be tapped or added. When the owner hides girls' and women's
+     names, they come without them and show what they are, as in the pictures. */
+  function viewer(els, doc) {
+    var idx = index(doc), vs = views(doc, idx), hideF = !!(doc.o && doc.o.hideF);
+    var st = { view: vs[0].key, tidy: !!(doc.o && doc.o.tidy), zl: 0, z: 1, L: null, boxW: 0, boxH: 0, center: true, fitNext: false };
+    var sideBtns = Array.prototype.slice.call(els.side.querySelectorAll('button'));
+
+    function room() {
+      var w = Math.max(240, els.scroll.clientWidth - 36);
+      if (w !== st.boxW || !st.boxH) { st.boxW = w; st.boxH = Math.max(340, (window.innerHeight || 700) - 170); }
+      return { w: w, h: st.boxH };
+    }
+    function draw() {
+      var view = vs.filter(function (v) { return v.key === st.view; })[0] || vs[0];
+      els.side.hidden = vs.length < 2;
+      sideBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.side === view.key)); });
+      var base = { ghosts: false, mates: 'all' }, L = layout(doc, idx, view, SCREEN, base), box = room();
+      var canTidy = L.W > box.w + 1;
+      els.tidy.hidden = !canTidy;
+      els.tidy.setAttribute('aria-pressed', String(st.tidy));
+      els.tidy.setAttribute('aria-label', st.tidy ? 'رجّع الشجرة بالأجيال' : 'رتّب الشجرة على قد الشاشة');
+      if (st.tidy && canTidy) L = fitLayout(doc, idx, view, SCREEN, base, box.w, box.h, 1).L;
+      st.L = L;
+      paint(els.canvas, L, doc, { hideF: hideF });
+      size();
+      if (st.center) { st.center = false; centerOn(doc.me); }
+    }
+    function steps() { return zoomSteps(st.L && st.L.W, els.scroll.clientWidth - 36); }
+    function size() {
+      var L = st.L;
+      if (!L || els.scroll.clientWidth - 36 <= 0) return;
+      var zs = steps();
+      if (st.fitNext) { st.fitNext = false; st.zl = zs.length - 1; }
+      st.zl = Math.min(st.zl, zs.length - 1);
+      var last = zs.length > 1 && st.zl >= zs.length - 1;
+      els.zoom.hidden = zs.length < 2;
+      st.z = zs[st.zl];
+      els.canvas.style.transform = st.z === 1 ? '' : 'scale(' + st.z + ')';
+      els.stage.style.width = Math.ceil(L.W * st.z) + 'px';
+      els.stage.style.height = Math.ceil(L.H * st.z) + 'px';
+      els.zoom.setAttribute('aria-label', last ? 'رجّع الشجرة لحجمها' : st.zl ? 'صغّرها أكثر' : 'صغّر الشجرة');
+      els.zoom.setAttribute('aria-pressed', String(st.zl > 0));
+      els.zoom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (last ? ZOOM.in : ZOOM.out) + '</svg>';
+    }
+    function centerOn(pid) {
+      var n = st.L && st.L.nodes.filter(function (x) { return x.pid === pid; })[0];
+      if (n) els.scroll.scrollLeft = Math.max(0, 18 + n.x * st.z - els.scroll.clientWidth / 2);
+    }
+
+    sideBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (st.view === b.dataset.side) return;
+        st.view = b.dataset.side; st.zl = 0; st.center = true;
+        draw();
+      });
+    });
+    els.tidy.addEventListener('click', function () {
+      st.tidy = !st.tidy; st.zl = 0; st.fitNext = st.tidy; st.center = true;
+      draw();
+    });
+    els.zoom.addEventListener('click', function () {
+      var mid = (els.scroll.scrollLeft + els.scroll.clientWidth / 2 - 18) / st.z;
+      st.zl = (st.zl + 1) % steps().length;
+      size();
+      if (!st.zl) centerOn(doc.me);
+      else els.scroll.scrollLeft = Math.max(0, 18 + mid * st.z - els.scroll.clientWidth / 2);
+    });
+    var resizeT = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeT);
+      resizeT = setTimeout(function () {
+        if (Math.max(240, els.scroll.clientWidth - 36) !== st.boxW) draw(); else size();
+      }, 120);
+    });
+    draw();
+  }
+
+  TREE.viewer = viewer;
+
   function init() {
     var $ = function (id) { return document.getElementById(id); };
     var ui = {
@@ -1320,7 +1565,11 @@
       pWives: $('tr-p-wives'), pBefore: $('tr-p-before'), pAfter: $('tr-p-after'), pMarks: $('tr-p-marks'),
       pConfirm: $('tr-p-confirm'), pWarn: $('tr-p-warn'), pYes: $('tr-p-yes'), pNo: $('tr-p-no'),
       acctCount: $('acct-tree-count'),
-      famStart: $('tr-fam-start'), famBtn: $('tr-fam-btn'), famText: $('tr-fam-text'), famForm: $('tr-fam-form'), famName: $('tr-fam-name')
+      famStart: $('tr-fam-start'), famBtn: $('tr-fam-btn'), famText: $('tr-fam-text'), famForm: $('tr-fam-form'), famName: $('tr-fam-name'),
+      linkBtn: $('tr-link-btn'), link: $('tr-link'), lClose: $('tr-l-close'), lText: $('tr-l-text'), lMsg: $('tr-l-msg'),
+      lRetry: $('tr-l-retry'), lIn: $('tr-l-in'), lOn: $('tr-l-on'), lQr: $('tr-l-qr'), lUrl: $('tr-l-url'), lCopy: $('tr-l-copy'),
+      lForm: $('tr-l-form'), lLabel: $('tr-l-label'), lPass: $('tr-l-pass'), lSave: $('tr-l-save'), lCancel: $('tr-l-cancel'),
+      lMore: $('tr-l-more'), lChange: $('tr-l-change'), lStop: $('tr-l-stop'), lConfirm: $('tr-l-confirm'), lYes: $('tr-l-yes'), lNo: $('tr-l-no')
     };
     if (!ui.sec || !ui.canvas || !KIN) return;
 
@@ -1328,7 +1577,9 @@
       doc: null, where: 'local', loaded: false, failed: false, seq: 0,
       view: null, L: null, zl: 0, z: 1, center: true, lastAdded: null, focus: null, boxW: 0, boxH: 0, fitNext: false,
       person: null, from: null, adding: null, union: null, g: '',
-      saving: null, again: false, saveErr: false, pending: false
+      saving: null, again: false, saveErr: false, pending: false,
+      // «رابط الشجرة كاملة»: the link's code, null for none, undefined while it's asked for
+      link: null, linkErr: false, linkOff: false
     };
     var acctReady = !root.ACCOUNT, timer = null, told = null;  // told: the tree kin.js last heard about
     var sideBtns = Array.prototype.slice.call(ui.side.querySelectorAll('button'));
@@ -1360,6 +1611,7 @@
       var a = signedIn(), uid = a ? a.user().id : null;
       if (!force && uid === synced) return;
       synced = uid;
+      loadLink();
       var seq = ++st.seq;
       st.failed = false;
       if (!a) {
@@ -1491,6 +1743,7 @@
       showFam();
       draw();
       note();
+      showLinkBtn();
       if (!ui.sheet.hidden) fillSheet();
     }
 
@@ -1511,7 +1764,7 @@
     }
 
     function draw() {
-      var doc = st.doc, idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
+      var doc = st.doc, idx = index(doc), vs = views(doc, idx);
       var view = vs.filter(function (v) { return v.key === st.view; })[0] || vs[0];
       st.view = view.key;
       ui.side.hidden = vs.length < 2;
@@ -1527,33 +1780,10 @@
       }
       if (tidy && canTidy) L = fitLayout(doc, idx, view, SCREEN, base, box.w, box.h, 1).L;
       st.L = L;
-      ui.canvas.textContent = '';
-      ui.canvas.style.width = L.W + 'px';
-      ui.canvas.style.height = L.H + 'px';
-
-      var svg = document.createElementNS(NS, 'svg');
-      svg.setAttribute('class', 'tr-lines');
-      svg.setAttribute('width', L.W); svg.setAttribute('height', L.H);
-      svg.setAttribute('viewBox', '0 0 ' + L.W + ' ' + L.H);
-      svg.setAttribute('aria-hidden', 'true');
-      var r = SCREEN.AV / 2 + 3;
-      L.links.forEach(function (l) {
-        var d;
-        if (l.t === 'pair') {
-          d = 'M' + (l.x1 + r) + ' ' + l.y + 'H' + (l.x2 - r);
-          if (l.ex) exMark(l.x1, l.x2, l.y, 6).forEach(function (q) { d += 'M' + q.slice(0, 2).join(' ') + 'L' + q.slice(2).join(' '); });
-        } else {
-          d = linkLines(l, 14, 4).map(function (c) {
-            return c[0] + c.slice(1).map(function (v) { return Math.round(v * 10) / 10; }).join(' ');
-          }).join('');
-        }
-        var p = document.createElementNS(NS, 'path');
-        p.setAttribute('d', d);
-        if (l.ghost) p.setAttribute('class', 'is-ghost');
-        svg.appendChild(p);
+      paint(ui.canvas, L, doc, {
+        fresh: st.lastAdded,
+        tap: function (n, b) { if (n.ghost) openPerson(n.ghost.of, n.ghost.t, b); else openPerson(n.pid, null, b); }
       });
-      ui.canvas.appendChild(svg);
-      L.nodes.forEach(function (n) { ui.canvas.appendChild(nodeEl(n, doc, idx, rels)); });
       sizeStage();
       if (st.center && shown()) {
         st.center = false;
@@ -1562,45 +1792,7 @@
       }
     }
 
-    function nodeEl(n, doc, idx, rels) {
-      var b = el('button', 'tr-node');
-      b.type = 'button';
-      b.style.left = (n.x - SCREEN.NW / 2) + 'px';
-      b.style.top = n.y + 'px';
-      if (n.ghost) {
-        var label = relName(rels[n.ghost.of].concat(n.ghost.t));
-        b.classList.add('is-ghost');
-        b.appendChild(el('span', 'tr-av', '+'));
-        b.appendChild(el('span', 'tr-name', label));
-        b.setAttribute('aria-label', 'ضيف ' + label);
-        b.addEventListener('click', function () { openPerson(n.ghost.of, n.ghost.t, b); });
-        return b;
-      }
-      var p = doc.p[n.pid], isMe = n.pid === doc.me, rel = relLabel(doc, idx, rels, n.pid);
-      b.classList.add(isMe ? 'is-me' : n.kind === 'mate' ? 'is-mate' : 'is-blood');
-      if (!isMe && p.g === 'f') b.classList.add('is-f');
-      if (n.pid === st.lastAdded) b.classList.add('is-new');
-      b.dataset.pid = n.pid;
-      b.appendChild(el('span', 'tr-av', initial(p.n)));
-      // someone added from «شنو يصير لك؟» on the way to a relative may have no name yet
-      b.appendChild(el('span', 'tr-name' + (p.n ? '' : ' is-noname'), p.n || 'بدون اسم'));
-      b.appendChild(el('span', 'tr-rel', rel));
-      if (p.d) b.appendChild(el('span', 'tr-rip', rip(p)));
-      b.setAttribute('aria-label', isMe ? p.n + '، هذا إنت' : (p.n || 'بدون اسم') + '، ' + KIN.verb(rels[n.pid]) + ' ' + rel + (p.d ? '، ' + rip(p) : ''));
-      b.addEventListener('click', function () { openPerson(n.pid, null, b); });
-      return b;
-    }
-
-    /* The sizes the zoom button steps through: as drawn, then smaller. A big tree gets two steps down,
-       the second showing it all (or as much as stays visible). */
-    function zooms() {
-      var L = st.L, avail = ui.scroll.clientWidth - 36;
-      if (!L || avail <= 0) return [1];
-      var fit = Math.max(0.16, Math.min(1, avail / L.W));
-      if (fit > 0.98) return [1];
-      if (fit >= 0.62) return [1, fit];
-      return [1, Math.min(0.75, Math.sqrt(fit)), fit];
-    }
+    function zooms() { return zoomSteps(st.L && st.L.W, ui.scroll.clientWidth - 36); }
 
     function sizeStage() {
       var L = st.L;
@@ -1942,14 +2134,21 @@
       if (!st.doc || !KIN.openShare) return;
       var doc = copy(st.doc), key = st.view, vs = views(doc, index(doc));
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
-      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), tidy: !!(st.doc.o && st.doc.o.tidy) };
+      // with a «رابط الشجرة كاملة», a picture that leaves people out carries its QR, and the sheet can copy it
+      var link = st.link && signedIn() ? linkUrl(st.link) : null;
+      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF), tidy: !!(st.doc.o && st.doc.o.tidy), qr: link };
       KIN.openShare({
         file: 'shorbaka-tree',
         make: function (format) { return makePicture(doc, key, format, opts); },
         alt: famTitle(doc) + (view.label ? '، ' + view.label : ''),
         mention: 'تمنشن أهلك',
-        tips: { story: 'انشرها بقروب العائلة، أو حطها ستوري ومنشن أهلك', post: 'انشرها بقروب العائلة، أو نزّلها بوست ومنشن أهلك' },
-        text: 'سويت شجرة عائلتي على شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
+        link: link,
+        tips: link
+          ? { story: 'حطها ستوري مع ستيكر الرابط، ومنشن أهلك وعطهم الباسورد', post: 'انشرها بقروب العائلة مع الرابط والباسورد، أو نزّلها بوست ومنشن أهلك' }
+          : { story: 'انشرها بقروب العائلة، أو حطها ستوري ومنشن أهلك', post: 'انشرها بقروب العائلة، أو نزّلها بوست ومنشن أهلك' },
+        text: link
+          ? 'سويت شجرة عائلتي على شرباكة 🌳 شوفوها كاملة هني: ' + link + '\nواطلبوا مني الباسورد'
+          : 'سويت شجرة عائلتي على شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
         // remembered with the tree, so the next picture comes out the same way
         option: hideOption(doc, key, opts)
       }, ui.share);
@@ -1983,6 +2182,185 @@
         option: hideOption(doc, key, opts)
       }, ui.pdf);
     });
+
+    /* --- «رابط الشجرة كاملة»: the whole tree at shorbaka.com/t/#code, opened with a password I set ---
+       It needs the account: the page shows the tree as it is saved there. The sheet shows one of
+       out (not signed in), wait, err, none (no link yet: set a password), on (the link, its QR and a way
+       to copy it), change (a new password) or stop (are you sure). */
+
+    var linkSeq = 0, linkMode = '', linkNote = null;  // linkNote: what the sheet says after a change, in one state
+
+    function linkUrl(code) {
+      var site = /(^|\.)shorbaka\.com$/.test(location.hostname) ? 'https://shorbaka.com' : location.origin;
+      return site + '/t/#' + code;
+    }
+
+    function loadLink() {
+      var a = signedIn(), seq = ++linkSeq;
+      st.linkErr = false; linkMode = ''; linkNote = null;
+      if (!a || !a.treeLink) { st.link = null; showLinkBtn(); fillLink(); return; }
+      st.link = undefined;
+      showLinkBtn(); fillLink();
+      a.treeLink().then(function (code) {
+        if (seq === linkSeq) st.link = code || null;
+      }, function (e) {
+        if (seq !== linkSeq) return;
+        st.link = null;
+        // the site went up before its database knew about links: no button until it does
+        if (e && (e.code === 'PGRST202' || e.code === '42883')) st.linkOff = true; else st.linkErr = true;
+      }).then(function () {
+        if (seq === linkSeq) { showLinkBtn(); fillLink(); }
+      });
+    }
+
+    function showLinkBtn() {
+      if (ui.linkBtn) ui.linkBtn.hidden = !st.doc || !accounts() || st.linkOff;
+    }
+
+    function linkState() {
+      if (!signedIn()) return 'out';
+      if (st.linkErr) return 'err';
+      if (st.link === undefined) return 'wait';
+      if (!st.link) return 'none';
+      return linkMode || 'on';
+    }
+
+    function fillLink() {
+      if (!ui.link || ui.link.hidden) return;
+      var s = linkState(), url = st.link ? linkUrl(st.link) : '';
+      ui.lIn.hidden = s !== 'out';
+      ui.lRetry.hidden = s !== 'err';
+      ui.lOn.hidden = ui.lMore.hidden = s !== 'on';
+      ui.lForm.hidden = s !== 'none' && s !== 'change';
+      ui.lConfirm.hidden = s !== 'stop';
+      ui.lCancel.hidden = s !== 'change';
+      ui.lText.textContent = s === 'change' ? 'الرابط نفسه ما يتغيّر، بس الباسورد القديم يوقف.'
+        : 'اللي عنده الرابط والباسورد يشوف شجرتك كاملة، وما يقدر يغيّر فيها شي.';
+      ui.lLabel.textContent = s === 'change' ? 'الباسورد الجديد' : 'حط باسورد للرابط';
+      btnText(ui.lSave).textContent = s === 'change' ? 'غيّر الباسورد' : 'سوّ الرابط';
+
+      var m = s === 'wait' ? { a: 'لحظة…' }
+        : s === 'err' ? { err: true, a: 'ما قدرنا نجيب رابط شجرتك الحين. تأكد من النت.' }
+        : linkNote && linkNote.s === s ? linkNote : null;
+      ui.lMsg.textContent = '';
+      ui.lMsg.hidden = !m;
+      ui.lMsg.classList.toggle('is-err', !!(m && m.err));
+      if (m) {
+        ui.lMsg.appendChild(document.createTextNode(m.a));
+        if (m.pw) { ui.lMsg.appendChild(el('b', null, m.pw)); ui.lMsg.appendChild(document.createTextNode(m.b)); }
+      }
+
+      if (s !== 'on' || ui.lQr.dataset.url === url) return;
+      ui.lUrl.textContent = url.replace(/^https?:\/\//, '');
+      ui.lQr.dataset.url = url; ui.lQr.textContent = '';
+      loadQr().then(function (qrcode) {
+        if (ui.lQr.dataset.url !== url) return;
+        ui.lQr.innerHTML = qrSvg(qrOf(qrcode, url));
+        ui.lQr.hidden = false;
+      }, function () {
+        if (ui.lQr.dataset.url === url) { ui.lQr.dataset.url = ''; ui.lQr.hidden = true; }
+      });
+    }
+
+    function btnText(btn) { return btn.querySelector('span') || btn; }
+    function flashBtn(btn, text) {
+      var s = btnText(btn);
+      if (!s.dataset.label) s.dataset.label = s.textContent;
+      s.textContent = text;
+      clearTimeout(btn._t);
+      btn._t = setTimeout(function () { s.textContent = s.dataset.label; }, 2200);
+    }
+    function sayLink(s, err, a, pw, b) { linkNote = { s: s, err: err, a: a, pw: pw, b: b || '' }; fillLink(); }
+
+    function openLink() {
+      if (!st.doc || !ui.link) return;
+      linkMode = ''; linkNote = null;
+      if (signedIn() && st.linkErr) loadLink();
+      ui.link.hidden = false;
+      document.documentElement.classList.add('kin-lock');
+      fillLink();
+      ui.lClose.focus();
+    }
+
+    function closeLink() {
+      if (!ui.link || ui.link.hidden) return;
+      ui.link.hidden = true;
+      document.documentElement.classList.remove('kin-lock');
+      linkMode = ''; linkNote = null;  // the password shown after setting it goes with the sheet
+      ui.lPass.value = '';
+      if (ui.linkBtn && !ui.linkBtn.hidden) ui.linkBtn.focus({ preventScroll: true });
+    }
+
+    function busyLink(btns, on) {
+      btns.forEach(function (b) { b.disabled = on; });
+    }
+
+    if (ui.link) {
+      ui.linkBtn.addEventListener('click', openLink);
+      ui.lClose.addEventListener('click', closeLink);
+      ui.link.addEventListener('click', function (e) { if (e.target === ui.link) closeLink(); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !ui.link.hidden) { e.stopPropagation(); closeLink(); }
+      }, true);
+      ui.lRetry.addEventListener('click', loadLink);
+
+      ui.lIn.addEventListener('click', function () {
+        closeLink();
+        if (KIN.openAuth) KIN.openAuth({ title: 'سجّل دخولك', text: 'الرابط يفتح شجرتك من حسابك: سجّل دخولك بجوجل عشان تنحفظ فيه، وبعدها سوّ الرابط.' }, ui.linkBtn);
+      });
+
+      // Setting a password makes the link the first time, and changes its password after that.
+      ui.lForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        // shown back as typed, in English digits like the rest of the site
+        var a = signedIn(), was = linkState(), typed = ui.lPass.value.trim(), pw = plainPw(typed);
+        typed = typed.replace(/[٠-٩۰-۹]/g, function (d) { return String(d.charCodeAt(0) & 0xF); });
+        if (!a || (was !== 'none' && was !== 'change')) return;
+        if (pw.length < 4) { sayLink(was, true, 'الباسورد لازم يكون 4 حروف أو أرقام على الأقل.'); ui.lPass.focus(); return; }
+        var uid = a.user().id, s = btnText(ui.lSave), text = s.textContent;
+        busyLink([ui.lSave, ui.lCancel], true); s.textContent = 'لحظة…';
+        // the link shows the tree saved in the account, so the last change goes first
+        (st.pending || st.saving ? save() : Promise.resolve(true)).then(function () {
+          return a.setTreeLink(pw);
+        }).then(function (code) {
+          busyLink([ui.lSave, ui.lCancel], false); s.textContent = text;
+          var b = signedIn();
+          if (!b || b.user().id !== uid || !code) return;
+          st.link = code; st.linkErr = false; linkMode = '';
+          ui.lPass.value = '';
+          if (was === 'change') sayLink('on', false, 'تغيّر الباسورد إلى ', typed, '. اللي عندهم الرابط يحتاجون الباسورد الجديد.');
+          else sayLink('on', false, 'انحفظ الباسورد ', typed, '. احفظه عندك، لأنه ينحفظ مشفّر وما نقدر نرجّعه لك.');
+          ui.lCopy.focus({ preventScroll: true });
+        }, function () {
+          busyLink([ui.lSave, ui.lCancel], false); s.textContent = text;
+          sayLink(was, true, 'ما زبطت. تأكد من النت وجرّب مرة ثانية.');
+        });
+      });
+
+      ui.lCopy.addEventListener('click', function () {
+        if (!st.link) return;
+        KIN.copyText(linkUrl(st.link)).then(function (ok) { flashBtn(ui.lCopy, ok ? 'انتسخ الرابط ✓' : 'ما انتسخ، جرّب مرة ثانية'); });
+      });
+      ui.lChange.addEventListener('click', function () { linkMode = 'change'; linkNote = null; fillLink(); ui.lPass.focus(); });
+      ui.lCancel.addEventListener('click', function () { linkMode = ''; linkNote = null; ui.lPass.value = ''; fillLink(); ui.lChange.focus(); });
+      ui.lStop.addEventListener('click', function () { linkMode = 'stop'; linkNote = null; fillLink(); ui.lNo.focus(); });
+      ui.lNo.addEventListener('click', function () { linkMode = ''; fillLink(); ui.lStop.focus(); });
+      ui.lYes.addEventListener('click', function () {
+        var a = signedIn();
+        if (!a) return;
+        busyLink([ui.lYes, ui.lNo], true);
+        a.stopTreeLink().then(function () {
+          busyLink([ui.lYes, ui.lNo], false);
+          st.link = null; linkMode = '';
+          sayLink('none', false, 'وقّفنا الرابط، وما عاد ينفتح حتى بالباسورد.');
+          ui.lClose.focus();
+        }, function () {
+          busyLink([ui.lYes, ui.lNo], false);
+          linkMode = '';
+          sayLink('on', true, 'ما قدرنا نوقّفه الحين. تأكد من النت وجرّب مرة ثانية.');
+        });
+      });
+    }
 
     // «ترتيب»: gathers a wide tree into the shape of the screen (and of the pictures), or back to generations.
     if (ui.tidy) ui.tidy.addEventListener('click', function () {

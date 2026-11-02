@@ -388,12 +388,22 @@
   }
 
   // The small sign-off at the bottom: the mark and the address, on a see-through pill that sits in the story.
-  function drawSticker(ctx, cy) {
-    var label = 'shorbaka.com', markH = 56, markW = markH * 102 / 72, gap = 18, padS = 28, padE = 34, h = 96;
+  /* The «shorbaka.com» sticker at the foot of a picture, its middle at (cx, cy) (cx: 540, the middle,
+     when left out). Returns how wide it is; stickerWidth tells that before drawing it. */
+  var STICKER = { label: 'shorbaka.com', markH: 56, gap: 18, padS: 28, padE: 34, h: 96 };
+  function stickerWidth(ctx) {
+    ctx.save();
+    setFont(ctx, '500', 40);
+    var w = STICKER.padS + STICKER.markH * 102 / 72 + STICKER.gap + ctx.measureText(STICKER.label).width + STICKER.padE;
+    ctx.restore();
+    return w;
+  }
+  function drawSticker(ctx, cy, cx) {
+    var label = STICKER.label, markH = STICKER.markH, markW = markH * 102 / 72, gap = STICKER.gap, padS = STICKER.padS, padE = STICKER.padE, h = STICKER.h;
     ctx.save();
     ctx.direction = 'ltr'; ctx.textAlign = 'left'; setFont(ctx, '500', 40);
     var m = ctx.measureText(label), w = padS + markW + gap + m.width + padE;
-    var x0 = 540 - w / 2;
+    var x0 = (cx == null ? 540 : cx) - w / 2;
     roundRect(ctx, x0, cy - h / 2, w, h, h / 2);
     ctx.fillStyle = 'rgba(244, 239, 230, 0.07)'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.2)'; ctx.stroke();
@@ -402,6 +412,7 @@
     ctx.fillStyle = '#F4EFE6';
     ctx.fillText(label, x0 + padS + markW + gap, cy + ink / 2);
     ctx.restore();
+    return w;
   }
 
   function loadFonts(sample) {
@@ -506,7 +517,7 @@
   KIN.makeStory = makeStory; KIN.fitWalk = fitWalk; KIN.storyBox = storyBox; KIN.FORMATS = FORMATS;
   // For the family tree picture (tree.js), so both pictures look like one family.
   KIN.draw = { FONT: FONT, setFont: setFont, fit: fit, roundRect: roundRect, drawMark: drawMark, pearl: pearl,
-    drawSticker: drawSticker, loadFonts: loadFonts, background: background };
+    drawSticker: drawSticker, stickerWidth: stickerWidth, loadFonts: loadFonts, background: background };
 
   /* ---------- Page ---------- */
 
@@ -593,7 +604,7 @@
       rIn: $('kin-r-in'), rInText: $('kin-r-in-text'), rSee: $('kin-r-see'),
       privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
       authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close'),
-      authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local'),
+      authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local'), mLink: $('kin-mlink'),
       acctBox: $('acct'), acctIn: $('acct-in'), acctBtn: $('acct-btn'), acctAv: $('acct-av'), acctFirst: $('acct-first'),
       acctMenu: $('acct-menu'), acctAvLg: $('acct-av-lg'), acctName: $('acct-name'), acctEmail: $('acct-email'),
       acctWallet: $('acct-wallet'), acctCount: $('acct-count'), acctOut: $('acct-out'), acctDel: $('acct-del'),
@@ -1115,12 +1126,17 @@
 
     ui.copy.addEventListener('click', function () {
       var n = names();
-      var text = sentence(cur(), n.them) + '\nشوف شنو يصير لك: shorbaka.com';
-      var ok = function () { flash(ui.copy, 'انسخت'); };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(ok, function () { if (legacyCopy(text)) ok(); });
-      } else if (legacyCopy(text)) { ok(); }
+      copyText(sentence(cur(), n.them) + '\nشوف شنو يصير لك: shorbaka.com').then(function (ok) { if (ok) flash(ui.copy, 'انسخت'); });
     });
+
+    // Resolves true once text is on the clipboard.
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return legacyCopy(text); });
+      }
+      return Promise.resolve(legacyCopy(text));
+    }
+    KIN.copyText = copyText;
 
     function legacyCopy(text) {
       var t = el('textarea');
@@ -1223,6 +1239,8 @@
       pic = source;
       var first = showSizes(source);
       showOption(source.option);
+      if (ui.mLink) ui.mLink.hidden = !source.link;
+      ui.modal.classList.toggle('has-link', !!(ui.mLink && source.link));
       from.disabled = true; s.textContent = 'لحظة…';
       return showImage(first).then(function () {
         openSheet(ui.modal, from);
@@ -1276,6 +1294,12 @@
         o.set(!on);
         ui.optBox.checked = !on;
       }).then(function () { busy(false); });
+    });
+
+    // the source's link (the tree's «رابط الشجرة كاملة»), for Instagram's link sticker
+    if (ui.mLink) ui.mLink.addEventListener('click', function () {
+      if (!pic || !pic.link) return;
+      copyText(pic.link).then(function (ok) { flash(ui.mLink, ok ? 'انتسخ الرابط ✓' : 'ما انتسخ، جرّب مرة ثانية', 2200); });
     });
 
     ui.close.addEventListener('click', function () { closeSheet(ui.modal); });

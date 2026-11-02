@@ -184,6 +184,19 @@
       });
   }
 
+  /* «رابط الشجرة»: a link to my whole tree that opens with a password I set. The database keeps the
+     password hashed and gives the tree only to whoever has both; these are the owner's side of it. */
+  function one(res) {
+    if (res.error) throw res.error;
+    return res.data == null ? null : res.data;
+  }
+  // My link's code, or null when I have none.
+  function treeLink() { return client.rpc('my_tree_link').then(one); }
+  // Sets the password (making the link the first time). Resolves the code, the same one as before.
+  function setTreeLink(password) { return client.rpc('set_tree_link', { password: password }).then(one); }
+  // The link stops opening, even with the password.
+  function stopTreeLink() { return client.rpc('stop_tree_link').then(one); }
+
   // Deletes the account and everything saved in it (the database function cascades).
   function deleteAccount() {
     return client.rpc('delete_my_account').then(rows).then(signOut);
@@ -203,6 +216,9 @@
     loadTree: loadTree,
     saveTree: saveTree,
     saveTreeNow: saveTreeNow,
+    treeLink: treeLink,
+    setTreeLink: setTreeLink,
+    stopTreeLink: stopTreeLink,
     deleteAccount: deleteAccount
   };
 })(window);
