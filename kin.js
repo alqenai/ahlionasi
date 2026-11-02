@@ -546,6 +546,12 @@
   KIN.people = people; KIN.arNum = arNum;
 
   // Rebuild the walk from the steps that were tapped; null if anything is off.
+  // «علي» and «على القناعي» are the same person here: first word, alef/yeh/teh marbuta forms and tashkeel set aside.
+  function firstWord(s) {
+    return String(s || '').trim().split(/\s+/)[0].replace(/[\u064B-\u0652\u0640]/g, '')
+      .replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').toLowerCase();
+  }
+
   function replay(steps) {
     if (!Array.isArray(steps) || !steps.length || steps.length > MAX * 2) return null;
     var path = [], trail = [];
@@ -583,7 +589,8 @@
       wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), wIn: $('kin-w-in'), modal: $('kin-modal'),
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
       mTitle: $('kin-m-title'), seg: $('kin-seg'), opt: $('kin-opt'), optBox: $('kin-opt-box'),
-      optText: $('kin-opt-text'), optHint: $('kin-opt-hint'),
+      optText: $('kin-opt-text'), optHint: $('kin-opt-hint'), rTree: $('kin-r-tree'), addTree: $('kin-add-tree'),
+      rIn: $('kin-r-in'), rInText: $('kin-r-in-text'), rSee: $('kin-r-see'),
       privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
       authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close'),
       authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local'),
@@ -594,13 +601,58 @@
     };
     if (!ui.path) return;
 
-    var st = { trail: [], open: false, done: false, pending: null }, file = null, url = null;
+    var st = { trail: [], open: false, done: false, pending: null, added: null }, file = null, url = null;
     var sheet = null, sheetFrom = null, wSeq = 0, acctReady = !root.ACCOUNT;
 
     // The account system, when it is switched on and loaded; null otherwise.
     function accounts() { return root.ACCOUNT && root.ACCOUNT.on() ? root.ACCOUNT : null; }
 
     function cur() { return st.trail.length ? st.trail[st.trail.length - 1].path : []; }
+
+    /* «شجرة عائلتي» (tree.js), when this walk starts from its owner («اسمك» empty or the same name):
+       each step can then be someone in it, and the choices name them («أبوي (محمد)»). */
+    function treeDoc() {
+      var T = root.TREE, doc = T && T.current ? T.current() : null;
+      if (!doc || !doc.p[doc.me]) return null;
+      var me = firstWord(ui.me.value);
+      return !me || me === firstWord(doc.p[doc.me].n) ? doc : null;
+    }
+
+    // Who in the tree the walk has reached: me at the start, null once it leaves the tree.
+    function treeAt(doc) {
+      if (!doc) return null;
+      var at = st.trail.length ? st.trail[st.trail.length - 1].pid : doc.me;
+      return at && doc.p[at] ? at : null;
+    }
+
+    /* The choices for one step. Without the tree: one («أخوي»). With it: one for each one in the
+       tree («أخوي (خالد)», «أخوي (منصور)»), and one for someone not in it yet (not for a father or
+       mother who is already there). */
+    function stepChoices(path, step, doc, idx, at) {
+      var base = chip(path, step);
+      base.pid = null;
+      var kin = doc && at ? root.TREE.kinOf(doc, idx, at, step) : [];
+      if (!kin.length) return [base];
+      var out = kin.map(function (pid) {
+        return Object.assign({}, base, { pid: pid, main: base.main + ' (' + (doc.p[pid].n || 'بدون اسم') + ')' });
+      });
+      if (step !== 'F' && step !== 'M') {
+        out.push(Object.assign({}, base, { hint: STEPS[step].g === 'f' ? 'وحدة ثانية مو بشجرتك' : 'واحد ثاني مو بشجرتك' }));
+      }
+      return out;
+    }
+
+    // A walk opened again from the saved list: fathers and mothers are certain, so they get their names back.
+    function bindTrail(trail) {
+      var doc = treeDoc(), at = doc ? doc.me : null, idx = doc ? root.TREE.index(doc) : null;
+      trail.forEach(function (info) {
+        var kin = at && (info.step === 'F' || info.step === 'M') ? root.TREE.kinOf(doc, idx, at, info.step) : [];
+        info.pid = kin[0] || null;
+        if (info.pid) info.main = info.main + ' (' + (doc.p[info.pid].n || 'بدون اسم') + ')';
+        at = info.pid;
+      });
+      return trail;
+    }
     function names() { return { me: ui.me.value.trim(), them: ui.them.value.trim() }; }
     function label(btn) { return btn.querySelector('span'); }
 
@@ -692,10 +744,13 @@
         ui.path.appendChild(node(i, s.main, s.hint, STEPS[s.step].t, i === st.trail.length - 1));
       });
 
-      var opts = st.open && !st.done ? options(path) : [];
+      var opts = st.open && !st.done ? options(path) : [], doc = opts.length ? treeDoc() : null;
+      var idx = doc ? root.TREE.index(doc) : null, at = treeAt(doc), list = [];
+      if (doc && at === doc.me) opts = opts.filter(function (s) { return s !== (doc.p[doc.me].g === 'f' ? 'W' : 'H'); });
+      opts.forEach(function (s) { list = list.concat(stepChoices(path, s, doc, idx, at)); });
       ui.opts.textContent = '';
-      opts.forEach(function (s, i) { ui.opts.appendChild(option(chip(path, s), i)); });
-      ui.next.hidden = !opts.length;
+      list.forEach(function (info, i) { ui.opts.appendChild(option(info, i)); });
+      ui.next.hidden = !list.length;
       ui.max.hidden = !(st.open && !st.done && path.length >= MAX);
 
       ui.actions.hidden = !st.trail.length || st.done;
@@ -714,6 +769,29 @@
         ui.rExtra.textContent = more;
         ui.rExtra.hidden = !more;
       }
+      treeBox(n);
+    }
+
+    function walkSteps() { return st.trail.map(function (i) { return { t: i.step, pid: i.pid || null }; }); }
+
+    // Under the result: «ضيفه لشجرتي», or «فهد موجود بشجرتك» when the walk ended on someone in it.
+    function treeBox(n) {
+      if (!ui.rTree) return;
+      var doc = st.done ? treeDoc() : null, last = st.trail[st.trail.length - 1], T = root.TREE;
+      if (!doc || !last || !T.addWalk) { ui.rTree.hidden = true; return; }
+      var f = gender(cur()) === 'f', who = n.them || (f ? 'هي' : 'هو');
+      if (last.pid && doc.p[last.pid]) {
+        ui.rTree.hidden = false; ui.addTree.hidden = true; ui.rIn.hidden = false;
+        ui.rInText.textContent = st.added === last.pid
+          ? (f ? 'انضافت ' : 'انضاف ') + (n.them || '') + ' لشجرتك ✓'
+          : who + (f ? ' موجودة بشجرتك ✓' : ' موجود بشجرتك ✓');
+        ui.rSee.textContent = f ? 'شوفها بالشجرة' : 'شوفه بالشجرة';
+        return;
+      }
+      // only when every step can go on the tree (my wife's brother can't, for one)
+      ui.rTree.hidden = !T.addWalk(doc, walkSteps(), n.them);
+      ui.addTree.hidden = false; ui.rIn.hidden = true;
+      label(ui.addTree).textContent = f ? 'ضيفها لشجرتي' : 'ضيفه لشجرتي';
     }
 
     function renderWallet() {
@@ -758,7 +836,7 @@
         open.appendChild(el('span', 'kin-w-rel', verb(path) + ' ' + phrase(path)));
         open.addEventListener('click', function () {
           ui.me.value = it.me; ui.them.value = it.them;
-          st.trail = trail; st.open = true; st.done = true;
+          st.trail = bindTrail(trail); st.open = true; st.done = true;
           render();
           ui.result.focus({ preventScroll: true });
           ui.result.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -995,10 +1073,10 @@
       st.trail.pop(); st.done = false; st.open = true; render(); focusNext();
     });
     ui.reset.addEventListener('click', function () {
-      st.trail = []; st.done = false; st.open = true; render(); focusNext();
+      st.trail = []; st.done = false; st.open = true; st.added = null; render(); focusNext();
     });
     ui.again.addEventListener('click', function () {
-      st.trail = []; st.done = false; st.open = true;
+      st.trail = []; st.done = false; st.open = true; st.added = null;
       ui.them.value = ''; render(); ui.them.focus();
     });
 
@@ -1063,7 +1141,8 @@
         file: 'shorbaka',
         make: function (format) { return makeStory(n.me, n.them, path, format); },
         alt: 'صلة القرابة بيني وبين ' + subject(path, n.them) + '. ' + sentence(path, n.them),
-        mention: n.them ? 'تمنشن ' + n.them : 'تمنشنهم'
+        mention: n.them ? 'تمنشن ' + n.them : 'تمنشنهم',
+        text: 'شوف شنو يصير لك أي أحد على شرباكة: https://shorbaka.com'
       };
     }
 
@@ -1081,7 +1160,7 @@
         ui.dl.setAttribute('download', name);
         ui.share.hidden = !(file && navigator.canShare && navigator.canShare({ files: [file] }));
         if (ui.mTitle) ui.mTitle.textContent = t.title;
-        ui.tip.textContent = t.tip + '، ولا تنسى ' + p.mention;
+        ui.tip.textContent = p.tips && p.tips[format] ? p.tips[format] : t.tip + '، ولا تنسى ' + p.mention;
         segs.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.format === format)); });
         shown = format;
       });
@@ -1120,6 +1199,29 @@
     }
 
     ui.story.addEventListener('click', function () { openShare(finderPicture(), ui.story); });
+
+    if (ui.addTree) {
+      ui.addTree.addEventListener('click', function () {
+        var n = names(), r = root.TREE && root.TREE.addFromFinder ? root.TREE.addFromFinder(walkSteps(), n.them) : null;
+        if (!r) { flash(ui.addTree, 'ما زبطت، جرّب مرة ثانية', 2400); return; }
+        // the walk now goes through the tree: its steps get their people (and names, where there are)
+        var doc = root.TREE.current();
+        st.trail.forEach(function (info, i) {
+          if (info.pid || !r.pids[i]) return;
+          info.pid = r.pids[i];
+          info.main = info.main + ' (' + ((doc && doc.p[info.pid].n) || 'بدون اسم') + ')';
+        });
+        st.added = r.pid;
+        render();
+        ui.rSee.focus({ preventScroll: true });
+      });
+      ui.rSee.addEventListener('click', function () {
+        var last = st.trail[st.trail.length - 1];
+        if (last && last.pid && root.TREE.reveal) root.TREE.reveal(last.pid);
+        if (history.replaceState) history.replaceState(null, '', '#tree');
+        showSection('tree', true);
+      });
+    }
 
     segs.forEach(function (b) {
       b.addEventListener('click', function () {
@@ -1193,8 +1295,14 @@
         });
       });
     }
+    // The picture goes with a sentence and the link (where the app keeps text, like WhatsApp).
     ui.share.addEventListener('click', function () {
-      if (file) navigator.share({ files: [file] }).catch(function () {});
+      if (!file) return;
+      var data = { files: [file] };
+      if (pic && pic.text) data.text = pic.text;
+      navigator.share(data).catch(function (e) {
+        if (data.text && e && e.name === 'TypeError') navigator.share({ files: [file] }).catch(function () {});
+      });
     });
 
     /* Two sections share the page under the hero: «شنو يصير لك؟» (with the saved list) and
@@ -1209,6 +1317,7 @@
         if (a.dataset.sec === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
       if (root.TREE && root.TREE.shown) root.TREE.shown(name === 'tree');
+      if (name === 'kin') render();  // names from the tree may have changed meanwhile
       if (scroll) $(name).scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
     secLinks.forEach(function (a) {
@@ -1234,6 +1343,7 @@
     KIN.openShare = openShare;
     KIN.openAuth = function (copy, from) { openAuth(null, from, copy); };
     KIN.showSection = showSection;
+    KIN.treeChanged = function () { render(); };
 
     render();
     renderWallet();

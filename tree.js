@@ -468,6 +468,65 @@
     return out;
   }
 
+  // Everyone drawn as the head of a family on some view (they can have a husband or wife added).
+  function allHeads(doc, idx) {
+    var heads = {};
+    views(doc, idx).forEach(function (v) {
+      var L = layout(doc, idx, v, SCREEN, { ghosts: false, mates: 'all' });
+      Object.keys(L.heads).forEach(function (k) { heads[k] = 1; });
+    });
+    return heads;
+  }
+
+  // Can a t (F M B Z S D H W) be added to pid, and still show on one of the views?
+  function canAdd(doc, idx, pid, t) {
+    return !!doc.p[pid] && choices(doc, idx, pid, lineSet(doc, idx), allHeads(doc, idx)).indexOf(t) >= 0;
+  }
+
+  /* Who in the tree is pid's t, in the finder's steps: his father, her brothers, their daughters...
+     eldest first. The finder shows them by name («أخوي (خالد)»). */
+  function kinOf(doc, idx, pid, t) {
+    if (!doc.p[pid]) return [];
+    var fam = idx.parent[pid], x = fam ? doc.f[fam] : null, unions = idx.unions[pid] || [], out = [];
+    var g = /[FBSH]/.test(t) ? 'm' : 'f';
+    if (t === 'F') return x && x.a ? [x.a] : [];
+    if (t === 'M') return x && x.b ? [x.b] : [];
+    if (t === 'B' || t === 'Z') return x ? x.k.filter(function (c) { return c !== pid && doc.p[c].g === g; }) : [];
+    unions.forEach(function (fid) {
+      var y = doc.f[fid];
+      if (t === 'H' || t === 'W') {
+        var m = y.a === pid ? y.b : y.a;
+        if (m && doc.p[m].g === g) out.push(m);
+      } else if (t === 'S' || t === 'D') {
+        y.k.forEach(function (c) { if (doc.p[c].g === g) out.push(c); });
+      }
+    });
+    return out;
+  }
+
+  /* Puts a walk from the finder into the tree: steps [{ t: 'F', pid: 'p3' or null }, ...] from me.
+     A step with a pid is someone already in the tree; the others add a new person, without a name
+     but the last, who gets `name`. Works on a copy: returns { doc, pid, added } or, when a step
+     can't go on the tree, null. pids: who each step ended up at. */
+  function addWalk(doc, steps, name) {
+    var d = copy(doc), cur = d.me, prev = null, added = [], pids = [];
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i], idx = index(d), last = i === steps.length - 1;
+      if (s.pid && kinOf(d, idx, cur, s.t).indexOf(s.pid) >= 0) { prev = cur; cur = s.pid; pids.push(cur); continue; }
+      if (!canAdd(d, idx, cur, s.t)) return null;
+      // a child of someone just reached through a marriage belongs to that marriage
+      var fid = null;
+      if ((s.t === 'S' || s.t === 'D') && (idx.unions[cur] || []).length > 1) {
+        fid = (idx.unions[cur] || []).filter(function (u) { return d.f[u].a === prev || d.f[u].b === prev; })[0] || idx.unions[cur][0];
+      }
+      var np = addRelative(d, cur, s.t, last ? name : '', fid);
+      if (!np) return null;
+      added.push(np); pids.push(np);
+      prev = cur; cur = np;
+    }
+    return { doc: d, pid: cur, added: added, pids: pids };
+  }
+
   /* The line from parents down to each child, turning with round corners instead of square ones:
      a list of ['M', x, y], ['L', x, y] and ['Q', cx, cy, x, y] steps (the screen draws it as SVG, the
      picture on a canvas). All the children's lines are one path, so where they overlap the line
@@ -490,7 +549,8 @@
   var TREE = {
     blank: blank, clean: clean, cleanFam: cleanFam, famTitle: famTitle, copy: copy, index: index, count: count, addRelative: addRelative, rename: rename,
     removePerson: removePerson, move: move, relations: relations, relName: relName, views: views, climb: climb,
-    lineSet: lineSet, lineUnions: lineUnions, layout: layout, choices: choices, kidLines: kidLines, SCREEN: SCREEN
+    lineSet: lineSet, lineUnions: lineUnions, layout: layout, choices: choices, kidLines: kidLines, SCREEN: SCREEN,
+    allHeads: allHeads, canAdd: canAdd, kinOf: kinOf, addWalk: addWalk
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = TREE;
   root.TREE = TREE;
@@ -624,7 +684,7 @@
         if (n.more) ctx.setLineDash([ring * 1.6, ring * 1.4]);
         ctx.stroke();
         ctx.setLineDash([]);
-        var hidden = !n.more && hideF && doc.p[n.pid].g === 'f';
+        var hidden = !n.more && hideF && doc.p[n.pid].g === 'f', nameless = !n.more && !doc.p[n.pid].n;
         if (hidden) pearl(ctx, cx, cy, r * 0.3, isMe);
         else {
           var top = n.more ? '+' + n.more : initial(doc.p[n.pid].n);
@@ -636,12 +696,12 @@
           ctx.direction = 'rtl';
         }
 
-        var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : hidden ? relName(rels[n.pid]) : doc.p[n.pid].n;
+        var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : hidden || nameless ? relName(rels[n.pid]) : doc.p[n.pid].n;
         var ny = Y(n.y) + M.AV + 22 * s + 34 * s;
         ctx.fillStyle = n.more ? '#9DB2C8' : '#F4EFE6';
         D.fit(ctx, name, n.more ? '500' : '700', Math.round(Math.max(22, 34 * s)), M.NW + 6, 16);
         ctx.fillText(name, cx, ny);
-        if (!n.more && !hidden) {
+        if (!n.more && !hidden && !nameless) {
           var rel = relName(rels[n.pid]);
           ctx.fillStyle = isMe ? '#F4EFE6' : '#E9C46A';
           D.fit(ctx, rel, '500', Math.round(Math.max(18, 25 * s)), M.NW + 6, 14);
@@ -712,11 +772,11 @@
 
     var st = {
       doc: null, where: 'local', loaded: false, failed: false, seq: 0,
-      view: null, L: null, zl: 0, z: 1, center: true, lastAdded: null,
+      view: null, L: null, zl: 0, z: 1, center: true, lastAdded: null, focus: null,
       person: null, from: null, adding: null, union: null, g: '',
       saving: null, again: false, saveErr: false, pending: false
     };
-    var acctReady = !root.ACCOUNT, timer = null;
+    var acctReady = !root.ACCOUNT, timer = null, told = null;  // told: the tree kin.js last heard about
     var sideBtns = Array.prototype.slice.call(ui.side.querySelectorAll('button'));
     var gBtns = Array.prototype.slice.call(ui.gSeg.querySelectorAll('button'));
 
@@ -851,6 +911,7 @@
 
     function render() {
       ui.msg.hidden = true; ui.retry.hidden = true;
+      if (told !== st.doc) { told = st.doc; if (KIN.treeChanged) KIN.treeChanged(); }
       counts();
       if (!acctReady || (!st.loaded && !st.failed)) {
         ui.start.hidden = true; ui.wrap.hidden = true;
@@ -877,15 +938,6 @@
       draw();
       note();
       if (!ui.sheet.hidden) fillSheet();
-    }
-
-    function allHeads(doc, idx) {
-      var heads = {};
-      views(doc, idx).forEach(function (v) {
-        var L = layout(doc, idx, v, SCREEN, { ghosts: false, mates: 'all' });
-        Object.keys(L.heads).forEach(function (k) { heads[k] = 1; });
-      });
-      return heads;
     }
 
     function draw() {
@@ -925,7 +977,8 @@
       sizeStage();
       if (st.center && shown()) {
         st.center = false;
-        centerOn(st.lastAdded && doc.p[st.lastAdded] ? st.lastAdded : doc.me);
+        centerOn([st.focus, st.lastAdded, doc.me].filter(function (x) { return x && doc.p[x]; })[0]);
+        st.focus = null;
       }
     }
 
@@ -949,14 +1002,14 @@
       if (n.pid === st.lastAdded) b.classList.add('is-new');
       b.dataset.pid = n.pid;
       b.appendChild(el('span', 'tr-av', initial(p.n)));
-      b.appendChild(el('span', 'tr-name', p.n || '…'));
+      // someone added from «شنو يصير لك؟» on the way to a relative may have no name yet
+      b.appendChild(el('span', 'tr-name' + (p.n ? '' : ' is-noname'), p.n || 'بدون اسم'));
       b.appendChild(el('span', 'tr-rel', rel));
-      b.setAttribute('aria-label', isMe ? p.n + '، هذا إنت' : p.n + '، ' + KIN.verb(rels[n.pid]) + ' ' + rel);
+      b.setAttribute('aria-label', isMe ? p.n + '، هذا إنت' : (p.n || 'بدون اسم') + '، ' + KIN.verb(rels[n.pid]) + ' ' + rel);
       b.addEventListener('click', function () { openPerson(n.pid, null, b); });
       return b;
     }
 
-    // Big trees can be zoomed out to see all of it at once.
     /* The sizes the zoom button steps through: as drawn, then smaller. A big tree gets two steps down,
        the second showing it all (or as much as stays visible). */
     function zooms() {
@@ -1025,7 +1078,8 @@
       var idx = index(doc), rels = relations(doc, idx), isMe = pid === doc.me;
       ui.pAv.textContent = initial(p.n);
       ui.pAv.parentNode.className = 'tr-p-who' + (isMe ? ' is-me' : p.g === 'f' ? ' is-f' : '');
-      ui.pTitle.textContent = p.n || '…';
+      ui.pTitle.textContent = p.n || 'بدون اسم';
+      ui.pName.placeholder = p.g === 'f' ? 'اكتب اسمها' : 'اكتب اسمه';
       ui.pRel.textContent = isMe ? 'هذا إنت' : KIN.verb(rels[pid]) + ' ' + relName(rels[pid]);
       ui.pSave.disabled = !cleanName(ui.pName.value) || cleanName(ui.pName.value) === p.n;
 
@@ -1260,6 +1314,8 @@
         make: function (format) { return makePicture(doc, key, format, opts); },
         alt: famTitle(doc) + (view.label ? '، ' + view.label : ''),
         mention: 'تمنشن أهلك',
+        tips: { story: 'انشرها بجروب العائلة، أو حطها ستوري وتمنشن أهلك', post: 'انشرها بجروب العائلة، أو نزّلها بوست وتمنشن أهلك' },
+        text: 'سويت شجرة عائلتي على شرباكة 🌳 سوّ شجرة عائلتك: https://shorbaka.com/#tree',
         // remembered with the tree, so the next picture comes out the same way
         option: !viewHasF(doc, key) ? null : {
           label: 'أخفي أسامي البنات', hint: 'يطلع «أختي» و«أمي» بدال الأسامي', on: opts.hideF,
@@ -1286,6 +1342,30 @@
       st.center = true;
       render();
     };
+
+    /* For «شنو يصير لك؟» (kin.js): the tree as it is now (null while it loads), and a way to put a walk
+       from it into the tree (see addWalk). Returns what addWalk returns. */
+    TREE.current = function () { return st.loaded && !st.failed ? st.doc : null; };
+    TREE.addFromFinder = function (steps, name) {
+      if (!st.doc) return null;
+      var r = addWalk(st.doc, steps, name);
+      if (!r) return null;
+      st.doc = r.doc; st.lastAdded = r.pid;
+      TREE.reveal(r.pid);
+      changed();
+      return r;
+    };
+    // The next time the tree shows, it opens on the side this person is on, with them in the middle.
+    TREE.reveal = function (pid) {
+      var doc = st.doc;
+      if (!doc || !doc.p[pid]) return;
+      var idx = index(doc), on = views(doc, idx).filter(function (v) {
+        return layout(doc, idx, v, SCREEN, { ghosts: false, mates: 'all' }).nodes.some(function (n) { return n.pid === pid; });
+      })[0];
+      if (on) st.view = on.key;
+      st.focus = pid; st.center = true;
+    };
+
 
     if (root.ACCOUNT) {
       root.ACCOUNT.onChange(function () { if (acctReady) sync(); });
