@@ -986,9 +986,9 @@
      «امسح الكود» / «وشوف الشجرة كاملة» over the shorbaka.com mark on its right (see drawQrPanel). */
   var PICFMT = {
     story: { title: 120, titleY: 300, sub: 46, subY: 384, boxY: 470, boxH: 1000, boxW: 960,
-      qr: { boxH: 940, y: 1580, qr: 214, pad: 24, gap: 34, r: 40, t1: 46, t2: 36, t3: 34, mark: 46 } },
+      qr: { boxH: 885, y: 1521, qr: 214, pad: 24, gap: 34, r: 40, t1: 46, t2: 36, t3: 34, mark: 46, t4: 28, foot: 59 } },
     post: { title: 92, titleY: 168, sub: 38, subY: 232, boxY: 292, boxH: 812, boxW: 960,
-      qr: { boxH: 770, y: 1196, qr: 172, pad: 20, gap: 28, r: 34, t1: 38, t2: 30, t3: 28, mark: 38 } }
+      qr: { boxH: 722, y: 1146, qr: 172, pad: 20, gap: 28, r: 34, t1: 38, t2: 30, t3: 28, mark: 38, t4: 24, foot: 50 } }
   };
   var MIN_SCALE = 0.72, MAX_SCALE = 1.25;
 
@@ -1182,23 +1182,34 @@
   }
 
   /* The foot of a story or post that leaves people out: one see-through panel like the shorbaka.com
-     sticker, its middle at (540, Z.y). The code sits on its left on a soft pearl (not white, so it
-     doesn't glare on the navy), and on its right «امسح الكود» / «وشوف الشجرة كاملة» over the mark
-     and shorbaka.com. */
+     sticker. Its top row, centred on (540, Z.y): the code on the left on a soft pearl (not white, so
+     it doesn't glare on the navy), and on the right «امسح الكود» / «وشوف الشجرة كاملة» over the mark
+     and shorbaka.com. Under them, in small print, who to take the password from (pwText). */
   var QR_WORDS = ['امسح الكود', 'وشوف الشجرة كاملة'], QR_BG = '#D9D1C1';
-  function drawQrPanel(ctx, q, Z) {
+  function drawQrPanel(ctx, q, Z, pwText) {
     var D = KIN.draw, k = Z.qr / 214, mw = Z.mark * 102 / 72, mg = Math.round(12 * k);
     ctx.save();
     ctx.direction = 'rtl';
     D.setFont(ctx, '700', Z.t1); var w1 = ctx.measureText(QR_WORDS[0]).width;
     D.setFont(ctx, '500', Z.t2); var w2 = ctx.measureText(QR_WORDS[1]).width;
+    D.setFont(ctx, '500', Z.t4); var w4 = ctx.measureText(pwText).width;
     ctx.direction = 'ltr';
     D.setFont(ctx, '500', Z.t3); var m3 = ctx.measureText(STICKER_LABEL), w3 = mw + mg + m3.width;
-    var tw = Math.max(w1, w2, w3), W = Math.round(Z.pad + Z.qr + Z.gap + tw + Z.pad * 1.4), H = Z.qr + 2 * Z.pad;
-    var x0 = Math.round(540 - W / 2), y0 = Math.round(Z.y - H / 2), right = x0 + W - Z.pad * 1.4;
+    var tw = Math.max(w1, w2, w3), top = Z.qr + 2 * Z.pad, H = top + Z.foot;
+    var W = Math.round(Math.min(1000, Math.max(Z.pad + Z.qr + Z.gap + tw + Z.pad * 1.4, w4 + Z.pad * 3)));
+    var x0 = Math.round(540 - W / 2), y0 = Math.round(Z.y - top / 2), right = x0 + W - Z.pad * 1.4;
     D.roundRect(ctx, x0, y0, W, H, Z.r);
     ctx.fillStyle = 'rgba(244, 239, 230, 0.07)'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.2)'; ctx.stroke();
+
+    // the small print under a thin line: «خذ الباسورد من علي»
+    var yd = y0 + top;
+    ctx.beginPath(); ctx.moveTo(x0 + Z.pad, yd); ctx.lineTo(x0 + W - Z.pad, yd);
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(244, 239, 230, 0.14)'; ctx.stroke();
+    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(244, 239, 230, 0.8)';
+    D.fit(ctx, pwText, '500', Z.t4, W - Z.pad * 2, Math.round(Z.t4 * 0.7));
+    ctx.fillText(pwText, x0 + W / 2, yd + Z.foot / 2);
 
     D.roundRect(ctx, x0 + Z.pad, y0 + Z.pad, Z.qr, Z.qr, Math.round(Z.qr * 0.1));
     ctx.fillStyle = QR_BG; ctx.fill();
@@ -1218,9 +1229,17 @@
   }
   var STICKER_LABEL = 'shorbaka.com';
 
+  /* Who the password comes from: me, the one who made the tree and set it («خذ الباسورد من علي»).
+     When girls' names are hidden and I'm a girl, my name stays out too. */
+  function pwFrom(doc, hideF) {
+    var me = (doc && doc.p[doc.me]) || {}, f = me.g === 'f', name = hideF && f ? '' : String(me.n || '').trim();
+    return 'خذ الباسورد من ' + (name || (f ? 'صاحبة الشجرة' : 'صاحب الشجرة'));
+  }
+
   TREE.loadQr = loadQr;
   TREE.qrOf = qrOf;
   TREE.qrSvg = qrSvg;
+  TREE.pwFrom = pwFrom;
 
   /* A «رابط الشجرة» password as it's kept, the same whichever keyboard typed it: Arabic and Persian
      digits as 0-9, capitals as small letters, and the Arabic letters written more than one way
@@ -1245,7 +1264,8 @@
     var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH, tidy), boxH = F.boxH;
     // the QR goes on when the picture leaves people out: families folded into «+3», or the other side
     var qrLib = link && (pl.folded || vs.length > 1) ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
-    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? QR_WORDS.join(' ') : '')), qrLib]).then(function (got) {
+    var pwText = pwFrom(doc, hideF);
+    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? QR_WORDS.join(' ') + ' ' + pwText : '')), qrLib]).then(function (got) {
       var qrcode = got[1];
       if (qrcode) { boxH = F.qr.boxH; pl = pictureLayout(doc, idx, view, F.boxW, boxH, tidy); }
       var c = document.createElement('canvas');
@@ -1265,7 +1285,7 @@
       var ox = 540 - L.W * s / 2, oy = F.boxY + Math.max(0, (boxH - L.H * s) / 2);
       drawTree(ctx, doc, rels, L, function (x) { return ox + x * s; }, function (y) { return oy + y * s; }, s, INK.sea, hideF);
 
-      if (qrcode) drawQrPanel(ctx, qrOf(qrcode, link), F.qr);
+      if (qrcode) drawQrPanel(ctx, qrOf(qrcode, link), F.qr, pwText);
       else D.drawSticker(ctx, KIN.FORMATS[format === 'post' ? 'post' : 'story'].sticker);
       return new Promise(function (res) { c.toBlob(res, 'image/png'); });
     });
@@ -1332,8 +1352,8 @@
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
     var title = famTitle(doc), foot = 'سوّ شجرة عائلتك على shorbaka.com';
-    var qrLib = link ? loadQr().catch(function () { return null; }) : Promise.resolve(null);
-    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? foot + ' ' + QR_WORDS.join(' ') : foot)), qrLib]).then(function (got) {
+    var qrLib = link ? loadQr().catch(function () { return null; }) : Promise.resolve(null), pwText = pwFrom(doc, hideF);
+    return Promise.all([D.loadFonts(fontSample(doc, rels, link ? foot + ' ' + QR_WORDS.join(' ') + ' ' + pwText : foot)), qrLib]).then(function (got) {
       var qrcode = got[1];
       var W = P.w * k, H = P.h * k, c = document.createElement('canvas');
       c.width = W; c.height = H;
@@ -1351,7 +1371,7 @@
       ctx.fillText(title, W / 2, titleY);
 
       // with the QR in the corner, the tree stops above it
-      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? 116 : 74) * k;
+      var boxW = W - 88 * k, boxY = titleY + 48 * k, boxH = H - boxY - (qrcode ? 128 : 74) * k;
       var pl = pictureLayout(doc, idx, view, boxW, boxH, true, PDF_MIN, PDF_MAX), L = pl.L, s = pl.s;
       ctx.fillStyle = '#A3801F';
       D.setFont(ctx, '500', 11 * k);
@@ -1368,8 +1388,9 @@
       ctx.fillText(foot, right - tw / 2, fy + 3.5 * k);
       D.drawMark(ctx, left + markW / 2, fy, markH, true);
 
-      // the QR to the whole tree in the bottom left corner, «امسح الكود» / «وشوف الشجرة كاملة» beside it
-      var qrSide = 68 * k, qx = 34 * k, qy = H - 34 * k - qrSide;
+      // the QR to the whole tree in the bottom left corner, «امسح الكود» / «وشوف الشجرة كاملة» beside
+      // it, and under it in small print who to take the password from
+      var qrSide = 68 * k, qx = 34 * k, qy = H - 50 * k - qrSide;
       if (qrcode) {
         drawQrCode(ctx, qrOf(qrcode, link), qx, qy, qrSide);
         ctx.textAlign = 'left';
@@ -1377,6 +1398,8 @@
         ctx.fillText(QR_WORDS[0], qx + qrSide + 6 * k, qy + qrSide / 2 - 2 * k);
         ctx.fillStyle = '#4A607A'; D.setFont(ctx, '500', 8.5 * k);
         ctx.fillText(QR_WORDS[1], qx + qrSide + 6 * k, qy + qrSide / 2 + 11 * k);
+        ctx.fillStyle = '#A3801F'; D.fit(ctx, pwText, '500', 7.5 * k, 140 * k, 5.5 * k);
+        ctx.fillText(pwText, qx + 4 * k, fy + 3.5 * k);  // on the same line as the address at the foot
       }
 
       var preview = document.createElement('canvas'), pw = 1100, ph = Math.round(1100 * H / W);
