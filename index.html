@@ -6,6 +6,10 @@
   <title>شرباكة | شنو يصير لك؟</title>
   <meta name="description" content="اعرف شنو يصير لك أي أحد بجملة وحدة، وسوّ شجرة عائلتك، وشاركها ستوري. Find out exactly how you are related to anyone, build your family tree, and share it as a story.">
   <meta name="theme-color" content="#0E2A47">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="شرباكة">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <meta property="og:site_name" content="شرباكة">
   <meta property="og:title" content="شرباكة | شنو يصير لك؟">
@@ -22,7 +26,7 @@
   <link rel="icon" href="/favicon.ico?v=2" sizes="any">
   <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
-  <link rel="manifest" href="/site.webmanifest?v=2">
+  <link rel="manifest" href="/site.webmanifest?v=3">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -312,6 +316,24 @@
       -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     }
     .acct-in { padding: 0 16px; }
+    /* «نزّل التطبيق»: the site as an app on the phone (app.js) */
+    .app-btn {
+      pointer-events: auto; margin-inline-end: auto; animation: fade .4s ease-out both;
+      display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px;
+      border: 0; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: .92rem; font-weight: 500;
+      color: var(--pearl); background: rgba(14, 42, 71, .6); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .18);
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); -webkit-tap-highlight-color: transparent;
+    }
+    .app-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .app-btn:hover { background: rgba(244, 239, 230, .12); }
+    .app-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .app-text { font-size: .95rem; line-height: 1.75; color: #C9D6E3; padding: 0 6px; }
+    .app-steps { list-style: none; counter-reset: step; display: grid; gap: 10px; margin: 16px 0 4px; padding: 0; }
+    .app-steps li { counter-increment: step; display: flex; gap: 12px; align-items: flex-start; font-size: .95rem; line-height: 1.75; padding: 10px 12px; border-radius: 16px; background: rgba(244, 239, 230, .05); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .08); }
+    .app-steps li::before { content: counter(step); flex: none; width: 28px; height: 28px; margin-top: 1px; border-radius: 50%; display: grid; place-items: center; font-size: .85rem; font-weight: 700; color: var(--navy); background: var(--teal); }
+    .app-steps svg { width: 20px; height: 20px; vertical-align: -4px; margin: 0 2px; fill: none; stroke: var(--sky); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .app-en { color: var(--muted); font-size: .85rem; }
+    .app-note { font-size: .9rem; line-height: 1.75; color: var(--pearl); margin-top: 14px; padding: 10px 14px; border-radius: 14px; background: rgba(233, 196, 106, .1); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .28); }
     .acct-in svg { width: 18px; height: 18px; }
     .acct-btn { padding-block: 5px; padding-inline: 5px 12px; }
     .acct-in:hover, .acct-btn:hover, .acct-btn[aria-expanded="true"] { background: rgba(244, 239, 230, .12); }
@@ -658,6 +680,7 @@
   <span class="bub" style="--x:90%;--s:9px;--d:25s;--w:-15s" aria-hidden="true"></span>
 
   <header class="top">
+    <button type="button" class="app-btn" id="app-btn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M12 7.5v7M9 11.8l3 3 3-3"/><path d="M10.5 18.5h3"/></svg><span>نزّل التطبيق</span></button>
     <div class="acct" id="acct" hidden>
       <button type="button" class="acct-in" id="acct-in" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.9-3.6 3.7-5.6 7-5.6s6.1 2 7 5.6"/></svg><span>تسجيل الدخول</span></button>
       <button type="button" class="acct-btn" id="acct-btn" aria-expanded="false" aria-controls="acct-menu" hidden><span class="acct-av" id="acct-av" aria-hidden="true"></span><span class="acct-first" id="acct-first"></span><svg class="acct-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.5L12 15l5.5-5.5"/></svg></button>
@@ -941,9 +964,30 @@
     </div>
   </div>
 
+  <div class="kin-modal" id="app-sheet" role="dialog" aria-modal="true" aria-labelledby="app-title" hidden>
+    <div class="kin-sheet">
+      <div class="kin-sheet-head">
+        <h3 id="app-title">نزّل شرباكة على جوالك</h3>
+        <button type="button" class="kin-x" id="app-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <p class="app-text">تطلع لك أيقونة شرباكة على شاشة جوالك، وتفتح مثل أي تطبيق.</p>
+      <ol class="app-steps" id="app-ios">
+        <li><span>اضغط <svg viewBox="0 0 24 24" aria-label="مشاركة" role="img"><path d="M12 3.5v11M8.5 7L12 3.5 15.5 7"/><path d="M8 10.5H6.5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H16"/></svg> زر المشاركة. وإذا ما بان، اضغط ⋯ جنب الرابط وبعدها «مشاركة».</span></li>
+        <li><span>انزل شوي واختار «إضافة إلى الشاشة الرئيسية» <span class="app-en" dir="ltr" lang="en">(Add to Home Screen)</span></span></li>
+        <li><span>اضغط «إضافة» <span class="app-en" dir="ltr" lang="en">(Add)</span>، وبتلقى شرباكة على شاشة جوالك.</span></li>
+      </ol>
+      <ol class="app-steps" id="app-inapp" hidden>
+        <li><span>افتح الصفحة بسفاري أو كروم: اضغط ⋯ اللي فوق واختار الفتح بالمتصفح.</span></li>
+        <li><span>ومن هناك اضغط «نزّل التطبيق» فوق.</span></li>
+      </ol>
+      <p class="app-note" id="app-note" role="status" hidden></p>
+    </div>
+  </div>
+
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
   <script src="/account.js?v=9" defer></script>
   <script src="/kin.js?v=20" defer></script>
   <script src="/tree.js?v=14" defer></script>
+  <script src="/app.js?v=1" defer></script>
 </body>
 </html>
