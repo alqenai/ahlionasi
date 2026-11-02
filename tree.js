@@ -302,8 +302,13 @@
     if (!path) return '';
     if (!path.length) return 'أنا';
     if (path.length === 3 && /^[FM]{3}$/.test(path.join(''))) return KIN.common(path);
-    if (path.length > 2) path = path.join('').replace(/[FM]([SD])/g, function (m, c) { return c === 'S' ? 'B' : 'Z'; }).split('');
-    return KIN.phrase(path);
+    return KIN.phrase(spoken(path));
+  }
+
+  // The steps the way relName says them: a half brother or sister on the way, as a brother or sister.
+  function spoken(path) {
+    if (path.length < 3) return path;
+    return path.join('').replace(/[FM]([SD])/g, function (m, c) { return c === 'S' ? 'B' : 'Z'; }).split('');
   }
 
   // When what pid is to me ends in a marriage («زوجة عمي»), that family: the one with the person before them.
@@ -1526,15 +1531,13 @@
       var qrSide = 68 * k, qx = 34 * k, qy = H - (pwText ? 50 : 34) * k - qrSide;
       if (qrcode) {
         drawQrCode(ctx, qrOf(qrcode, link), qx, qy, qrSide);
+        // all its words in one colour (Ali's call): «امسح الكود» stands out by weight alone
         ctx.textAlign = 'left';
         ctx.fillStyle = '#0E2A47'; D.setFont(ctx, '700', 9.5 * k);
         ctx.fillText(QR_WORDS[0], qx + qrSide + 6 * k, qy + qrSide / 2 - 2 * k);
-        ctx.fillStyle = '#4A607A'; D.setFont(ctx, '500', 8.5 * k);
+        D.setFont(ctx, '500', 8.5 * k);
         ctx.fillText(QR_WORDS[1], qx + qrSide + 6 * k, qy + qrSide / 2 + 11 * k);
-        if (askText) {
-          ctx.fillStyle = '#1E8C82'; D.setFont(ctx, '500', 8.5 * k);
-          ctx.fillText(askText, qx + qrSide + 6 * k, qy + qrSide / 2 + 24 * k);
-        }
+        if (askText) ctx.fillText(askText, qx + qrSide + 6 * k, qy + qrSide / 2 + 24 * k);
         if (pwText) {
           ctx.fillStyle = '#A3801F'; D.fit(ctx, pwText, '500', 7.5 * k, 140 * k, 5.5 * k);
           ctx.fillText(pwText, qx + 4 * k, fy + 3.5 * k);  // on the same line as the address at the foot
@@ -1793,7 +1796,7 @@
       start: $('tr-start'), meName: $('tr-me'), gSeg: $('tr-g'), go: $('tr-go'), startErr: $('tr-start-err'),
       wrap: $('tr-wrap'), side: $('tr-side'), zoom: $('tr-zoom'), tidy: $('tr-tidy'), scroll: $('tr-scroll'), stage: $('tr-stage'),
       canvas: $('tr-canvas'), share: $('tr-share'), pdf: $('tr-pdf'), note: $('tr-note'), saveRetry: $('tr-save-retry'), signIn: $('tr-in'),
-      sheet: $('tr-sheet'), pAv: $('tr-p-av'), pTitle: $('tr-p-title'), pRel: $('tr-p-rel'), pClose: $('tr-p-close'),
+      sheet: $('tr-sheet'), pAv: $('tr-p-av'), pTitle: $('tr-p-title'), pRel: $('tr-p-rel'), pStory: $('tr-p-story'), pClose: $('tr-p-close'),
       pRename: $('tr-p-rename'), pName: $('tr-p-name'), pSave: $('tr-p-save'), pLabel: $('tr-p-label'), pAdds: $('tr-p-adds'),
       pForm: $('tr-p-form'), pFormLabel: $('tr-p-form-label'), pNew: $('tr-p-new'), pUnions: $('tr-p-unions'), pAdd: $('tr-p-add'),
       pDone: $('tr-p-done'), pOrder: $('tr-p-order'), pUp: $('tr-p-up'), pDown: $('tr-p-down'), pDel: $('tr-p-del'),
@@ -2099,6 +2102,7 @@
       ui.pTitle.textContent = p.n || 'بدون اسم';
       ui.pName.placeholder = p.g === 'f' ? 'اكتب اسمها' : 'اكتب اسمه';
       ui.pRel.textContent = isMe ? 'هذا إنت' : KIN.verb(rels[pid]) + ' ' + relLabel(doc, idx, rels, pid) + (p.d ? '، ' + rip(p) : '');
+      if (ui.pStory) ui.pStory.hidden = isMe || !rels[pid] || !rels[pid].length || !KIN.openShare || !KIN.makeStory;
       ui.pSave.disabled = !cleanName(ui.pName.value) || cleanName(ui.pName.value) === p.n;
 
       var list = choices(doc, idx, pid, lineSet(doc, idx), allHeads(doc, idx));
@@ -2283,8 +2287,59 @@
     ui.pClose.addEventListener('click', closePerson);
     ui.sheet.addEventListener('click', function (e) { if (e.target === ui.sheet) closePerson(); });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !ui.sheet.hidden) { e.stopPropagation(); closePerson(); }
+      if (e.key !== 'Escape' || ui.sheet.hidden) return;
+      var over = document.getElementById('kin-modal');  // the story from «سوّها ستوري» closes first (kin.js)
+      if (over && !over.hidden) return;
+      e.stopPropagation(); closePerson();
     }, true);
+
+    /* «سوّها ستوري» under what someone is to me: the picture of «شنو يصير لك؟» for them, in the words
+       the tree writes under their name («زوجة عمي الثانية», «طليقة أخوي», «جد أبوي»). It opens over
+       the person's sheet, and closing it comes back to the sheet. */
+    if (ui.pStory) ui.pStory.addEventListener('click', function () {
+      var src = st.doc && st.person && KIN.openShare && KIN.makeStory ? relStory(copy(st.doc), st.person) : null;
+      if (src) KIN.openShare(src, ui.pStory);
+    });
+
+    function relStory(doc, pid) {
+      var idx = index(doc), rels = relations(doc, idx), p = doc.p[pid], me = doc.p[doc.me] || {};
+      if (!p || !rels[pid] || !rels[pid].length) return null;
+      var said = spoken(rels[pid]), rel = relLabel(doc, idx, rels, pid);
+      // the drawing: my half brother («ولد أبوي») stands beside me, as a brother does in «شنو يصير لك؟»
+      var walk = said.join('').replace(/[FM]([SD])/g, function (m, c) { return c === 'S' ? 'B' : 'Z'; }).split('');
+      // «أخفي أسامي البنات» is the tree's own switch, so its pictures and this one stay the same
+      var hide = !!(doc.o && doc.o.hideF), herName = p.g === 'f' && !!cleanName(p.n), myName = me.g === 'f' && !!cleanName(me.n);
+      function names() {
+        return { me: hide && myName ? '' : cleanName(me.n), them: hide && herName ? '' : cleanName(p.n) };
+      }
+      // the line at the bottom, as «شنو يصير لك؟» writes it («يعني جدي»), and «الله يرحمه»
+      function more(them) {
+        var m = KIN.extra(said, them);
+        if (m === 'يعني ' + rel) m = 'يعني ' + KIN.phrase(said);  // «جد أبوي»: يعني أبو أبو أبوي
+        return p.d ? (m ? m + '، ' : '') + rip(p) : m;
+      }
+      var src = {
+        file: 'shorbaka',
+        make: function (format) {
+          var n = names();
+          return KIN.makeStory(n.me, n.them, walk, format, { rel: rel, more: more(n.them) });
+        },
+        text: 'شوف شنو يصير لك أي أحد على شرباكة: https://shorbaka.com',
+        option: herName || myName ? {
+          label: 'أخفي أسامي البنات',
+          hint: herName && myName ? 'يطلع «هي» و«أنا» بدال الأسامي' : herName ? 'يطلع «هي» بدال اسمها' : 'يطلع «أنا» بدال اسمك',
+          on: hide,
+          set: function (on) { hide = on; words(); if (st.doc) { setOpt('hideF', on); changed(); } }
+        } : null
+      };
+      function words() {
+        var n = names(), who = KIN.subject(said, n.them);
+        src.alt = 'صلة القرابة بيني وبين ' + who + '. ' + who + ' ' + KIN.verb(said) + ' ' + rel + (p.d ? '، ' + rip(p) : '');
+        src.mention = p.d ? 'تمنشن أهلك' : n.them ? 'تمنشن ' + n.them : p.g === 'f' ? 'تمنشنها' : 'تمنشنه';
+      }
+      words();
+      return src;
+    }
 
     /* --- starting a tree --- */
 

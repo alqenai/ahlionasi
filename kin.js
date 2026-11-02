@@ -451,9 +451,12 @@
     });
   }
 
-  function makeStory(meName, themName, path, format) {
+  /* words: the tree's own words for the relation, when they say more than the steps do (tree.js, from a
+     person's sheet): { rel: «زوجة عمي الثانية», «طليقة أخوي», «جد أبوي», more: the line at the bottom }. */
+  function makeStory(meName, themName, path, format, words) {
     var F = FORMATS[format] || FORMATS.story;
-    var subj = subject(path, themName), rel = phrase(path), more = extra(path, themName);
+    var subj = subject(path, themName), rel = (words && words.rel) || phrase(path);
+    var more = words && typeof words.more === 'string' ? words.more : extra(path, themName);
     return loadFonts('صلة القرابة بيني وبين ' + subj + ' ' + rel + ' ' + (meName || 'أنا') + ' ' + more).then(function () {
       var W = 1080, H = F.H, c = document.createElement('canvas');
       c.width = W; c.height = H;
@@ -489,7 +492,7 @@
       });
 
       var box = storyBox(y, more, F);
-      drawWalk(ctx, path, meName, themName, box);
+      drawWalk(ctx, path, meName, themName || (words && words.rel) || '', box);
 
       if (more) {
         ctx.textAlign = 'center'; ctx.fillStyle = '#9DB2C8';
@@ -992,10 +995,12 @@
       if (x) x.focus();
     }
 
+    // A sheet can open over another one (a story from a person's sheet in the tree): the page stays
+    // still until the last one closes.
     function closeSheet(m, keepFocus) {
       if (!m || m.hidden) return;
       m.hidden = true;
-      document.documentElement.classList.remove('kin-lock');
+      if (!document.querySelector('.kin-modal:not([hidden])')) document.documentElement.classList.remove('kin-lock');
       if (sheet === m) sheet = null;
       if (!keepFocus && sheetFrom) sheetFrom.focus();
     }
