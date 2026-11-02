@@ -7,7 +7,8 @@
    The whole tree is one small document:
      { v: 1, me: 'p1', n: 7,
        p: { p1: { n: 'علي', g: 'm' }, ... },                  people: name, m or f
-       f: { f2: { a: 'p3', b: 'p4', k: ['p1', 'p5'] }, ... } }  families: husband, wife, children eldest first
+       f: { f2: { a: 'p3', b: 'p4', k: ['p1', 'p5'] }, ... },   families: husband, wife, children eldest first
+       o: { hideF: true } }                                    settings (left out when none is on)
    A family can be missing its husband or wife (not added yet). Brothers and sisters whose parents
    aren't added yet share a family with neither. */
 (function (root) {
@@ -97,6 +98,8 @@
       n = Math.max(n, num(id));
     });
     var doc = { v: 1, me: raw.me, n: Math.max(n, Math.floor(+raw.n) || 0), p: p, f: f };
+    // settings: o.hideF hides girls' and women's names in the shared picture
+    if (raw.o && typeof raw.o === 'object' && raw.o.hideF === true) doc.o = { hideF: true };
     prune(doc);
     return doc;
   }
@@ -535,7 +538,29 @@
     return { L: L, s: s };
   }
 
-  function makePicture(doc, viewKey, format) {
+  // Does this view show any girl or woman? (The switch that hides their names only shows when it does.)
+  function viewHasF(doc, viewKey) {
+    var idx = index(doc), vs = views(doc, idx), view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
+    return layout(doc, idx, view, PIC, { ghosts: false, mates: 'line' }).nodes.some(function (n) {
+      return n.pid && doc.p[n.pid] && doc.p[n.pid].g === 'f';
+    });
+  }
+
+  // A small pearl, drawn where a hidden name's first letter would be.
+  function pearl(ctx, cx, cy, pr, onPearl) {
+    if (onPearl) ctx.fillStyle = '#0E2A47';
+    else {
+      var g = ctx.createRadialGradient(cx - pr * 0.35, cy - pr * 0.4, pr * 0.05, cx, cy, pr);
+      g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.55, '#F4EFE6'); g.addColorStop(1, '#C9BCA8');
+      ctx.fillStyle = g;
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, pr, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* opts.hideF: girls and women show what they are to me («أختي») instead of their name, and a pearl
+     instead of their first letter. */
+  function makePicture(doc, viewKey, format, opts) {
+    var hideF = !!(opts && opts.hideF);
     var D = KIN.draw, F = PICFMT[format] || PICFMT.story, H = KIN.FORMATS[format === 'post' ? 'post' : 'story'].H;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
@@ -587,20 +612,24 @@
         if (n.more) ctx.setLineDash([ring * 1.6, ring * 1.4]);
         ctx.stroke();
         ctx.setLineDash([]);
-        var top = n.more ? '+' + n.more : initial(doc.p[n.pid].n);
-        ctx.fillStyle = isMe ? '#0E2A47' : '#F4EFE6';
-        D.setFont(ctx, '700', Math.round(M.AV * (n.more ? 0.36 : 0.42)));
-        var m = ctx.measureText(top), ink = (m.actualBoundingBoxAscent || M.AV * 0.3) - (m.actualBoundingBoxDescent || 0);
-        ctx.direction = n.more ? 'ltr' : 'rtl';  // «+3», not «3+»
-        ctx.fillText(top, cx, cy + ink / 2);
-        ctx.direction = 'rtl';
+        var hidden = !n.more && hideF && doc.p[n.pid].g === 'f';
+        if (hidden) pearl(ctx, cx, cy, r * 0.3, isMe);
+        else {
+          var top = n.more ? '+' + n.more : initial(doc.p[n.pid].n);
+          ctx.fillStyle = isMe ? '#0E2A47' : '#F4EFE6';
+          D.setFont(ctx, '700', Math.round(M.AV * (n.more ? 0.36 : 0.42)));
+          var m = ctx.measureText(top), ink = (m.actualBoundingBoxAscent || M.AV * 0.3) - (m.actualBoundingBoxDescent || 0);
+          ctx.direction = n.more ? 'ltr' : 'rtl';  // «+3», not «3+»
+          ctx.fillText(top, cx, cy + ink / 2);
+          ctx.direction = 'rtl';
+        }
 
-        var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : doc.p[n.pid].n;
+        var name = n.more ? (n.g === 'f' ? 'عيالها' : 'عياله') : hidden ? relName(rels[n.pid]) : doc.p[n.pid].n;
         var ny = Y(n.y) + M.AV + 22 * s + 34 * s;
         ctx.fillStyle = n.more ? '#9DB2C8' : '#F4EFE6';
         D.fit(ctx, name, n.more ? '500' : '700', Math.round(Math.max(22, 34 * s)), M.NW + 6, 16);
         ctx.fillText(name, cx, ny);
-        if (!n.more) {
+        if (!n.more && !hidden) {
           var rel = relName(rels[n.pid]);
           ctx.fillStyle = isMe ? '#F4EFE6' : '#E9C46A';
           D.fit(ctx, rel, '500', Math.round(Math.max(18, 25 * s)), M.NW + 6, 14);
@@ -614,6 +643,7 @@
   }
 
   TREE.makePicture = makePicture;
+  TREE.viewHasF = viewHasF;
   TREE.pictureLayout = pictureLayout;
 
   /* ---------- Page ---------- */
@@ -1156,11 +1186,24 @@
       if (!st.doc || !KIN.openShare) return;
       var doc = copy(st.doc), key = st.view, vs = views(doc, index(doc));
       var view = vs.filter(function (v) { return v.key === key; })[0] || vs[0];
+      var opts = { hideF: !!(st.doc.o && st.doc.o.hideF) };
       KIN.openShare({
         file: 'shorbaka-tree',
-        make: function (format) { return makePicture(doc, key, format); },
+        make: function (format) { return makePicture(doc, key, format, opts); },
         alt: 'شجرة عائلتي' + (view.label ? '، ' + view.label : ''),
-        mention: 'تمنشن أهلك'
+        mention: 'تمنشن أهلك',
+        // remembered with the tree, so the next picture comes out the same way
+        option: !viewHasF(doc, key) ? null : {
+          label: 'أخفي أسامي البنات', hint: 'يطلع «أختي» و«أمي» بدال الأسامي', on: opts.hideF,
+          set: function (on) {
+            opts.hideF = on;
+            if (!st.doc) return;
+            var o = st.doc.o || {};
+            if (on) o.hideF = true; else delete o.hideF;
+            if (Object.keys(o).length) st.doc.o = o; else delete st.doc.o;
+            changed();
+          }
+        }
       }, ui.share);
     });
     var resizeT = null;

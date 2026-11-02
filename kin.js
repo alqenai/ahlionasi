@@ -582,7 +582,8 @@
       copy: $('kin-copy'), again: $('kin-again'), wallet: $('kin-wallet'), wCount: $('kin-w-count'),
       wList: $('kin-w-list'), wNote: $('kin-w-note'), wEmpty: $('kin-w-empty'), wIn: $('kin-w-in'), modal: $('kin-modal'),
       img: $('kin-img'), share: $('kin-share'), dl: $('kin-dl'), close: $('kin-close'), tip: $('kin-tip'),
-      mTitle: $('kin-m-title'), seg: $('kin-seg'),
+      mTitle: $('kin-m-title'), seg: $('kin-seg'), opt: $('kin-opt'), optBox: $('kin-opt-box'),
+      optText: $('kin-opt-text'), optHint: $('kin-opt-hint'),
       privacy: $('kin-privacy-text'), auth: $('kin-auth'), authTitle: $('kin-auth-title'),
       authText: $('kin-auth-text'), gbtn: $('kin-gbtn'), authErr: $('kin-auth-err'), authClose: $('kin-auth-close'),
       authHint: $('kin-auth-hint'), authLocal: $('kin-auth-local'),
@@ -1052,8 +1053,9 @@
     var segs = ui.seg ? Array.prototype.slice.call(ui.seg.querySelectorAll('button')) : [];
 
     /* What the sheet is showing. A picture source is { file, make(format) -> Promise<Blob>, alt, mention }:
-       the finder's relation here, or the family tree from tree.js. */
-    var pic = null;
+       the finder's relation here, or the family tree from tree.js. It can also bring one switch,
+       option: { label, hint, on, set(on) }, shown under the size toggle (the tree's «أخفي أسامي البنات»). */
+    var pic = null, shown = 'story';
 
     function finderPicture() {
       var n = names(), path = cur();
@@ -1081,13 +1083,32 @@
         if (ui.mTitle) ui.mTitle.textContent = t.title;
         ui.tip.textContent = t.tip + '، ولا تنسى ' + p.mention;
         segs.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.format === format)); });
+        shown = format;
       });
+    }
+
+    // While a picture is being drawn, the toggle and the switch wait.
+    function busy(on) {
+      segs.forEach(function (x) { x.disabled = on; });
+      if (ui.optBox) ui.optBox.disabled = on;
+      ui.img.classList.toggle('is-busy', on);
+    }
+
+    function showOption(o) {
+      if (!ui.opt) return;
+      ui.opt.hidden = !o;
+      ui.modal.classList.toggle('has-opt', !!o);
+      if (!o) return;
+      ui.optBox.checked = !!o.on;
+      ui.optText.textContent = o.label;
+      ui.optHint.textContent = o.hint || '';
     }
 
     // Opens the sheet with a story first; the button shows «لحظة…» while the picture is drawn.
     function openShare(source, from) {
       var s = label(from), was = s.textContent;
       pic = source;
+      showOption(source.option);
       from.disabled = true; s.textContent = 'لحظة…';
       return showImage('story').then(function () {
         openSheet(ui.modal, from);
@@ -1103,13 +1124,21 @@
     segs.forEach(function (b) {
       b.addEventListener('click', function () {
         if (b.getAttribute('aria-pressed') === 'true') return;
-        segs.forEach(function (x) { x.disabled = true; });
-        ui.img.classList.add('is-busy');
-        showImage(b.dataset.format).catch(function () { flash(b, 'ما زبطت', 2000); }).then(function () {
-          ui.img.classList.remove('is-busy');
-          segs.forEach(function (x) { x.disabled = false; });
-        });
+        busy(true);
+        showImage(b.dataset.format).catch(function () { flash(b, 'ما زبطت', 2000); }).then(function () { busy(false); });
       });
+    });
+
+    if (ui.optBox) ui.optBox.addEventListener('change', function () {
+      var o = pic && pic.option, on = ui.optBox.checked;
+      if (!o) return;
+      o.set(on);
+      busy(true);
+      showImage(shown).catch(function () {
+        // the picture couldn't be drawn again: the switch goes back to what the picture shows
+        o.set(!on);
+        ui.optBox.checked = !on;
+      }).then(function () { busy(false); });
     });
 
     ui.close.addEventListener('click', function () { closeSheet(ui.modal); });
