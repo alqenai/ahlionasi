@@ -449,7 +449,9 @@
     /* «شجرة عائلتي» */
     .tree:focus { outline: none; }
     .tr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .tr-count { flex: none; font-size: .85rem; color: var(--muted); padding-top: 14px; }
+    .tr-count { flex: none; display: grid; gap: 1px; padding-top: 10px; text-align: center; font-size: .85rem; line-height: 1.5; color: var(--muted); }
+    .tr-count b { font-size: .95rem; font-weight: 700; color: var(--pearl); }
+    .tr-count span { font-size: .78rem; color: var(--sand); }
     .tr-msg { margin-top: 16px; padding: 14px; border-radius: 14px; background: rgba(244, 239, 230, .04); color: var(--muted); font-size: .95rem; line-height: 1.7; text-align: center; }
     .tr-retry { display: flex; margin: 10px auto 0; }
     .tr-start { display: grid; gap: 14px; margin-top: 18px; }
@@ -467,6 +469,23 @@
     .tr-err { font-size: .9rem; color: var(--coral); }
     .tr-start .kin-btn { width: 100%; }
 
+    /* the family name, on top of the tree */
+    .tr-fam { margin-top: 14px; text-align: center; }
+    .tr-fam-btn {
+      display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-height: 44px; padding: 4px 14px; border: 0; border-radius: 999px;
+      background: none; color: var(--pearl); font-size: 1.35rem; font-weight: 700; line-height: 1.4; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .tr-fam-btn > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tr-fam-btn svg { width: 17px; height: 17px; flex: none; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .tr-fam-btn:hover svg { stroke: var(--pearl); }
+    .tr-fam-btn.is-empty { min-height: 40px; padding: 0 16px; border: 1.5px dashed rgba(233, 196, 106, .55); font-size: .92rem; font-weight: 500; color: var(--sand); }
+    .tr-fam-btn.is-empty::before { content: "+"; font-size: 1.1rem; font-weight: 700; }
+    .tr-fam-btn.is-empty svg { display: none; }
+    .tr-fam-form { display: flex; align-items: flex-end; gap: 8px; text-align: start; }
+    .tr-fam-form label { flex: 1; min-width: 0; }
+    .tr-fam-form label > span { display: block; font-size: .82rem; color: var(--muted); margin: 0 4px 6px; }
+    .tr-fam-form .kin-w-ok { min-height: 50px; padding: 0 16px; border-radius: 14px; }
+    .tr-field i { font-style: normal; opacity: .75; }
     .tr-bar { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
     .tr-bar:has(> :not([hidden])) { min-height: 46px; }
     .tr-side { flex: 1; margin-bottom: 0; }
@@ -689,6 +708,7 @@
 
       <form class="tr-start" id="tr-start" novalidate hidden>
         <label class="tr-field"><span>اسمك</span><input class="tr-input" id="tr-me" type="text" maxlength="40" autocomplete="given-name" placeholder="مثال: علي" enterkeyhint="done"></label>
+        <label class="tr-field"><span>اسم العائلة <i>(إذا تبي)</i></span><input class="tr-input" id="tr-fam-start" type="text" maxlength="30" autocomplete="family-name" placeholder="مثال: القناعي" enterkeyhint="done"></label>
         <div class="tr-field">
           <span id="tr-g-label">إنت</span>
           <div class="kin-seg tr-g" id="tr-g" role="group" aria-labelledby="tr-g-label">
@@ -701,6 +721,13 @@
       </form>
 
       <div class="tr-wrap" id="tr-wrap" hidden>
+        <div class="tr-fam">
+          <button type="button" class="tr-fam-btn" id="tr-fam-btn"><span id="tr-fam-text"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>
+          <form class="tr-fam-form" id="tr-fam-form" hidden>
+            <label><span>اسم العائلة</span><input class="tr-input" id="tr-fam-name" type="text" maxlength="30" autocomplete="family-name" placeholder="مثال: القناعي" enterkeyhint="done"></label>
+            <button type="submit" class="kin-w-ok" id="tr-fam-save"><span>حفظ</span></button>
+          </form>
+        </div>
         <div class="tr-bar">
           <div class="kin-seg tr-side" id="tr-side" role="group" aria-label="جهة الشجرة" hidden>
             <button type="button" data-side="F" aria-pressed="true">أهل أبوي</button>
@@ -796,6 +823,6 @@
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
   <script src="/account.js?v=5" defer></script>
   <script src="/kin.js?v=14" defer></script>
-  <script src="/tree.js?v=3" defer></script>
+  <script src="/tree.js?v=4" defer></script>
 </body>
 </html>

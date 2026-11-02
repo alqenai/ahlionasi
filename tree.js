@@ -8,6 +8,7 @@
      { v: 1, me: 'p1', n: 7,
        p: { p1: { n: 'علي', g: 'm' }, ... },                  people: name, m or f
        f: { f2: { a: 'p3', b: 'p4', k: ['p1', 'p5'] }, ... },   families: husband, wife, children eldest first
+       fn: 'القناعي',                                          the family name (left out when not given)
        o: { hideF: true } }                                    settings (left out when none is on)
    A family can be missing its husband or wife (not added yet). Brothers and sisters whose parents
    aren't added yet share a family with neither. */
@@ -15,7 +16,7 @@
   'use strict';
 
   var KIN = root.KIN || (typeof require === 'function' ? require('./kin.js') : null);
-  var MAXP = 400, NAME = 40;
+  var MAXP = 400, NAME = 40, FAM = 30;
 
   /* ---------- The document ---------- */
 
@@ -28,6 +29,14 @@
   }
 
   function cleanName(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, NAME); }
+
+  // «عائلة القناعي» is kept as «القناعي»: the page and the picture add «عائلة» themselves.
+  function cleanFam(s) {
+    var x = cleanName(s).replace(/^(ال)?(عائلة|عايلة)\s+/, '').slice(0, FAM).trim();
+    return /^(ال)?(عائلة|عايلة)$/.test(x) ? '' : x;
+  }
+
+  function famTitle(doc) { return doc && doc.fn ? 'شجرة عائلة ' + doc.fn : 'شجرة عائلتي'; }
 
   // Who is whose child, and who is married in which families, in the order they were added.
   function index(doc) {
@@ -98,6 +107,8 @@
       n = Math.max(n, num(id));
     });
     var doc = { v: 1, me: raw.me, n: Math.max(n, Math.floor(+raw.n) || 0), p: p, f: f };
+    var fn = typeof raw.fn === 'string' ? cleanFam(raw.fn) : '';
+    if (fn) doc.fn = fn;
     // settings: o.hideF hides girls' and women's names in the shared picture
     if (raw.o && typeof raw.o === 'object' && raw.o.hideF === true) doc.o = { hideF: true };
     prune(doc);
@@ -477,7 +488,7 @@
   }
 
   var TREE = {
-    blank: blank, clean: clean, copy: copy, index: index, count: count, addRelative: addRelative, rename: rename,
+    blank: blank, clean: clean, cleanFam: cleanFam, famTitle: famTitle, copy: copy, index: index, count: count, addRelative: addRelative, rename: rename,
     removePerson: removePerson, move: move, relations: relations, relName: relName, views: views, climb: climb,
     lineSet: lineSet, lineUnions: lineUnions, layout: layout, choices: choices, kidLines: kidLines, SCREEN: SCREEN
   };
@@ -564,7 +575,8 @@
     var D = KIN.draw, F = PICFMT[format] || PICFMT.story, H = KIN.FORMATS[format === 'post' ? 'post' : 'story'].H;
     var idx = index(doc), rels = relations(doc, idx), vs = views(doc, idx);
     var view = vs.filter(function (v) { return v.key === viewKey; })[0] || vs[0];
-    var sample = 'شجرة عائلتي أهل أبوي أمي عياله عيالها +0123456789 ' + GENS.join(' ') + ' ' + Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relName(rels[id]); }).join(' ');
+    var title = famTitle(doc);
+    var sample = title + ' أهل أبوي أمي عياله عيالها +0123456789 ' + GENS.join(' ') + ' ' + Object.keys(doc.p).map(function (id) { return doc.p[id].n + ' ' + relName(rels[id]); }).join(' ');
     return D.loadFonts(sample).then(function () {
       var c = document.createElement('canvas');
       c.width = 1080; c.height = H;
@@ -574,8 +586,8 @@
 
       var pl = pictureLayout(doc, idx, view, F.boxW, F.boxH), L = pl.L, s = pl.s;
       ctx.fillStyle = '#F4EFE6';
-      D.fit(ctx, 'شجرة عائلتي', '700', F.title, 960, 60);
-      ctx.fillText('شجرة عائلتي', 540, F.titleY);
+      D.fit(ctx, title, '700', F.title, 960, 60);
+      ctx.fillText(title, 540, F.titleY);
       ctx.fillStyle = '#E9C46A';
       D.setFont(ctx, '500', F.sub);
       ctx.fillText((view.label ? view.label + ' · ' : '') + gens(L.levels), 540, F.subY);
@@ -693,7 +705,8 @@
       pForm: $('tr-p-form'), pFormLabel: $('tr-p-form-label'), pNew: $('tr-p-new'), pUnions: $('tr-p-unions'), pAdd: $('tr-p-add'),
       pDone: $('tr-p-done'), pOrder: $('tr-p-order'), pUp: $('tr-p-up'), pDown: $('tr-p-down'), pDel: $('tr-p-del'),
       pConfirm: $('tr-p-confirm'), pWarn: $('tr-p-warn'), pYes: $('tr-p-yes'), pNo: $('tr-p-no'),
-      acctCount: $('acct-tree-count')
+      acctCount: $('acct-tree-count'),
+      famStart: $('tr-fam-start'), famBtn: $('tr-fam-btn'), famText: $('tr-fam-text'), famForm: $('tr-fam-form'), famName: $('tr-fam-name')
     };
     if (!ui.sec || !ui.canvas || !KIN) return;
 
@@ -825,10 +838,13 @@
       ui.signIn.hidden = inAcct || !a || !acctReady;
     }
 
+    // How many are in the tree, in English digits like the picture's «+3», and «الله يحفظهم» under it.
+    function people(n) { return n === 1 ? 'شخص واحد' : n === 2 ? 'شخصين' : n <= 10 ? n + ' أشخاص' : n + ' شخص'; }
     function counts() {
       var n = st.doc ? count(st.doc) : 0;
-      ui.count.textContent = n > 1 ? KIN.people(n) : '';
-      if (ui.acctCount) ui.acctCount.textContent = st.where === 'account' && n > 1 ? KIN.people(n) : '';
+      ui.count.textContent = '';
+      if (n > 1) { ui.count.appendChild(el('b', null, people(n))); ui.count.appendChild(el('span', null, 'الله يحفظهم')); }
+      if (ui.acctCount) ui.acctCount.textContent = st.where === 'account' && n > 1 ? people(n) : '';
     }
 
     /* --- drawing the tree on the page --- */
@@ -857,6 +873,7 @@
         return;
       }
       ui.start.hidden = true; ui.wrap.hidden = false;
+      showFam();
       draw();
       note();
       if (!ui.sheet.hidden) fillSheet();
@@ -1113,7 +1130,7 @@
     ui.pDel.addEventListener('click', function () {
       var p = st.doc.p[st.person], gone = removePerson(copy(st.doc), st.person) || [], f = p.g === 'f';
       ui.pWarn.textContent = 'بينمسح ' + (p.n || 'هالشخص') + ' من شجرتك' + (gone.length
-        ? (f ? '، ومعها ' : '، ومعه ') + KIN.people(gone.length) + ' ما يوصلون لك إلا ' + (f ? 'عن طريقها.' : 'عن طريقه.')
+        ? (f ? '، ومعها ' : '، ومعه ') + people(gone.length) + ' ما يوصلون لك إلا ' + (f ? 'عن طريقها.' : 'عن طريقه.')
         : '.');
       ui.pConfirm.hidden = false;
       ui.pDel.hidden = true;
@@ -1155,12 +1172,49 @@
         return;
       }
       st.doc = blank(name, st.g);
+      var fn = cleanFam(ui.famStart.value);
+      if (fn) st.doc.fn = fn;
       st.center = true;
       changed();
       save();
       var meBtn = ui.canvas.querySelector('.tr-node.is-me');
       if (meBtn) meBtn.focus({ preventScroll: true });
     });
+
+    /* --- the family name on top: tap it to write or change it --- */
+
+    function showFam() {
+      var fn = st.doc && st.doc.fn;
+      ui.famText.textContent = fn ? 'عائلة ' + fn : 'اسم العائلة';
+      ui.famBtn.classList.toggle('is-empty', !fn);
+      ui.famBtn.setAttribute('aria-label', fn ? 'عائلة ' + fn + '. غيّر اسم العائلة' : 'ضيف اسم العائلة');
+    }
+    function openFam() {
+      if (!st.doc) return;
+      ui.famName.value = st.doc.fn || '';
+      ui.famBtn.hidden = true; ui.famForm.hidden = false;
+      ui.famName.focus();
+    }
+    // keep: write what's in the box into the tree; otherwise just close it
+    function closeFam(keep) {
+      if (ui.famForm.hidden) return;
+      ui.famForm.hidden = true; ui.famBtn.hidden = false;
+      if (keep && st.doc) {
+        var fn = cleanFam(ui.famName.value);
+        if (fn !== (st.doc.fn || '')) {
+          if (fn) st.doc.fn = fn; else delete st.doc.fn;
+          changed();
+        }
+      }
+      showFam();
+    }
+    ui.famBtn.addEventListener('click', openFam);
+    ui.famForm.addEventListener('submit', function (e) { e.preventDefault(); closeFam(true); ui.famBtn.focus({ preventScroll: true }); });
+    ui.famName.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.stopPropagation(); closeFam(false); ui.famBtn.focus({ preventScroll: true }); }
+    });
+    // leaving the box keeps what was written (tapping «حفظ» leaves it too)
+    ui.famName.addEventListener('blur', function () { setTimeout(function () { closeFam(true); }, 0); });
 
     /* --- the rest of the controls --- */
 
@@ -1190,7 +1244,7 @@
       KIN.openShare({
         file: 'shorbaka-tree',
         make: function (format) { return makePicture(doc, key, format, opts); },
-        alt: 'شجرة عائلتي' + (view.label ? '، ' + view.label : ''),
+        alt: famTitle(doc) + (view.label ? '، ' + view.label : ''),
         mention: 'تمنشن أهلك',
         // remembered with the tree, so the next picture comes out the same way
         option: !viewHasF(doc, key) ? null : {
