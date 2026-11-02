@@ -8,8 +8,8 @@
     supabaseKey: 'sb_publishable_nom1uzSkzypbyYisBt2-dQ_psJfSZEe',  // public key, safe to ship: row-level security guards the data
     googleClientId: '715982042873-ps3ftqgqvdskeegi0m7nksadeqae4a81.apps.googleusercontent.com',  // public too: Google only honours it on https://shorbaka.com
     // Sign-in with a code sent by email. Supabase sends it through the site's own email service (Resend),
-    // with supabase/templates/email-code.html as the email. Until that is set up, shorbaka.com/?email=1 tries it.
-    emailSignIn: false
+    // with supabase/templates/email-code.html as the email. false hides it (shorbaka.com/?email=1 still shows it).
+    emailSignIn: true
   };
 
   var SUPABASE_JS = '/vendor/supabase-2.117.3.js';
