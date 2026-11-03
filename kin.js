@@ -1303,7 +1303,7 @@
         make: function (format) { return makeStory(n.me, n.them, path, format); },
         alt: 'صلة القرابة بيني وبين ' + subject(path, n.them) + '. ' + sentence(path, n.them),
         mention: n.them ? 'تمنشن ' + n.them : 'تمنشنهم',
-        text: 'شوف شنو يصير لك أي أحد على شرباكة: https://shorbaka.com'
+        text: 'شوف شنو يصير لك أي أحد على شرباكة: https://shorbaka.com/#kin'
       };
     }
 
@@ -1628,7 +1628,7 @@
     var secLinks = Array.prototype.slice.call(document.querySelectorAll('.sec'));
     function showSection(name, scroll) {
       if (!mainEl) return;
-      name = (name === 'tree' || name === 'work' || name === 'friends' || name === 'game') && $(name) ? name : 'kin';
+      name = (name === 'kin' || name === 'tree' || name === 'work' || name === 'friends' || name === 'game') && $(name) ? name : $('game') ? 'game' : 'kin';
       mainEl.setAttribute('data-sec', name);
       secLinks.forEach(function (a) {
         if (a.dataset.sec === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
@@ -1647,13 +1647,15 @@
         showSection(a.dataset.sec, true);
       });
     });
+    // The site opens on «تحدي» (Ali, 2026-11-03); #kin opens «شنو يصير لك؟». A section named in the address is scrolled to.
     function hashSec() {
       var h = location.hash;
-      return h === '#tree' ? 'tree' : h === '#work' ? 'work' : h === '#friends' ? 'friends' : h === '#game' ? 'game' : 'kin';
+      return h === '#kin' ? 'kin' : h === '#tree' ? 'tree' : h === '#work' ? 'work' : h === '#friends' ? 'friends' : 'game';
     }
-    window.addEventListener('hashchange', function () { showSection(hashSec(), hashSec() !== 'kin'); });
+    function named() { return /^#(kin|tree|work|friends|game)$/.test(location.hash) && $(hashSec()); }
+    window.addEventListener('hashchange', function () { showSection(hashSec(), !!named()); });
     showSection(hashSec(), false);
-    if (hashSec() !== 'kin' && $(hashSec())) setTimeout(function () { $(hashSec()).scrollIntoView({ block: 'start' }); }, 0);
+    if (named()) setTimeout(function () { $(hashSec()).scrollIntoView({ block: 'start' }); }, 0);
     var acctGame = $('acct-game');
     if (acctGame) acctGame.addEventListener('click', function () {
       closeMenu();

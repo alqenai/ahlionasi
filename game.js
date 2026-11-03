@@ -314,7 +314,7 @@
     var F = K.FORMATS[format] || K.FORMATS.story, H = F.H, post = format === 'post';
     var marks = r.marks, line = verdict(r.score, marks.length), hasPts = typeof r.points === 'number';
     var right = r.score + ' من ' + marks.length + ' صح', most = marks.length * 100;
-    return D.loadFonts('تحدي شنو يصير لك؟ ' + line + ' ' + right + ' من نقطة جرّب تحدي شرباكة 0123456789/').then(function () {
+    return D.loadFonts('تحدي شرباكة ' + line + ' ' + right + ' من نقطة جرّب تحدي شرباكة 0123456789/').then(function () {
       var c = document.createElement('canvas');
       c.width = 1080; c.height = H;
       var ctx = c.getContext('2d');
@@ -322,7 +322,7 @@
       ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       var y = post ? 200 : 430;
       ctx.fillStyle = '#9DB2C8'; D.setFont(ctx, '500', post ? 44 : 50);
-      ctx.fillText('تحدي شنو يصير لك؟', 540, y);
+      ctx.fillText('تحدي شرباكة', 540, y);
 
       // the points, big: «188», and «من 500 نقطة» under them (or «4/5» for a score without points)
       y += post ? 280 : 360;
@@ -485,9 +485,9 @@
       root.KIN.openShare({
         file: 'shorbaka-game',
         make: function (format) { return makePicture(pic, format); },
-        alt: 'جبت ' + said + ' بتحدي شنو يصير لك؟',
+        alt: 'جبت ' + said + ' بتحدي شرباكة',
         mention: 'تمنشن ربعك',
-        text: 'جبت ' + said + ' بتحدي شنو يصير لك؟ جرّب تحدي شرباكة: https://shorbaka.com/#game'
+        text: 'جبت ' + said + '. جرّب تحدي شرباكة: https://shorbaka.com/#game'
       }, from);
     }
 
