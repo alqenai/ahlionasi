@@ -171,7 +171,7 @@
     return a;
   }
 
-  // Ten at random, the ones not played lately first, so a second round brings new questions.
+  // Five at random, the ones not played lately first, so a second round brings new questions.
   function pick(all) {
     var seen = [];
     try { seen = JSON.parse(localStorage.getItem(SEEN) || '[]'); } catch (e) {}
@@ -399,6 +399,22 @@
       return r.ok ? r.text().then(function (x) { return x ? JSON.parse(x) : null; }) : Promise.reject(new Error('HTTP ' + r.status));
     });
   }
+  // A random id of this browser, so the dashboard can count how many people play without an account
+  // (Ali, 2026-11-03). It isn't made from anything about the person; the database keeps it only for
+  // challenges played without signing in.
+  var DEV = 'shorbaka.game.dev';
+  function device() {
+    try {
+      var d = localStorage.getItem(DEV);
+      if (!/^[0-9a-f-]{16,64}$/.test(d || '')) {
+        d = '';
+        if (root.crypto && root.crypto.randomUUID) d = root.crypto.randomUUID();
+        else for (var i = 0; i < 32; i++) d += Math.floor(Math.random() * 16).toString(16);
+        localStorage.setItem(DEV, d);
+      }
+      return d;
+    } catch (e) { return null; }
+  }
   function lastLocal() {
     try { var l = JSON.parse(localStorage.getItem(LAST) || 'null'); return l && typeof l.at === 'number' ? l : null; } catch (e) { return null; }
   }
@@ -447,7 +463,10 @@
     function begin() {
       var s = ui.go.querySelector('span') || ui.go, was = s.textContent;
       ui.go.disabled = true; s.textContent = 'لحظة…';
-      var gate = rpc('game_start').then(function (r) {
+      var gate = rpc('game_start', { dev: device() }).catch(function (e) {
+        // before 20261103_game_stats.sql the database's game_start takes nothing
+        return /HTTP 404/.test(e && e.message) ? rpc('game_start') : Promise.reject(e);
+      }).then(function (r) {
         if (r && r.ok === false) return { locked: Date.parse(r.next) };
         return { play: r && r.play };
       }, function () {
@@ -665,7 +684,13 @@
       try { localStorage.setItem(LAST, JSON.stringify({ at: at, score: st.score, of: st.marks.length, marks: marks, points: st.points })); } catch (e) {}
       lockUntil(at + DAY);
       // the list (and the total) once the account has this score
-      if (st.play) rpc('game_finish', { play: st.play, sc: st.score, total: st.marks.length, marks: marks, pts: st.points }).then(results, results);
+      // which questions came up (0 for the family-tree one), so the dashboard can count them
+      var qids = st.round.map(function (r) { return /^[0-9]+$/.test(r.q.id) ? Number(r.q.id) : 0; });
+      var done = { play: st.play, sc: st.score, total: st.marks.length, marks: marks, pts: st.points };
+      if (st.play) rpc('game_finish', { play: st.play, sc: st.score, total: st.marks.length, marks: marks, pts: st.points, qids: qids }).catch(function (e) {
+        // before 20261103_game_stats.sql the database's game_finish takes no questions
+        return /HTTP 404/.test(e && e.message) ? rpc('game_finish', done) : Promise.reject(e);
+      }).then(results, results);
       else results();
       sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }

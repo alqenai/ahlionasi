@@ -339,8 +339,63 @@
     });
   }
 
+  /* --- «التحدي»: how many play «تحدي» and how they do (Ali, 2026-11-03). Every challenge is kept, signed
+     in or not (20261103_game_stats.sql). A person is an account, or a browser for the ones who don't sign
+     in; admins' challenges (testing) aren't in the numbers but are in the list, marked. --- */
+
+  var gp = { rows: [], total: 0 };
+
+  function gameStats(o) {
+    var tiles = $('g-tiles');
+    tiles.textContent = '';
+    tiles.appendChild(tile('اللاعبين', o.players, num(o.accounts) + ' حساب · ' + num(o.visitors) + ' زائر'));
+    tiles.appendChild(tile('لعبوا اليوم', o.players_today, num(o.players_7d) + ' بآخر 7 أيام'));
+    tiles.appendChild(tile('تحديات خلصت', o.finished, num(Math.max(0, (o.started || 0) - (o.finished || 0))) + ' بدوا وما كمّلوا'));
+    tiles.appendChild(tile('معدل النقاط', o.avg_points, 'من 500 · ' + num(o.perfect) + ' ولا غلطة'));
+  }
+
+  function playRow(x) {
+    var li = el('li'), dot = el('span', 'dot'), txt = el('span', 'txt');
+    dot.style.setProperty('--c', x.admin ? 'var(--sand)' : x.signed ? 'var(--teal)' : 'var(--muted)');
+    if (x.signed) txt.appendChild(el('bdi', null, x.email || '(بدون إيميل)'));
+    else txt.appendChild(el('span', 'g-who', 'زائر'));
+    if (x.admin) txt.appendChild(el('span', 'chip admin', 'أدمن'));
+    txt.appendChild(el('span', 'g-sep', ' · '));
+    txt.appendChild(el('span', 'g-res', x.score == null ? 'ما كمّل'
+      : x.score + ' من ' + x.of + (x.points == null ? '' : ' · ' + num(x.points) + ' نقطة')));
+    var t = el('time', null, ago(x.at));
+    t.dateTime = x.at; t.title = tf.format(new Date(x.at));
+    li.appendChild(dot); li.appendChild(txt); li.appendChild(t);
+    return li;
+  }
+
+  function loadPlays(more) {
+    return rpc('admin_game_plays', { lim: 50, skip: more ? gp.rows.length : 0 }).then(function (r) {
+      gp.rows = (more ? gp.rows : []).concat((r && r.rows) || []);
+      gp.total = (r && r.total) || 0;
+      var ul = $('g-feed');
+      ul.textContent = '';
+      if (!gp.rows.length) ul.appendChild(el('li', null, 'ما لعب أحد للحين.'));
+      gp.rows.forEach(function (x) { ul.appendChild(playRow(x)); });
+      $('g-more').hidden = gp.rows.length >= gp.total;
+    });
+  }
+
+  function loadGame() {
+    return Promise.all([rpc('admin_game_stats').then(gameStats), loadPlays(false)]).catch(function (e) {
+      if (!missing(e)) throw e;
+      $('g-tiles').textContent = '';
+      $('g-feed').textContent = '';
+      $('g-more').hidden = true;
+      $('g-tiles').appendChild(el('p', 'note', 'أرقام التحدي تحتاج ملف 20261103_game_stats.sql ينشغل بـ Supabase (SQL Editor) مرة وحدة.'));
+    });
+  }
+
+  $('g-more').onclick = function () { loadPlays(true).catch(function (e) { toast(e.message); }); };
+
   /* --- «الأسئلة»: the questions of «تحدي» (#game). Each one: a map or a question, the right answer and
-     two wrong ones, on or off. The game plays 10 of the ones that are on, at random. --- */
+     two wrong ones, on or off. A challenge plays 4 of the ones that are on at random (2 maps, 2 questions)
+     and one from the player's own tree. --- */
 
   var G = root.GAME;
   var STEP_BTNS = [['F', 'أبو'], ['M', 'أم'], ['B', 'أخو'], ['Z', 'أخت'], ['S', 'ولد'], ['D', 'بنت'], ['H', 'زوج'], ['W', 'زوجة']];
@@ -366,6 +421,16 @@
     return (x.q + ' ' + x.a.join(' ')).indexOf(qs.q) >= 0;
   }
 
+  // «طلع 37 مرة · 70% صح» (from finished challenges, not counting admins)
+  function qStat(x) {
+    var s = el('span', 'qstat');
+    if (!x.shown) { s.textContent = 'ما طلع للحين'; return s; }
+    s.appendChild(document.createTextNode('طلع '));
+    s.appendChild(el('b', null, x.shown === 1 ? 'مرة وحدة' : x.shown === 2 ? 'مرتين' : x.shown <= 10 ? x.shown + ' مرات' : num(x.shown) + ' مرة'));
+    s.appendChild(document.createTextNode(' · ' + Math.round(100 * (x.right || 0) / x.shown) + '% صح'));
+    return s;
+  }
+
   function stepsText(p) { return G ? G.stepLabels(p.split('')).join(' ← ') + ' ← ؟' : p; }
 
   function questions(list) {
@@ -375,12 +440,17 @@
     box.textContent = '';
     var shown = qs.list.filter(qMatches);
     if (!shown.length) { box.appendChild(el('p', 'note', qs.list.length ? 'ما في أسئلة بهذا الفلتر.' : 'ما في أسئلة للحين.')); return; }
-    shown.slice().reverse().forEach(function (x) {
+    // newest first; «الأكثر ظهور»: the ones that came up most first
+    shown = qs.show === 'top'
+      ? shown.slice().sort(function (a, b) { return (b.shown || 0) - (a.shown || 0) || b.id - a.id; })
+      : shown.slice().reverse();
+    shown.forEach(function (x) {
       var card = el('div', 'card qrow' + (x.on ? '' : ' is-off'));
       var main = el('div', 'qm');
       var top = el('div', 'qtop');
       top.appendChild(el('span', 'chip', x.k === 'map' ? 'خريطة' : 'سؤال'));
       top.appendChild(el('span', 'qid', '#' + x.id));
+      if (typeof x.shown === 'number') top.appendChild(qStat(x));
       main.appendChild(top);
       if (x.k === 'map') {
         var m = el('div', 'qmap');
@@ -549,6 +619,7 @@
     if (!force && state.loaded[tab]) return Promise.resolve();
     var p = tab === 'overview' ? rpc('admin_overview').then(overview)
       : tab === 'users' ? loadUsers(false)
+      : tab === 'game' ? loadGame()
       : tab === 'questions' ? loadQuestions()
       : tab === 'flags' ? rpc('site_flags').then(flags).catch(function (e) {
         if (!missing(e)) throw e;
@@ -564,13 +635,13 @@
 
   function show(tab) {
     state.tab = tab;
-    document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
-    ['overview', 'users', 'activity', 'questions', 'flags'].forEach(function (t) { $('p-' + t).hidden = t !== tab; });
+    document.querySelectorAll('.tabs .tab').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
+    ['overview', 'users', 'activity', 'game', 'questions', 'flags'].forEach(function (t) { $('p-' + t).hidden = t !== tab; });
     try { history.replaceState(null, '', '#' + tab); } catch (e) {}
     load(tab);
   }
 
-  document.querySelectorAll('.tab').forEach(function (b) { b.onclick = function () { show(b.dataset.tab); }; });
+  document.querySelectorAll('.tabs .tab').forEach(function (b) { b.onclick = function () { show(b.dataset.tab); }; });
   $('refresh').onclick = function () { state.loaded = {}; load(state.tab, true); };
   $('search').onsubmit = function (ev) { ev.preventDefault(); state.q = $('q').value.trim(); loadUsers(false).catch(function (e) { toast(e.message); }); };
   $('u-more').onclick = function () { loadUsers(true).catch(function (e) { toast(e.message); }); };
@@ -595,7 +666,7 @@
       }
       gate('dash');
       var t = (location.hash || '').replace('#', '');
-      show(['overview', 'users', 'activity', 'questions', 'flags'].indexOf(t) >= 0 ? t : 'overview');
+      show(['overview', 'users', 'activity', 'game', 'questions', 'flags'].indexOf(t) >= 0 ? t : 'overview');
     }).catch(function (e) {
       if (missing(e)) { gate('g-setup'); return; }
       $('g-fail-msg').textContent = e.message;
