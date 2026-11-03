@@ -597,7 +597,7 @@
   /* ---------- Page ---------- */
 
   var LOCAL = 'shorbaka.friends.v1', UNSAVED = 'shorbaka.friends.unsaved';
-  // The groups a start comes with, all three picked (Ali: just these three; «+ قروب» adds any other)
+  // The groups a start offers, none picked till I pick them (Ali: just these three; «+ قروب» adds any other)
   var SUGGEST = ['ربع الدوام', 'ربع الديوانية', 'ربع الجامعة'];
   var ZOOM = {
     out: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20M7.5 10.5h6"/>',
@@ -708,7 +708,7 @@
 
     var st = { doc: null, where: 'local', loaded: false, failed: false, seq: 0, saving: null, again: false, pending: false, saveErr: false,
       mode: null, pid: null, gid: null, sel: [], newSel: [], from: null, gFrom: null, lastAdded: null, center: true, zl: 0, z: 1, L: null,
-      starts: SUGGEST.slice(), custom: [], keep: null, fontsOk: false, noTable: false };
+      starts: [], custom: [], keep: null, fontsOk: false, noTable: false };
     var acctReady = !root.ACCOUNT, timer = null;
 
     function accounts() { return root.ACCOUNT && root.ACCOUNT.on() ? root.ACCOUNT : null; }
