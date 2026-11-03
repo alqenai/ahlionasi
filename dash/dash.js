@@ -275,7 +275,12 @@
     'admin:stop_link': ['وقفت رابط شجرة', 'var(--coral)'],
     'admin:delete': ['مسحت حساب', 'var(--coral)'],
     'admin:flag_on': ['شغّلت ميزة', 'var(--teal)'],
-    'admin:flag_off': ['طفّيت ميزة', 'var(--sand)']
+    'admin:flag_off': ['طفّيت ميزة', 'var(--sand)'],
+    'admin:question_add': ['زدت سؤال', 'var(--teal)'],
+    'admin:question_edit': ['عدّلت سؤال', 'var(--sand)'],
+    'admin:question_on': ['شغّلت سؤال', 'var(--teal)'],
+    'admin:question_off': ['طفّيت سؤال', 'var(--sand)'],
+    'admin:question_delete': ['مسحت سؤال', 'var(--coral)']
   };
 
   /* --- «المزايا»: parts of the site to turn on or off. Off only hides it; what people saved stays. --- */
@@ -325,7 +330,7 @@
       dot.style.setProperty('--c', k[1]);
       var txt = el('span', 'txt');
       txt.appendChild(document.createTextNode(k[0] + (e.kind === 'tree' && e.n ? ' (' + people(e.n) + ')' : '') + ' '));
-      txt.appendChild(el('bdi', null, /^admin:flag_/.test(e.kind) ? '«' + (FLAG_NAMES[e.email] || e.email) + '»' : e.email || ''));
+      txt.appendChild(el('bdi', null, /^admin:flag_/.test(e.kind) ? '«' + (FLAG_NAMES[e.email] || e.email) + '»' : /^admin:question_/.test(e.kind) ? '#' + e.email : e.email || ''));
       var t = el('time', null, ago(e.at));
       t.dateTime = e.at; t.title = tf.format(new Date(e.at));
       li.appendChild(dot); li.appendChild(txt); li.appendChild(t);
@@ -333,12 +338,217 @@
     });
   }
 
+  /* --- «الأسئلة»: the questions of «تحدي» (#game). Each one: a map or a question, the right answer and
+     two wrong ones, on or off. The game plays 10 of the ones that are on, at random. --- */
+
+  var G = root.GAME;
+  var STEP_BTNS = [['F', 'أبو'], ['M', 'أم'], ['B', 'أخو'], ['Z', 'أخت'], ['S', 'ولد'], ['D', 'بنت'], ['H', 'زوج'], ['W', 'زوجة']];
+  var qs = { list: [], show: 'all', q: '', edit: null };
+
+  function qMissing() {
+    var box = $('qs');
+    box.textContent = '';
+    var p = el('p', 'note', 'الأسئلة تحتاج ملف 20261103_game.sql ينشغل بـ Supabase (SQL Editor) مرة وحدة. لين ذاك اللعبة تلعب بالأسئلة المبدئية اللي بالموقع.');
+    var a = el('a', 'btn small', 'افتح الملف');
+    a.href = 'https://raw.githubusercontent.com/alqenai/shorbaka/main/supabase/migrations/20261103_game.sql';
+    a.target = '_blank'; a.rel = 'noopener';
+    box.appendChild(p); box.appendChild(a);
+    $('q-count').textContent = '';
+  }
+
+  function qMatches(x) {
+    if (qs.show === 'on' && !x.on) return false;
+    if (qs.show === 'off' && x.on) return false;
+    if (qs.show === 'map' && x.k !== 'map') return false;
+    if (qs.show === 'text' && x.k !== 'text') return false;
+    if (!qs.q) return true;
+    return (x.q + ' ' + x.a.join(' ')).indexOf(qs.q) >= 0;
+  }
+
+  function stepsText(p) { return G ? G.stepLabels(p.split('')).join(' ← ') + ' ← ؟' : p; }
+
+  function questions(list) {
+    if (list) qs.list = list;
+    var box = $('qs'), on = qs.list.filter(function (x) { return x.on; }).length;
+    $('q-count').textContent = num(qs.list.length) + ' سؤال، ' + num(on) + ' شغّال';
+    box.textContent = '';
+    var shown = qs.list.filter(qMatches);
+    if (!shown.length) { box.appendChild(el('p', 'note', qs.list.length ? 'ما في أسئلة بهذا الفلتر.' : 'ما في أسئلة للحين.')); return; }
+    shown.slice().reverse().forEach(function (x) {
+      var card = el('div', 'card qrow' + (x.on ? '' : ' is-off'));
+      var main = el('div', 'qm');
+      var top = el('div', 'qtop');
+      top.appendChild(el('span', 'chip', x.k === 'map' ? 'خريطة' : 'سؤال'));
+      top.appendChild(el('span', 'qid', '#' + x.id));
+      main.appendChild(top);
+      if (x.k === 'map') {
+        var m = el('div', 'qmap');
+        if (G) m.innerHTML = G.mapSvg(x.p, { scale: 0.8 });
+        main.appendChild(m);
+        main.appendChild(el('p', 'qq', x.q || 'شنو يصير لك؟'));
+      } else {
+        main.appendChild(el('p', 'qq', x.q));
+      }
+      var ans = el('div', 'qa');
+      ans.appendChild(el('span', 'ok', '✓ ' + x.a[0]));
+      ans.appendChild(el('span', 'no', x.a[1]));
+      ans.appendChild(el('span', 'no', x.a[2]));
+      main.appendChild(ans);
+      var side = el('div', 'qside');
+      var sw = el('input');
+      sw.type = 'checkbox'; sw.setAttribute('role', 'switch'); sw.className = 'qsw'; sw.checked = !!x.on;
+      sw.setAttribute('aria-label', 'شغّال');
+      sw.onchange = function () {
+        var to = sw.checked;
+        sw.disabled = true;
+        rpc('admin_set_question_on', { qid: x.id, turn_on: to }).then(function () {
+          x.on = to; sw.disabled = false; state.loaded.activity = false;
+          toast(to ? 'السؤال شغّال' : 'السؤال طافي، ما بيطلع باللعبة');
+          questions();
+        }).catch(function (e) { sw.disabled = false; sw.checked = !to; toast('ما تغيّر: ' + e.message); });
+      };
+      var ed = el('button', 'btn small', 'عدّل');
+      ed.type = 'button';
+      ed.onclick = function () { openEditor(x); };
+      side.appendChild(sw); side.appendChild(ed);
+      card.appendChild(main); card.appendChild(side);
+      box.appendChild(card);
+    });
+  }
+
+  function openEditor(x) {
+    qs.edit = x ? { id: x.id, k: x.k, q: x.q, p: x.p, a: x.a.slice(), on: x.on } : { id: null, k: 'map', q: '', p: 'F', a: ['', '', ''], on: true };
+    editor(true);
+  }
+
+  // Draws the editor from qs.edit, so switching the kind or adding a step keeps what was typed.
+  function editor(scroll) {
+    var e = qs.edit;
+    var box = $('q-edit');
+    box.hidden = false;
+    box.textContent = '';
+    box.appendChild(el('h3', null, e.id ? 'عدّل السؤال #' + e.id : 'سؤال جديد'));
+    var seg = el('div', 'seg');
+    [['map', 'خريطة'], ['text', 'سؤال أو لغز']].forEach(function (k) {
+      var b = el('button', 'tab', k[1]);
+      b.type = 'button'; b.setAttribute('aria-selected', String(e.k === k[0]));
+      b.onclick = function () { e.k = k[0]; if (e.k === 'map' && !e.p) e.p = 'F'; editor(false); };
+      seg.appendChild(b);
+    });
+    box.appendChild(seg);
+
+    if (e.k === 'map') {
+      box.appendChild(el('p', 'note', 'دوس الخطوات من عندك لين توصل للشخص. الخريطة تطلع مثل ما يشوفها اللاعب.'));
+      var pv = el('div', 'qmap big');
+      if (G) pv.innerHTML = G.mapSvg(e.p, { scale: 1 });
+      box.appendChild(pv);
+      box.appendChild(el('p', 'qsteps', stepsText(e.p)));
+      var steps = el('div', 'steps');
+      STEP_BTNS.forEach(function (sb) {
+        var b = el('button', 'btn small', '+ ' + sb[1]);
+        b.type = 'button'; b.disabled = e.p.length >= 6;
+        b.onclick = function () { e.p += sb[0]; editor(false); };
+        steps.appendChild(b);
+      });
+      var un = el('button', 'btn small danger', 'شيل آخر خطوة');
+      un.type = 'button'; un.disabled = e.p.length <= 1;
+      un.onclick = function () { e.p = e.p.slice(0, -1); editor(false); };
+      steps.appendChild(un);
+      box.appendChild(steps);
+    }
+
+    function field(label, value, ph, set, area) {
+      var w = el('label', 'fld');
+      w.appendChild(el('span', null, label));
+      var i = el(area ? 'textarea' : 'input', 'input');
+      i.value = value || ''; i.placeholder = ph || ''; if (!area) i.maxLength = 80; else { i.maxLength = 300; i.rows = 3; }
+      i.oninput = function () { set(i.value); };
+      w.appendChild(i);
+      box.appendChild(w);
+      return i;
+    }
+    field(e.k === 'map' ? 'السؤال (اختياري)' : 'السؤال', e.q, e.k === 'map' ? 'شنو يصير لك؟' : 'مثال: أخو عمك، وما هو عمك. منو؟', function (v) { e.q = v; }, e.k === 'text');
+    field('الجواب الصح', e.a[0], e.k === 'map' ? 'مثال: ولد عمي' : '', function (v) { e.a[0] = v; }).classList.add('is-ok');
+    field('جواب غلط', e.a[1], '', function (v) { e.a[1] = v; });
+    field('جواب غلط ثاني', e.a[2], '', function (v) { e.a[2] = v; });
+
+    var onRow = el('label', 'flag');
+    var ow = el('span', 'fw'); ow.appendChild(el('b', null, 'شغّال'));
+    ow.appendChild(el('small', null, 'يطلع باللعبة. طفّه إذا تبيه يبقى محفوظ بس ما يطلع.'));
+    var osw = el('input'); osw.type = 'checkbox'; osw.setAttribute('role', 'switch'); osw.checked = e.on;
+    osw.onchange = function () { e.on = osw.checked; };
+    onRow.appendChild(ow); onRow.appendChild(osw);
+    box.appendChild(onRow);
+
+    var msg = el('p', 'err'); msg.hidden = true;
+    box.appendChild(msg);
+    var acts = el('div', 'acts');
+    var save = el('button', 'btn primary', 'احفظ'); save.type = 'button';
+    var cancel = el('button', 'btn', 'إلغاء'); cancel.type = 'button';
+    cancel.onclick = closeEditor;
+    save.onclick = function () {
+      var a = e.a.map(function (t) { return String(t || '').trim(); });
+      var bad = a.some(function (t) { return !t; }) ? 'اكتب الجواب الصح والجوابين الغلط.'
+        : new Set(a).size < 3 ? 'الأجوبة الثلاثة لازم تكون مختلفة.'
+        : e.k === 'text' && !String(e.q || '').trim() ? 'اكتب السؤال.'
+        : e.k === 'map' && !e.p ? 'زيد خطوة على الأقل.' : '';
+      if (bad) { msg.textContent = bad; msg.hidden = false; return; }
+      save.disabled = true;
+      rpc('admin_save_question', { qid: e.id, q_kind: e.k, q_text: e.q || '', q_path: e.k === 'map' ? e.p : '',
+        q_answer: a[0], q_wrong1: a[1], q_wrong2: a[2], turn_on: e.on }).then(function () {
+        toast(e.id ? 'انحفظ التعديل' : 'انزاد السؤال');
+        state.loaded.activity = false;
+        closeEditor();
+        return loadQuestions();
+      }).catch(function (er) {
+        save.disabled = false;
+        msg.textContent = missing(er) ? 'شغّل ملف 20261103_game.sql بـ Supabase أول.' : 'ما انحفظ: ' + er.message;
+        msg.hidden = false;
+      });
+    };
+    acts.appendChild(save); acts.appendChild(cancel);
+    if (e.id) {
+      var del = el('button', 'btn danger', 'احذف'); del.type = 'button';
+      del.style.marginInlineStart = 'auto';
+      del.onclick = function () {
+        if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'متأكد؟ دوس مرة ثانية'; return; }
+        del.disabled = true;
+        rpc('admin_delete_question', { qid: e.id }).then(function () {
+          toast('انحذف السؤال'); state.loaded.activity = false; closeEditor(); return loadQuestions();
+        }).catch(function (er) { del.disabled = false; toast('ما انحذف: ' + er.message); });
+      };
+      acts.appendChild(del);
+    }
+    box.appendChild(acts);
+    if (scroll) box.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  function closeEditor() { qs.edit = null; $('q-edit').hidden = true; $('q-edit').textContent = ''; }
+
+  function loadQuestions() {
+    return rpc('admin_game_questions').then(function (list) { questions(Array.isArray(list) ? list : []); }).catch(function (e) {
+      if (missing(e)) { qMissing(); return; }
+      throw e;
+    });
+  }
+
+  $('q-new').onclick = function () { openEditor(null); };
+  $('q-search').oninput = function () { qs.q = $('q-search').value.trim(); questions(); };
+  document.querySelectorAll('#q-filter button').forEach(function (b) {
+    b.onclick = function () {
+      qs.show = b.dataset.f;
+      document.querySelectorAll('#q-filter button').forEach(function (x) { x.setAttribute('aria-selected', String(x === b)); });
+      questions();
+    };
+  });
+
   /* --- tabs and loading --- */
 
   function load(tab, force) {
     if (!force && state.loaded[tab]) return Promise.resolve();
     var p = tab === 'overview' ? rpc('admin_overview').then(overview)
       : tab === 'users' ? loadUsers(false)
+      : tab === 'questions' ? loadQuestions()
       : tab === 'flags' ? rpc('site_flags').then(flags).catch(function (e) {
         if (!missing(e)) throw e;
         $('flags').textContent = '';
@@ -354,7 +564,7 @@
   function show(tab) {
     state.tab = tab;
     document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
-    ['overview', 'users', 'activity', 'flags'].forEach(function (t) { $('p-' + t).hidden = t !== tab; });
+    ['overview', 'users', 'activity', 'questions', 'flags'].forEach(function (t) { $('p-' + t).hidden = t !== tab; });
     try { history.replaceState(null, '', '#' + tab); } catch (e) {}
     load(tab);
   }
@@ -384,7 +594,7 @@
       }
       gate('dash');
       var t = (location.hash || '').replace('#', '');
-      show(['overview', 'users', 'activity', 'flags'].indexOf(t) >= 0 ? t : 'overview');
+      show(['overview', 'users', 'activity', 'questions', 'flags'].indexOf(t) >= 0 ? t : 'overview');
     }).catch(function (e) {
       if (missing(e)) { gate('g-setup'); return; }
       $('g-fail-msg').textContent = e.message;

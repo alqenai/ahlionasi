@@ -27,7 +27,7 @@
       padding: calc(16px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
       font-variant-numeric: tabular-nums;
     }
-    button, input { font: inherit; color: inherit; }
+    button, input, textarea { font: inherit; color: inherit; }
     .wrap { max-width: 1040px; margin: 0 auto; }
 
     header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -144,6 +144,41 @@
     .feed .txt bdi { direction: ltr; unicode-bidi: isolate; color: var(--muted); word-break: break-all; }
     .feed time { flex: none; font-size: .78rem; color: var(--muted); }
     .note { font-size: .8rem; color: var(--muted); margin-top: 14px; }
+    .q-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .q-head .count { margin: 0; }
+    .q-tools { display: grid; gap: 10px; margin: 14px 0 6px; }
+    @media (min-width: 760px) { .q-tools { grid-template-columns: auto 1fr; align-items: center; } }
+    .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+    .qs { display: grid; gap: 10px; grid-template-columns: 1fr; }
+    @media (min-width: 760px) { .qs { grid-template-columns: 1fr 1fr; } }
+    .qrow { display: flex; gap: 12px; padding: 14px; align-items: flex-start; }
+    .qrow.is-off { opacity: .55; }
+    .qm { flex: 1; min-width: 0; }
+    .qtop { display: flex; align-items: center; gap: 8px; }
+    .qid { font-size: .75rem; color: var(--muted); }
+    .qmap { display: flex; justify-content: center; margin-top: 8px; font-family: "Readex Pro", system-ui, sans-serif; }
+    .qmap svg { max-width: 100%; height: auto; max-height: 150px; }
+    .qmap.big { padding: 10px; border-radius: 14px; background: rgba(0, 0, 0, .18); }
+    .qmap.big svg { max-height: 240px; }
+    .qq { font-weight: 500; margin-top: 6px; }
+    .qa { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: .88rem; }
+    .qa .ok { color: var(--teal); font-weight: 500; }
+    .qa .no { color: var(--muted); }
+    .qside { display: grid; gap: 8px; justify-items: center; }
+    .qsw { appearance: none; -webkit-appearance: none; width: 50px; height: 30px; border-radius: 999px; background: rgba(244, 239, 230, .18); position: relative; cursor: pointer; transition: background .2s; margin: 0; }
+    .qsw::after { content: ""; position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--pearl); transition: transform .2s; }
+    .qsw:checked { background: var(--teal); }
+    .qsw:checked::after { transform: translateX(-20px); }
+    .q-edit { display: grid; gap: 12px; margin-top: 12px; }
+    .q-edit h3 { font-size: 1.05rem; }
+    .q-edit .note { margin: 0; }
+    .qsteps { text-align: center; color: var(--muted); font-size: .85rem; }
+    .steps { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .fld { display: grid; gap: 6px; }
+    .fld > span { font-size: .85rem; color: var(--muted); }
+    .fld textarea.input { resize: vertical; line-height: 1.6; }
+    .fld .input.is-ok { box-shadow: inset 0 0 0 1px rgba(46, 196, 182, .6); }
+    .q-edit .acts { display: flex; gap: 8px; flex-wrap: wrap; }
     .toast {
       position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%);
       background: var(--pearl); color: var(--navy); padding: 10px 18px; border-radius: 999px; font-size: .9rem; z-index: 9; max-width: calc(100% - 32px);
@@ -203,6 +238,7 @@
         <button class="tab" role="tab" aria-selected="true" data-tab="overview">نظرة عامة</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="users">المستخدمين</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="activity">آخر الأحداث</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="questions">الأسئلة</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="flags">المزايا</button>
         </div>
         <div class="rf"><span class="stamp" id="stamp"></span><button class="btn small" id="refresh" type="button">تحديث</button></div>
@@ -240,6 +276,25 @@
         <div class="more"><button class="btn" id="u-more" type="button" hidden>اعرض أكثر</button></div>
       </section>
 
+      <section id="p-questions" role="tabpanel" hidden>
+        <div class="q-head">
+          <p class="count" id="q-count"></p>
+          <button class="btn primary small" id="q-new" type="button">+ سؤال جديد</button>
+        </div>
+        <div class="card q-edit" id="q-edit" hidden></div>
+        <div class="q-tools">
+          <div class="seg" id="q-filter" role="group" aria-label="فلتر">
+            <button class="tab" type="button" data-f="all" aria-selected="true">الكل</button>
+            <button class="tab" type="button" data-f="on" aria-selected="false">شغّالة</button>
+            <button class="tab" type="button" data-f="off" aria-selected="false">طافية</button>
+            <button class="tab" type="button" data-f="map" aria-selected="false">خرايط</button>
+            <button class="tab" type="button" data-f="text" aria-selected="false">أسئلة</button>
+          </div>
+          <input class="input" id="q-search" type="search" placeholder="دوّر بالسؤال أو الجواب" autocomplete="off">
+        </div>
+        <p class="note">كل لعبة تطلع 10 أسئلة عشوائية من الشغّالة. الجواب الصح ينكتب أول، واللعبة تخلط ترتيب الأجوبة.</p>
+        <div class="qs" id="qs"></div>
+      </section>
       <section id="p-flags" role="tabpanel" hidden>
         <div class="card">
           <p class="note">شغّل أو طفّي أجزاء من الموقع. اللي تطفيه يختفي عن الناس بس، وبياناته تبقى محفوظة.</p>
@@ -254,6 +309,7 @@
   <div class="toast" id="toast" role="status" hidden></div>
 
   <script src="/account.js?v=14"></script>
-  <script src="/dash/dash.js?v=2"></script>
+  <script src="/game.js?v=1"></script>
+  <script src="/dash/dash.js?v=3"></script>
 </body>
 </html>

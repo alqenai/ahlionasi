@@ -1,11 +1,13 @@
 # شرباكة | Shorbaka
 
-Four sections, picked under the hero:
+Five sections, picked under the hero:
 
 - **شنو يصير لك؟** Type your name and someone else's, walk the family tree one step at a time, and get the relation written the way people say it («فهد يصير ولد عم أبوي»). Share it as an Instagram story or post, copy it, or keep it in «اللي يصيرون لي».
 - **شجرة عائلتي** (`#tree`). Start from yourself and add relatives one by one; under every name it says what they are to you («ولد عمي»). See it from your father's side or your mother's side, and share it as a story or post. Saved in your account when signed in, otherwise on the device.
 - **شجرة دوامي** (`#work`). The same idea for a workplace: start from yourself and add your manager, colleagues and the people under you, with their job and department; under every name it says what they are to you («مديرتي»، «زميلي»، «موظف عندي»). Rings are coloured by department. Mark friends at work «ربعي» (a heart) and people who left «طلع من الدوام». Share it as a story or post (with «أخفي الأسامي», only «ربعي» keep their names) or print it as an A4 PDF. Signed in, «رابط الشجرة كاملة» gives the whole tree its own link with no password (`shorbaka.com/w/#code`), and the PDF's QR opens it.
 - **ربعي** (`#friends`). Your friends and the groups you know them from (الدوام، كرة القدم، النادي…), drawn as metro lines: your name is the bar on top, each group is a line in its colour, a friend in one group is a station on it, and a friend in several groups is a pearl capsule across their lines. Tap a name or a group to change it. Share it as a story or post or print it as an A4 PDF, picking which groups show (one, some or all) and «الأسامي: كلها / بس اسمي». Signed in, «رابط ربعي» gives it its own link with no password (`shorbaka.com/f/#code`), and the PDF's QR opens it.
+
+- **تحدي** (`#game`). A family quiz: 10 random questions, each with three answers and one right. Some show a small map of you and a person («أنا ← أبوي ← أخوه ← ؟», «شنو يصير لك؟»), others are riddles and questions about names, generations and counting. At the end the score, shared as a story or post. The questions live in `public.game_questions` and are edited from the dashboard («الأسئلة»): add, change, turn on or off, delete.
 
 Live at **[shorbaka.com](https://shorbaka.com)**. The bigger app (mapping family, friends and circles) comes later.
 
@@ -20,6 +22,7 @@ Static files, no build step, served by GitHub Pages from `main`:
 - `w/index.html` + `wlink.js`: the page a work tree's link opens, to look at only (it asks the database for the tree with the link's code).
 - `friends.js`: «ربعي»: its data (one JSON document per person: groups and friends), the metro-lines layout, the pictures and PDF, and the section's page logic.
 - `f/index.html` + `flink.js`: the page a «رابط ربعي» opens, to look at only.
+- `game.js` + `game-bank.js`: «تحدي»: the map drawing (`GAME.mapSvg`, also used by the dashboard), the round, the score picture. `game-bank.js` holds the starter questions, played when the database can't be reached; `supabase/migrations/20261103_game.sql` puts the same list in the table.
 - `account.js`: Google sign-in and what is saved in the account (saved relations, the family tree, the work tree and «ربعي»), through Supabase. Accounts stay off while its `CONFIG` is empty; everything then lives on the device only.
 - `vendor/supabase-2.117.3.js`: the Supabase browser client (from npm `@supabase/supabase-js`, MIT).
 - `supabase/migrations/`: the database tables and their row-level security (each account sees only its own rows). Run each file once in the Supabase SQL Editor.
