@@ -1628,7 +1628,7 @@
     var secLinks = Array.prototype.slice.call(document.querySelectorAll('.sec'));
     function showSection(name, scroll) {
       if (!mainEl) return;
-      name = (name === 'tree' || name === 'work' || name === 'friends') && $(name) ? name : 'kin';
+      name = (name === 'tree' || name === 'work' || name === 'friends' || name === 'game') && $(name) ? name : 'kin';
       mainEl.setAttribute('data-sec', name);
       secLinks.forEach(function (a) {
         if (a.dataset.sec === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
@@ -1636,6 +1636,7 @@
       if (root.TREE && root.TREE.shown) root.TREE.shown(name === 'tree');
       if (root.WORK && root.WORK.shown) root.WORK.shown(name === 'work');
       if (root.FRIENDS && root.FRIENDS.shown) root.FRIENDS.shown(name === 'friends');
+      if (root.GAME && root.GAME.shown) root.GAME.shown(name === 'game');
       if (name === 'kin') render();  // names from the tree may have changed meanwhile
       if (scroll) $(name).scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
@@ -1648,11 +1649,18 @@
     });
     function hashSec() {
       var h = location.hash;
-      return h === '#tree' ? 'tree' : h === '#work' ? 'work' : h === '#friends' ? 'friends' : 'kin';
+      return h === '#tree' ? 'tree' : h === '#work' ? 'work' : h === '#friends' ? 'friends' : h === '#game' ? 'game' : 'kin';
     }
     window.addEventListener('hashchange', function () { showSection(hashSec(), hashSec() !== 'kin'); });
     showSection(hashSec(), false);
     if (hashSec() !== 'kin' && $(hashSec())) setTimeout(function () { $(hashSec()).scrollIntoView({ block: 'start' }); }, 0);
+    var acctGame = $('acct-game');
+    if (acctGame) acctGame.addEventListener('click', function () {
+      closeMenu();
+      if (history.replaceState) history.replaceState(null, '', '#game');
+      showSection('game', false);
+      if (root.GAME && root.GAME.showResults) root.GAME.showResults();
+    });
     var acctTree = $('acct-tree');
     if (acctTree) acctTree.addEventListener('click', function () {
       closeMenu();

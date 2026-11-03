@@ -496,6 +496,8 @@
     main:not([data-sec="tree"]) #tree { display: none; }
     main:not([data-sec="work"]) #work { display: none; }
     main:not([data-sec="friends"]) #friends { display: none; }
+    main[data-sec="game"] #kin, main[data-sec="game"] #kin-wallet { display: none !important; }
+    main:not([data-sec="game"]) #game { display: none; }
     /* four sections in the switcher, short names «شنو يصير لك؟ · عائلتي · دوامي · ربعي» (Ali, 2026-11-03),
        as wide as the card under it; on a phone the words alone, and «شنو» drops only on the narrowest */
     .secs { display: flex; }
@@ -505,6 +507,86 @@
       .sec svg { display: none; }
     }
     @media (max-width: 359px) { .sec-l { display: none; } }
+    /* five tabs with «تحدي» (2026-11-03): the icons go a little earlier, still as wide as the card */
+    @media (max-width: 519px) { .sec svg { display: none; } .sec { gap: 6px; padding: 0 4px; } }
+    @media (max-width: 400px) { .secs { gap: 2px; padding: 4px; } .sec { padding: 0 2px; font-size: .84rem; min-height: 44px; } }
+
+    /* «تحدي» */
+    .gm-start-btn { width: 100%; margin-top: 20px; }
+    .gm-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .9rem; color: var(--muted); }
+    .gm-top b { color: var(--teal); font-weight: 700; font-size: 1rem; }
+    .gm-sc { display: inline-flex; align-items: center; gap: 6px; }
+    .gm-sc { font-size: .85rem; }
+    .gm-gain { padding: 1px 8px; border-radius: 999px; background: rgba(46, 196, 182, .18); color: var(--teal); font-weight: 700; font-size: .85rem; direction: ltr; animation: gm-pop .4s ease-out; }
+    .gm-gain.is-zero { background: rgba(255, 138, 128, .16); color: var(--coral); }
+    @keyframes gm-pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+    .gm-time { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+    .gm-time-n { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 1rem; color: var(--sand); box-shadow: inset 0 0 0 2px rgba(233, 196, 106, .5); font-variant-numeric: tabular-nums; }
+    .gm-time-track { flex: 1; height: 8px; border-radius: 4px; background: rgba(244, 239, 230, .1); overflow: hidden; }
+    .gm-time-track i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--sand), var(--teal)); transform-origin: right center; }
+    .gm-time.is-over .gm-time-n { color: var(--coral); box-shadow: inset 0 0 0 2px rgba(255, 138, 128, .6); }
+    .gm-time-t { margin-top: 6px; min-height: 1.4em; font-size: .82rem; color: var(--muted); text-align: center; }
+    .gm-bar { display: flex; gap: 4px; margin-top: 10px; direction: rtl; }
+    .gm-bar i { flex: 1; height: 6px; border-radius: 3px; background: rgba(244, 239, 230, .12); }
+    .gm-bar i.is-cur { background: rgba(244, 239, 230, .45); }
+    .gm-bar i.is-ok { background: var(--teal); }
+    .gm-bar i.is-no { background: var(--coral); }
+    .gm-card { margin-top: 16px; padding: 18px 14px; border-radius: 22px; background: rgba(11, 35, 59, .55); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .1); text-align: center; }
+    .gm-card.is-in { animation: gm-in .35s ease-out both; }
+    @keyframes gm-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .gm-map { display: flex; justify-content: center; }
+    .gm-map svg { display: block; max-width: 100%; height: auto; max-height: 300px; font-family: "Readex Pro", system-ui, sans-serif; }
+    .gm-tag { display: inline-block; margin-bottom: 8px; padding: 2px 10px; border-radius: 999px; background: rgba(46, 196, 182, .14); color: var(--teal); font-size: .8rem; }
+    .gm-q { font-size: 1.2rem; font-weight: 700; line-height: 1.7; }
+    .gm-map + .gm-q { margin-top: 12px; color: var(--sand); }
+    .gm-card.is-text .gm-q { font-size: 1.15rem; padding: 10px 4px; }
+    .gm-opts { display: grid; gap: 10px; margin-top: 14px; }
+    .gm-opt {
+      display: flex; align-items: center; justify-content: center; min-height: 56px; padding: 8px 16px; border: 0; border-radius: 18px;
+      background: rgba(244, 239, 230, .07); box-shadow: inset 0 0 0 1px rgba(244, 239, 230, .18);
+      color: var(--pearl); font-size: 1.08rem; font-weight: 500; cursor: pointer; transition: background .15s, box-shadow .15s, opacity .2s;
+    }
+    .gm-opt:hover:not(:disabled) { background: rgba(244, 239, 230, .13); }
+    .gm-opt:active:not(:disabled) { transform: scale(.98); }
+    .gm-opt:disabled { cursor: default; }
+    .gm-opt.is-right { background: rgba(46, 196, 182, .2); box-shadow: inset 0 0 0 2px var(--teal); color: #fff; font-weight: 700; }
+    .gm-opt.is-wrong { background: rgba(255, 138, 128, .16); box-shadow: inset 0 0 0 2px var(--coral); animation: gm-no .35s; }
+    .gm-opt.is-off { opacity: .45; }
+    @keyframes gm-no { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+    .gm-next { width: 100%; margin-top: 14px; }
+    .gm-end { text-align: center; }
+    .gm-big { direction: ltr; margin-top: 18px; line-height: 1; }
+    .gm-big b { font-size: 5.5rem; font-weight: 700; color: var(--sand); text-shadow: 0 0 40px rgba(233, 196, 106, .35); }
+    .gm-big-u { margin-top: 6px; color: var(--muted); font-size: .95rem; }
+    .gm-line { margin-top: 12px; font-size: 1.3rem; font-weight: 700; }
+    .gm-dots { display: flex; justify-content: center; gap: 8px; margin-top: 16px; direction: rtl; flex-wrap: wrap; }
+    .gm-dots i { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(244, 239, 230, .28); }
+    .gm-dots i.is-ok { background: var(--teal); box-shadow: none; }
+    .gm-end-next { margin-top: 14px; font-size: .9rem; }
+    .gm-lock { display: flex; align-items: center; gap: 12px; margin-top: 20px; padding: 14px 16px; border-radius: 18px; background: rgba(233, 196, 106, .1); box-shadow: inset 0 0 0 1px rgba(233, 196, 106, .3); }
+    .gm-lock svg { width: 28px; height: 28px; flex: none; fill: none; stroke: var(--sand); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .gm-lock p { display: grid; gap: 2px; }
+    .gm-lock b { color: var(--sand); font-size: 1.05rem; }
+    .gm-lock span { color: var(--muted); font-size: .85rem; }
+    .gm-res { margin-top: 22px; scroll-margin-top: 90px; }
+    .gm-res-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .gm-res h3 { font-size: 1rem; font-weight: 700; }
+    .gm-res-total { font-size: .85rem; color: var(--muted); }
+    .gm-res-total b { color: var(--sand); font-size: 1rem; }
+    .gm-hint { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--sand); font-size: .92rem; }
+    .gm-hint svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .gm-end-total { margin-top: 14px; display: inline-block; padding: 4px 14px; border-radius: 999px; background: rgba(233, 196, 106, .12); color: var(--sand); font-weight: 700; font-size: .95rem; }
+    .gm-res-list { list-style: none; display: grid; gap: 6px; }
+    .gm-res-list li { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 14px; background: rgba(244, 239, 230, .05); }
+    .gm-r-day { flex: 1; min-width: 0; font-size: .9rem; color: var(--muted); }
+    .gm-r-sc { font-size: 1.05rem; color: var(--sand); white-space: nowrap; }
+    .gm-r-sc small { font-size: .78rem; font-weight: 400; color: var(--muted); }
+    .gm-r-share { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(244, 239, 230, .08); color: var(--pearl); font-size: .85rem; cursor: pointer; }
+    .gm-r-share svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+    .gm-res-empty { color: var(--muted); font-size: .9rem; }
+    .gm-res .kin-w-in { margin-top: 10px; }
+    .gm-end-btns { display: grid; gap: 10px; margin-top: 22px; }
+    .gm-end-btns .kin-btn { width: 100%; }
 
     /* «شجرة عائلتي» */
     .tree:focus { outline: none; }
@@ -836,6 +918,7 @@
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-wallet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg><span>اللي يصيرون لي</span><span class="acct-count" id="acct-count"></span></button>
         <button type="button" class="acct-item" id="acct-tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>شجرة عائلتي</span><span class="acct-count" id="acct-tree-count"></span></button>
+        <button type="button" class="acct-item" id="acct-game"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.4"/><circle cx="12" cy="16.8" r=".6" fill="currentColor"/></svg><span>نتائج التحدي</span><span class="acct-count" id="acct-game-count"></span></button>
         <a class="acct-item" id="acct-dash" href="/dash/" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="8" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="14.5" width="7" height="6" rx="1.5"/></svg><span>لوحة التحكم</span></a>
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h10"/></svg><span>تسجيل الخروج</span></button>
@@ -861,6 +944,7 @@
       <a class="sec" href="#tree" data-sec="tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>عائلتي</span></a>
       <a class="sec" href="#work" data-sec="work"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7V5.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V7M3 13h18"/></svg><span>دوامي</span></a>
       <a class="sec" href="#friends" data-sec="friends"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5v17M12 3.5v17M19 3.5v17"/><circle cx="5" cy="9" r="1.6"/><path d="M3.5 15.5h10"/><circle cx="19" cy="12" r="1.6"/></svg><span>ربعي</span></a>
+      <a class="sec" href="#game" data-sec="game"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.4"/><circle cx="12" cy="16.8" r=".6" fill="currentColor"/></svg><span>تحدي</span></a>
     </nav>
 
     <section class="kin" id="kin" aria-labelledby="kin-title">
@@ -1092,6 +1176,51 @@
         <button type="button" class="kin-w-in tr-in" id="fr-in" hidden>سجّل دخول عشان ينحفظون بحسابك</button>
       </div>
       <p class="kin-w-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg><span><b>ربعك لك بروحك.</b> ما ينشرون بالموقع ولا نشاركهم مع أحد، وإنت اللي تقرر شنو تشارك. وتقدر تخفي أساميهم قبل لا تنشر.</span></p>
+    </section>
+
+    <section class="kin game" id="game" tabindex="-1" aria-labelledby="gm-title">
+      <div id="gm-start">
+        <h2 id="gm-title">تحدي شنو يصير لك؟</h2>
+        <p class="kin-en" lang="en">Family quiz</p>
+        <p class="kin-sub">5 أسئلة، ولكل سؤال 10 ثواني. كل ما جاوبت أسرع، نقاطك تزيد.</p>
+        <button type="button" class="kin-btn kin-primary gm-start-btn" id="gm-go"><span>يلا نلعب</span></button>
+        <div class="gm-lock" id="gm-lock" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg>
+          <p><b id="gm-lock-t"></b><span>تحدي واحد كل يوم</span></p>
+        </div>
+        <div class="gm-res" id="gm-res">
+          <div class="gm-res-head"><h3>نتائج التحدي</h3><span class="gm-res-total" id="gm-res-total" hidden>مجموعك <b id="gm-res-total-n"></b> نقطة</span></div>
+          <ol class="gm-res-list" id="gm-res-list"></ol>
+          <p class="gm-res-empty" id="gm-res-empty">نتائجك تطلع هني بعد أول تحدي.</p>
+          <button type="button" class="kin-w-in" id="gm-res-in" hidden>سجّل دخول عشان تنحفظ نتائجك</button>
+        </div>
+      </div>
+      <div id="gm-play" hidden>
+        <div class="gm-top"><span id="gm-step"></span><span class="gm-sc"><span class="gm-gain" id="gm-gain" hidden></span><b id="gm-score">0</b><span>نقطة</span></span></div>
+        <div class="gm-bar" id="gm-bar" aria-hidden="true"></div>
+        <div class="gm-time" id="gm-time">
+          <span class="gm-time-n" id="gm-time-n" aria-hidden="true">10</span>
+          <div class="gm-time-track"><i id="gm-time-bar"></i></div>
+        </div>
+        <p class="gm-time-t" id="gm-time-t" aria-live="polite"></p>
+        <div class="gm-card" id="gm-card" aria-live="polite"></div>
+        <div class="gm-opts" id="gm-opts"></div>
+        <button type="button" class="kin-btn kin-primary gm-next" id="gm-next" hidden><span>التالي</span></button>
+      </div>
+      <div class="gm-end" id="gm-end" hidden>
+        <p class="kin-sub">نتيجتك</p>
+        <p class="gm-big" id="gm-big"></p>
+        <p class="gm-big-u" id="gm-big-u"></p>
+        <p class="gm-line" id="gm-line"></p>
+        <p class="gm-hint" id="gm-hint" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><span id="gm-hint-t"></span></p>
+        <div class="gm-dots" id="gm-dots" aria-hidden="true"></div>
+        <p class="gm-end-total" id="gm-end-total" hidden></p>
+        <p class="kin-sub gm-end-next">تحديك الجاي بعد 24 ساعة</p>
+        <div class="gm-end-btns">
+          <button type="button" class="kin-btn kin-primary" id="gm-share"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شارك نتيجتك</span></button>
+          <button type="button" class="kin-btn" id="gm-again"><span>نتائج التحدي</span></button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -1411,10 +1540,12 @@
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
   <script src="/account.js?v=14" defer></script>
   <script src="/flags.js?v=1" defer></script>
-  <script src="/kin.js?v=26" defer></script>
+  <script src="/kin.js?v=28" defer></script>
   <script src="/tree.js?v=21" defer></script>
   <script src="/work.js?v=3" defer></script>
   <script src="/friends.js?v=3" defer></script>
+  <script src="/game-bank.js?v=1" defer></script>
+  <script src="/game.js?v=6" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
