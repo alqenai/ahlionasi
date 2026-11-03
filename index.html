@@ -573,6 +573,8 @@
     .gm-res h3 { font-size: 1rem; font-weight: 700; }
     .gm-res-total { font-size: .85rem; color: var(--muted); }
     .gm-res-total b { color: var(--sand); font-size: 1rem; }
+    .gm-hint { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--sand); font-size: .92rem; }
+    .gm-hint svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .gm-end-total { margin-top: 14px; display: inline-block; padding: 4px 14px; border-radius: 999px; background: rgba(233, 196, 106, .12); color: var(--sand); font-weight: 700; font-size: .95rem; }
     .gm-res-list { list-style: none; display: grid; gap: 6px; }
     .gm-res-list li { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 14px; background: rgba(244, 239, 230, .05); }
@@ -1210,6 +1212,7 @@
         <p class="gm-big" id="gm-big"></p>
         <p class="gm-big-u" id="gm-big-u"></p>
         <p class="gm-line" id="gm-line"></p>
+        <p class="gm-hint" id="gm-hint" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><span id="gm-hint-t"></span></p>
         <div class="gm-dots" id="gm-dots" aria-hidden="true"></div>
         <p class="gm-end-total" id="gm-end-total" hidden></p>
         <p class="kin-sub gm-end-next">تحديك الجاي بعد 24 ساعة</p>
@@ -1542,7 +1545,7 @@
   <script src="/work.js?v=3" defer></script>
   <script src="/friends.js?v=3" defer></script>
   <script src="/game-bank.js?v=1" defer></script>
-  <script src="/game.js?v=5" defer></script>
+  <script src="/game.js?v=6" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>

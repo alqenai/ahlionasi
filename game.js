@@ -433,7 +433,7 @@
       step: $('gm-step'), score: $('gm-score'), bar: $('gm-bar'), card: $('gm-card'), opts: $('gm-opts'),
       next: $('gm-next'), lock: $('gm-lock'), lockT: $('gm-lock-t'), res: $('gm-res'), resList: $('gm-res-list'),
       resEmpty: $('gm-res-empty'), resIn: $('gm-res-in'), resTotal: $('gm-res-total'), resTotalN: $('gm-res-total-n'),
-      acctCount: $('acct-game-count'), endTotal: $('gm-end-total'), gain: $('gm-gain'), time: $('gm-time'), timeBar: $('gm-time-bar'),
+      acctCount: $('acct-game-count'), endTotal: $('gm-end-total'), hint: $('gm-hint'), hintT: $('gm-hint-t'), gain: $('gm-gain'), time: $('gm-time'), timeBar: $('gm-time-bar'),
       timeN: $('gm-time-n'), timeT: $('gm-time-t'), bigU: $('gm-big-u'), big: $('gm-big'), line: $('gm-line'), dots: $('gm-dots'), share: $('gm-share'), again: $('gm-again')
     };
     var st = null;
@@ -651,6 +651,13 @@
       ui.big.appendChild(b);
       ui.bigU.textContent = 'من ' + (st.marks.length * 100) + ' نقطة · ' + st.score + ' من ' + st.marks.length + ' صح';
       ui.line.textContent = verdict(st.score, st.marks.length);
+      // Ali (2026-11-03): say that time counts. When the right answers lost points to the clock, a line
+      // under «كفو! ولا غلطة» (or any score) says the next one goes up if they answer faster.
+      var slow = st.score > 0 && st.points < st.score * 100;
+      ui.hint.hidden = !slow;
+      if (slow) ui.hintT.textContent = st.score === st.marks.length
+        ? 'بس المرة الجاية جاوب أسرع، عشان نقاطك تزيد'
+        : 'وكل ما جاوبت أسرع، نقاطك تزيد';
       ui.dots.textContent = '';
       st.marks.forEach(function (ok) { var i = document.createElement('i'); if (ok) i.className = 'is-ok'; ui.dots.appendChild(i); });
       var marks = st.marks.map(function (ok) { return ok ? '1' : '0'; }).join('');
