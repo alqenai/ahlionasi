@@ -313,8 +313,8 @@
     if (!D) return Promise.reject(new Error('no kin.js'));
     var F = K.FORMATS[format] || K.FORMATS.story, H = F.H, post = format === 'post';
     var marks = r.marks, line = verdict(r.score, marks.length), hasPts = typeof r.points === 'number';
-    var right = r.score + ' من ' + marks.length + ' صح';
-    return D.loadFonts('تحدي شنو يصير لك؟ ' + line + ' ' + right + ' نقطة تقدر تغلبني؟ 0123456789/').then(function () {
+    var right = r.score + ' من ' + marks.length + ' صح', most = marks.length * 100;
+    return D.loadFonts('تحدي شنو يصير لك؟ ' + line + ' ' + right + ' من نقطة جرّب تحدي شرباكة 0123456789/').then(function () {
       var c = document.createElement('canvas');
       c.width = 1080; c.height = H;
       var ctx = c.getContext('2d');
@@ -324,7 +324,7 @@
       ctx.fillStyle = '#9DB2C8'; D.setFont(ctx, '500', post ? 44 : 50);
       ctx.fillText('تحدي شنو يصير لك؟', 540, y);
 
-      // the points, big: «420», and «نقطة» under them (or «4/5» for a score without points)
+      // the points, big: «188», and «من 500 نقطة» under them (or «4/5» for a score without points)
       y += post ? 280 : 360;
       ctx.save();
       ctx.direction = 'ltr'; ctx.textAlign = 'center';
@@ -335,7 +335,7 @@
       if (hasPts) {
         y += post ? 90 : 110;
         ctx.fillStyle = '#9DB2C8'; D.setFont(ctx, '500', post ? 54 : 62);
-        ctx.fillText('نقطة', 540, y);
+        ctx.fillText('من ' + most + ' نقطة', 540, y);
       }
 
       y += post ? 120 : 150;
@@ -362,8 +362,9 @@
       ctx.fillText(right, 540, y);
 
       y += post ? 130 : 200;
+      // Ali (2026-11-03): an invitation, not a dare: «جرّب تحدي شرباكة»
       ctx.fillStyle = '#E9C46A'; D.setFont(ctx, '700', post ? 64 : 72);
-      ctx.fillText('تقدر تغلبني؟', 540, y);
+      ctx.fillText('جرّب تحدي شرباكة', 540, y);
 
       D.drawSticker(ctx, F.sticker);
       return new Promise(function (res) { c.toBlob(res, 'image/png'); });
@@ -411,10 +412,12 @@
     var hs = h ? count(h, 'ساعة', 'ساعتين', 'ساعات', 'ساعة') : '', ms_ = m ? count(m, 'دقيقة', 'دقيقتين', 'دقايق', 'دقيقة') : '';
     return 'بعد ' + (hs && ms_ ? hs + ' و' + ms_ : hs || ms_);
   }
+  var numFmt = null;
+  function nf(n) { try { numFmt = numFmt || new Intl.NumberFormat('en-US'); return numFmt.format(n); } catch (e) { return String(n); } }
   var dateFmt = null;
   function day(at) {
     try {
-      dateFmt = dateFmt || new Intl.DateTimeFormat('ar-KW-u-nu-latn', { timeZone: 'Asia/Kuwait', weekday: 'long', day: 'numeric', month: 'long' });
+      dateFmt = dateFmt || new Intl.DateTimeFormat('ar-KW-u-nu-latn', { timeZone: 'Asia/Kuwait', day: 'numeric', month: 'long' });
       return dateFmt.format(new Date(at));
     } catch (e) { return new Date(at).toLocaleDateString(); }
   }
@@ -429,7 +432,8 @@
       start: $('gm-start'), play: $('gm-play'), end: $('gm-end'), go: $('gm-go'),
       step: $('gm-step'), score: $('gm-score'), bar: $('gm-bar'), card: $('gm-card'), opts: $('gm-opts'),
       next: $('gm-next'), lock: $('gm-lock'), lockT: $('gm-lock-t'), res: $('gm-res'), resList: $('gm-res-list'),
-      resEmpty: $('gm-res-empty'), resIn: $('gm-res-in'), gain: $('gm-gain'), time: $('gm-time'), timeBar: $('gm-time-bar'),
+      resEmpty: $('gm-res-empty'), resIn: $('gm-res-in'), resTotal: $('gm-res-total'), resTotalN: $('gm-res-total-n'),
+      acctCount: $('acct-game-count'), endTotal: $('gm-end-total'), gain: $('gm-gain'), time: $('gm-time'), timeBar: $('gm-time-bar'),
       timeN: $('gm-time-n'), timeT: $('gm-time-t'), bigU: $('gm-big-u'), big: $('gm-big'), line: $('gm-line'), dots: $('gm-dots'), share: $('gm-share'), again: $('gm-again')
     };
     var st = null;
@@ -477,28 +481,37 @@
       var marks = String(r.marks || '').split('').map(function (c) { return c === '1'; });
       if (!marks.length) for (var i = 0; i < r.of; i++) marks.push(i < r.score);
       var pic = { score: r.score, of: marks.length, marks: marks, points: typeof r.points === 'number' ? r.points : undefined };
-      var said = typeof pic.points === 'number' ? pic.points + ' نقطة' : r.score + ' من ' + marks.length;
+      var said = typeof pic.points === 'number' ? pic.points + ' من ' + (marks.length * 100) + ' نقطة' : r.score + ' من ' + marks.length;
       root.KIN.openShare({
         file: 'shorbaka-game',
         make: function (format) { return makePicture(pic, format); },
         alt: 'جبت ' + said + ' بتحدي شنو يصير لك؟',
         mention: 'تمنشن ربعك',
-        text: 'جبت ' + said + ' بتحدي شنو يصير لك؟ تقدر تغلبني؟ https://shorbaka.com/#game'
+        text: 'جبت ' + said + ' بتحدي شنو يصير لك؟ جرّب تحدي شرباكة: https://shorbaka.com/#game'
       }, from);
     }
 
     // «نتائج التحدي»: signed in, every score from the account; otherwise this device's last one.
     function results() {
       var list = ui.resList;
-      var draw = function (rows, inAccount) {
+      var draw = function (rows, inAccount, total) {
         list.textContent = '';
+        // the points of every challenge, added up (signed in only: they're kept in the account)
+        var has = inAccount && typeof total === 'number' && total > 0;
+        ui.resTotal.hidden = !has;
+        if (has) ui.resTotalN.textContent = nf(total);
+        if (ui.acctCount) ui.acctCount.textContent = has ? nf(total) : '';
+        if (ui.endTotal) {
+          ui.endTotal.hidden = !has || ui.end.hidden;
+          if (has) ui.endTotal.textContent = 'مجموع نقاطك ' + nf(total);
+        }
         rows.forEach(function (r) {
           var li = document.createElement('li');
           var d = document.createElement('span'); d.className = 'gm-r-day'; d.textContent = day(r.at);
           var sc = document.createElement('b'); sc.className = 'gm-r-sc';
           if (typeof r.points === 'number') {
             sc.textContent = r.points;
-            var u = document.createElement('small'); u.textContent = ' نقطة · ' + r.score + '/' + r.of;
+            var u = document.createElement('small'); u.textContent = ' من ' + (r.of * 100) + ' · ' + r.score + '/' + r.of + ' صح';
             sc.appendChild(u);
           } else sc.textContent = r.score + '/' + r.of;
           var b = document.createElement('button'); b.type = 'button'; b.className = 'gm-r-share'; b.setAttribute('aria-label', 'شارك النتيجة');
@@ -513,10 +526,13 @@
       };
       var l = lastLocal(), local = l && typeof l.score === 'number' ? [l] : [];
       if (!signedIn()) { draw(local, false); return; }
-      draw(local, true);
-      rpc('my_game_results').then(function (rows) {
-        if (!signedIn() || !Array.isArray(rows)) return;
-        draw(rows.map(function (r) { return { at: Date.parse(r.at), score: r.score, of: r.of, marks: r.marks, points: typeof r.points === 'number' ? r.points : undefined }; }), true);
+      draw(local, true, null);
+      rpc('my_game_results').then(function (res) {
+        var rows = res && Array.isArray(res.rows) ? res.rows : Array.isArray(res) ? res : null;
+        if (!signedIn() || !rows) return;
+        var total = res && typeof res.total === 'number' ? res.total
+          : rows.reduce(function (n, r) { return n + (typeof r.points === 'number' ? r.points : 0); }, 0);
+        draw(rows.map(function (r) { return { at: Date.parse(r.at), score: r.score, of: r.of, marks: r.marks, points: typeof r.points === 'number' ? r.points : undefined }; }), true, total);
       }, function () {});
     }
 
@@ -633,16 +649,17 @@
       ui.big.innerHTML = '';
       var b = document.createElement('b'); b.textContent = st.points;
       ui.big.appendChild(b);
-      ui.bigU.textContent = 'نقطة · ' + st.score + ' من ' + st.marks.length + ' صح';
+      ui.bigU.textContent = 'من ' + (st.marks.length * 100) + ' نقطة · ' + st.score + ' من ' + st.marks.length + ' صح';
       ui.line.textContent = verdict(st.score, st.marks.length);
       ui.dots.textContent = '';
       st.marks.forEach(function (ok) { var i = document.createElement('i'); if (ok) i.className = 'is-ok'; ui.dots.appendChild(i); });
       var marks = st.marks.map(function (ok) { return ok ? '1' : '0'; }).join('');
       var at = Date.now();
       try { localStorage.setItem(LAST, JSON.stringify({ at: at, score: st.score, of: st.marks.length, marks: marks, points: st.points })); } catch (e) {}
-      if (st.play) rpc('game_finish', { play: st.play, sc: st.score, total: st.marks.length, marks: marks, pts: st.points }).then(results, function () {});
       lockUntil(at + DAY);
-      results();
+      // the list (and the total) once the account has this score
+      if (st.play) rpc('game_finish', { play: st.play, sc: st.score, total: st.marks.length, marks: marks, pts: st.points }).then(results, results);
+      else results();
       sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 

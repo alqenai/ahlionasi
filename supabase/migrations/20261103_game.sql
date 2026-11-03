@@ -176,11 +176,14 @@ language sql volatile security definer set search_path = '' as $$
     and user_id is not distinct from (select auth.uid());
 $$;
 
--- My scores, newest first: [{at, score, of, marks, points}].
+-- My scores: {total: all my points added up, plays: how many, rows: [{at, score, of, marks, points}] newest first}.
 create function public.my_game_results() returns jsonb
 language sql stable security definer set search_path = '' as $$
-  select coalesce(jsonb_agg(jsonb_build_object('at', played_at, 'score', score, 'of', of_n, 'marks', marks, 'points', points) order by played_at desc), '[]'::jsonb)
-  from (select * from public.game_plays where user_id = (select auth.uid()) and score is not null order by played_at desc limit 200) r;
+  select jsonb_build_object(
+    'total', (select coalesce(sum(points), 0) from public.game_plays where user_id = (select auth.uid()) and score is not null),
+    'plays', (select count(*) from public.game_plays where user_id = (select auth.uid()) and score is not null),
+    'rows', (select coalesce(jsonb_agg(jsonb_build_object('at', played_at, 'score', score, 'of', of_n, 'marks', marks, 'points', points) order by played_at desc), '[]'::jsonb)
+      from (select * from public.game_plays where user_id = (select auth.uid()) and score is not null order by played_at desc limit 200) r));
 $$;
 
 revoke execute on function public.game_ip_hash(), public.game_last_play(), public.game_status(), public.game_start(),

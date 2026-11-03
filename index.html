@@ -569,7 +569,11 @@
     .gm-lock b { color: var(--sand); font-size: 1.05rem; }
     .gm-lock span { color: var(--muted); font-size: .85rem; }
     .gm-res { margin-top: 22px; scroll-margin-top: 90px; }
-    .gm-res h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .gm-res-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .gm-res h3 { font-size: 1rem; font-weight: 700; }
+    .gm-res-total { font-size: .85rem; color: var(--muted); }
+    .gm-res-total b { color: var(--sand); font-size: 1rem; }
+    .gm-end-total { margin-top: 14px; display: inline-block; padding: 4px 14px; border-radius: 999px; background: rgba(233, 196, 106, .12); color: var(--sand); font-weight: 700; font-size: .95rem; }
     .gm-res-list { list-style: none; display: grid; gap: 6px; }
     .gm-res-list li { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 14px; background: rgba(244, 239, 230, .05); }
     .gm-r-day { flex: 1; min-width: 0; font-size: .9rem; color: var(--muted); }
@@ -912,7 +916,7 @@
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-wallet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg><span>اللي يصيرون لي</span><span class="acct-count" id="acct-count"></span></button>
         <button type="button" class="acct-item" id="acct-tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>شجرة عائلتي</span><span class="acct-count" id="acct-tree-count"></span></button>
-        <button type="button" class="acct-item" id="acct-game"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.4"/><circle cx="12" cy="16.8" r=".6" fill="currentColor"/></svg><span>نتائج التحدي</span></button>
+        <button type="button" class="acct-item" id="acct-game"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.4"/><circle cx="12" cy="16.8" r=".6" fill="currentColor"/></svg><span>نتائج التحدي</span><span class="acct-count" id="acct-game-count"></span></button>
         <a class="acct-item" id="acct-dash" href="/dash/" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="8" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="14.5" width="7" height="6" rx="1.5"/></svg><span>لوحة التحكم</span></a>
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h10"/></svg><span>تسجيل الخروج</span></button>
@@ -1183,7 +1187,7 @@
           <p><b id="gm-lock-t"></b><span>تحدي واحد كل يوم</span></p>
         </div>
         <div class="gm-res" id="gm-res">
-          <h3>نتائج التحدي</h3>
+          <div class="gm-res-head"><h3>نتائج التحدي</h3><span class="gm-res-total" id="gm-res-total" hidden>مجموعك <b id="gm-res-total-n"></b> نقطة</span></div>
           <ol class="gm-res-list" id="gm-res-list"></ol>
           <p class="gm-res-empty" id="gm-res-empty">نتائجك تطلع هني بعد أول تحدي.</p>
           <button type="button" class="kin-w-in" id="gm-res-in" hidden>سجّل دخول عشان تنحفظ نتائجك</button>
@@ -1207,6 +1211,7 @@
         <p class="gm-big-u" id="gm-big-u"></p>
         <p class="gm-line" id="gm-line"></p>
         <div class="gm-dots" id="gm-dots" aria-hidden="true"></div>
+        <p class="gm-end-total" id="gm-end-total" hidden></p>
         <p class="kin-sub gm-end-next">تحديك الجاي بعد 24 ساعة</p>
         <div class="gm-end-btns">
           <button type="button" class="kin-btn kin-primary" id="gm-share"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شارك نتيجتك</span></button>
@@ -1537,7 +1542,7 @@
   <script src="/work.js?v=3" defer></script>
   <script src="/friends.js?v=3" defer></script>
   <script src="/game-bank.js?v=1" defer></script>
-  <script src="/game.js?v=4" defer></script>
+  <script src="/game.js?v=5" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
