@@ -9,7 +9,7 @@
   var URL_ = 'https://jfvbubrhghmivdjfbcku.supabase.co/rest/v1/rpc/game_questions';
   var KEY = 'sb_publishable_nom1uzSkzypbyYisBt2-dQ_psJfSZEe';  // public key
   var SEEN = 'shorbaka.game.seen';
-  var ROUND = 10;
+  var ROUND = 5;  // Ali (2026-11-03): five a round
 
   /* ---------- The map ---------- */
 
@@ -70,7 +70,7 @@
   function mapSvg(rawPath, opts) {
     opts = opts || {};
     var path = cleanPath(rawPath).split('').filter(Boolean);
-    var pts = layout(path), names = stepLabels(path), n = pts.length;
+    var pts = layout(path), names = opts.names || stepLabels(path), n = pts.length;
     var cell = 92, r = 17, rEnd = 22, fs = 16;
     var P = pts.map(function (p, i) { return { x: p.x * cell, y: p.y * cell, r: i === 0 || i === n - 1 ? rEnd : r }; });
     var taken = P.map(function (p) { return { x0: p.x - p.r, y0: p.y - p.r, x1: p.x + p.r, y1: p.y + p.r }; });
@@ -80,7 +80,7 @@
     }
     var labels = [];
     for (var k = 0; k < n; k++) {
-      var text = k === n - 1 && n > 1 ? (opts.answer || '') : names[k];
+      var text = k === n - 1 && n > 1 ? (opts.answer || opts.endName || '') : names[k];
       if (!text) continue;
       var bold = k === 0 || k === n - 1, size = bold ? fs + 1 : fs, w = textW(text, size, bold ? 700 : 500), q = P[k];
       var edge = {};
@@ -178,67 +178,173 @@
     if (!Array.isArray(seen)) seen = [];
     var fresh = shuffle(all.filter(function (q) { return seen.indexOf(q.id) < 0; }));
     var old = shuffle(all.filter(function (q) { return seen.indexOf(q.id) >= 0; }));
-    var round = fresh.concat(old).slice(0, ROUND);
+    // Ali (2026-11-03): mix them, not maps only. Each round: one question from a family tree (theirs, or
+    // an example one; see treeQuestion), two maps, and the rest riddles and questions, shuffled.
+    var want = { map: 2, text: ROUND - 3 }, round = [], rest = [];
+    fresh.concat(old).forEach(function (q) {
+      if (want[q.k] > 0) { want[q.k]--; round.push(q); } else rest.push(q);
+    });
+    round = round.concat(rest.slice(0, Math.max(0, ROUND - 1 - round.length)));
     var keep = seen.filter(function (id) { return !round.some(function (q) { return q.id === id; }); })
       .concat(round.map(function (q) { return q.id; }));
     keep = keep.slice(-Math.max(0, all.length - ROUND));
     try { localStorage.setItem(SEEN, JSON.stringify(keep)); } catch (e) {}
-    return round.map(function (q) {
+    var tq = treeQuestion();
+    if (tq) round.push(tq);
+    return shuffle(round).map(function (q) {
       return { q: q, choices: shuffle([0, 1, 2]).map(function (i) { return { text: q.a[i], right: i === 0 }; }) };
     });
   }
 
-  // What the score says (Ali's Kuwaiti, short).
-  function verdict(score, of) {
-    if (score >= of) return 'كفو! ولا غلطة';
-    if (score >= of * 0.8) return 'تعرف أهلك زين';
-    if (score >= of * 0.5) return 'مو شين، بس تبيلك قعدة مع جدتك';
-    return 'يبيلك تزور أهلك أكثر';
+  /* ---------- A question from a family tree ----------
+     Ali (2026-11-03): ask about the player's own «شجرة عائلتي» when there is one on this device or in the
+     account («سارة شنو تصير لك؟», the map with their names); otherwise about an example family
+     («سارة شنو تصير لفهد؟»). The names stay in the browser. */
+
+  var BOYS = ['فهد', 'خالد', 'ناصر', 'سالم', 'بدر', 'يوسف', 'جاسم', 'مشعل', 'عبدالله', 'حمد', 'سعود', 'راشد'];
+  var GIRLS = ['نورة', 'سارة', 'مريم', 'دانة', 'لولوة', 'هيا', 'شيخة', 'منيرة', 'فاطمة', 'أمل', 'بدرية', 'غلا'];
+  var EX_PATHS = ['FB', 'FZ', 'MB', 'MZ', 'FF', 'MM', 'FBS', 'FBD', 'FZS', 'FZD', 'MBS', 'MBD', 'MZS', 'MZD', 'BS', 'BD', 'ZS', 'ZD',
+    'FFB', 'MFB', 'FMZ', 'MMZ', 'FBW', 'MZH', 'FBSS', 'MZDS', 'FFBS', 'BSS'];
+  var GRAND = { 'جدي': 'جد', 'جدتي': 'جدة', 'حفيدي': 'حفيد', 'حفيدتي': 'حفيدة' };
+
+  // What the person at the end of path is: «ولد عمي», or about someone else, «ولد عم فهد».
+  function relWords(path, anchor) {
+    var K = root.KIN;
+    if (!K || !path.length) return '';
+    var c = K.common(path);
+    if (c && !anchor) return c;
+    if (c) {
+      var w = c.split(' ');
+      return GRAND[w[0]] ? GRAND[w[0]] + ' ' + anchor : c.replace(/(أبوي|أمي)$/, function (m) { return (m === 'أبوي' ? 'أبو ' : 'أم ') + anchor; });
+    }
+    return K.phrase(path, anchor);
   }
 
-  var GAME = { mapSvg: mapSvg, stepLabels: stepLabels, cleanPath: cleanPath, STEPS: STEPS, bank: bank, verdict: verdict, load: load };
+  // Two wrong answers close to the right one: the same walk with one step on the other side (أبو↔أم,
+  // أخو↔أخت, ولد↔بنت, زوج↔زوجة) or one step fewer. The person's own gender (the last step) stays.
+  var FLIP = { F: 'M', M: 'F', B: 'Z', Z: 'B', S: 'D', D: 'S', H: 'W', W: 'H' };
+  function wrongs(path, anchor, right) {
+    var same = root.KIN.phrase(path, anchor), out = [], add = function (p) {
+      // never another way of saying the right answer («أبو أبوي» is «جدي»)
+      var w = relWords(p, anchor);
+      if (w && w !== right && root.KIN.phrase(p, anchor) !== same && out.indexOf(w) < 0) out.push(w);
+    };
+    for (var i = 0; i < path.length - 1; i++) add(path.slice(0, i).concat(FLIP[path[i]], path.slice(i + 1)));
+    for (var j = 0; j < path.length - 1; j++) if (path.length > 1) add(path.slice(0, j).concat(path.slice(j + 1)));
+    var last = path[path.length - 1];
+    add(['F', 'B', last === 'D' || last === 'Z' || last === 'M' || last === 'W' ? 'D' : 'S']);
+    add(['M', 'Z', last === 'D' || last === 'Z' || last === 'M' || last === 'W' ? 'D' : 'S']);
+    return shuffle(out).slice(0, 2);
+  }
+
+  // From the player's tree: someone with a name, one to four steps away.
+  function fromMyTree() {
+    var T = root.TREE, doc = T && T.current && T.current();
+    if (!doc || !doc.p || !doc.me || !T.relations || !T.index) return null;
+    var rels;
+    try { rels = T.relations(doc, T.index(doc)); } catch (e) { return null; }
+    var pids = shuffle(Object.keys(rels).filter(function (pid) {
+      var p = rels[pid], n = doc.p[pid] && String(doc.p[pid].n || '').trim();
+      return pid !== doc.me && n && p.length >= 1 && p.length <= 4;
+    }));
+    for (var i = 0; i < pids.length; i++) {
+      var pid = pids[i], path = rels[pid];
+      var right = root.KIN.common(path) || (T.relName ? T.relName(path) : relWords(path));
+      var bad = wrongs(path, '', right);
+      if (!right || bad.length < 2) continue;
+      // the map: each person on the way by name (or what they are, when they have none)
+      var walk = [doc.me], names = ['أنا'];
+      var cur = doc.me;
+      var byPath = {};
+      Object.keys(rels).forEach(function (id) { byPath[rels[id].join('')] = byPath[rels[id].join('')] || id; });
+      for (var k = 1; k < path.length; k++) {
+        var id = byPath[path.slice(0, k).join('')], nm = id && doc.p[id] && String(doc.p[id].n || '').trim();
+        names.push(nm || stepLabels(path.slice(0, k))[k]);
+      }
+      var name = String(doc.p[pid].n).trim();
+      names.push('');
+      return { id: 'tree', k: 'map', p: path.join(''), q: name + ' شنو ' + root.KIN.verb(path) + ' لك؟', names: names, endName: name, a: [right, bad[0], bad[1]], mine: true };
+    }
+    return null;
+  }
+
+  // An example family: «فهد»، his father «خالد»، his uncle «ناصر»، and the person asked about.
+  function fromExample() {
+    if (!root.KIN) return null;
+    var path = EX_PATHS[Math.floor(Math.random() * EX_PATHS.length)].split('');
+    var boys = shuffle(BOYS), girls = shuffle(GIRLS), me = boys.pop();
+    var names = [me];
+    path.forEach(function (st) { names.push(STEPS[st].g === 'm' ? boys.pop() : girls.pop()); });
+    var right = relWords(path, me), bad = wrongs(path, me, right);
+    if (!right || bad.length < 2) return null;
+    var end = names[names.length - 1];
+    return { id: 'example', k: 'map', p: path.join(''), q: end + ' شنو ' + root.KIN.verb(path) + ' ل' + me + '؟', names: names, endName: end,
+      a: [right, bad[0], bad[1]], example: true };
+  }
+
+  function treeQuestion() { return fromMyTree() || fromExample(); }
+
+  /* Points (Ali, 2026-11-03): ten seconds a question, and the faster the more. A right answer within
+     the ten seconds gets 100 (straight away) down to 50 (at ten seconds); after that it gets 25. Wrong is 0. */
+  var LIMIT = 10000;
+  function points(right, ms) {
+    if (!right) return 0;
+    if (ms > LIMIT) return 25;
+    return Math.round(100 - 50 * Math.max(0, ms) / LIMIT);
+  }
+
+  // What the score says: always kind, never a dig at the player (Ali, 2026-11-03).
+  function verdict(score, of) {
+    if (score >= of) return 'كفو! ولا غلطة';
+    if (score >= of * 0.8) return 'ما شاء الله، تعرف أهلك زين';
+    if (score >= of * 0.5) return 'حلو! باقي لك شوي';
+    return 'بداية حلوة، جرّب مرة ثانية';
+  }
+
+  var GAME = { points: points, treeQuestion: treeQuestion, relWords: relWords, mapSvg: mapSvg, stepLabels: stepLabels, cleanPath: cleanPath, STEPS: STEPS, bank: bank, verdict: verdict, load: load };
   root.GAME = GAME;
   if (typeof document === 'undefined') return;
 
   /* ---------- The score picture (story 9:16 or post 4:5) ---------- */
 
-  function makePicture(score, marks, format) {
+  // r: { score: right answers, of: questions, marks: [true, false, …], points }
+  function makePicture(r, format) {
     var K = root.KIN, D = K && K.draw;
     if (!D) return Promise.reject(new Error('no kin.js'));
     var F = K.FORMATS[format] || K.FORMATS.story, H = F.H, post = format === 'post';
-    var line = verdict(score, marks.length);
-    return D.loadFonts('تحدي شنو يصير لك؟ ' + line + ' تقدر تغلبني؟ 0123456789/').then(function () {
+    var marks = r.marks, line = verdict(r.score, marks.length), hasPts = typeof r.points === 'number';
+    var right = r.score + ' من ' + marks.length + ' صح';
+    return D.loadFonts('تحدي شنو يصير لك؟ ' + line + ' ' + right + ' نقطة تقدر تغلبني؟ 0123456789/').then(function () {
       var c = document.createElement('canvas');
       c.width = 1080; c.height = H;
       var ctx = c.getContext('2d');
       D.background(ctx, 1080, H);
       ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      var y = post ? 210 : 470;
+      var y = post ? 200 : 430;
       ctx.fillStyle = '#9DB2C8'; D.setFont(ctx, '500', post ? 44 : 50);
       ctx.fillText('تحدي شنو يصير لك؟', 540, y);
 
-      // the score, big: «8/10»
-      y += post ? 300 : 380;
+      // the points, big: «420», and «نقطة» under them (or «4/5» for a score without points)
+      y += post ? 280 : 360;
       ctx.save();
-      ctx.direction = 'ltr';
+      ctx.direction = 'ltr'; ctx.textAlign = 'center';
       ctx.shadowColor = 'rgba(233, 196, 106, 0.45)'; ctx.shadowBlur = 60;
-      ctx.fillStyle = '#E9C46A'; D.setFont(ctx, '700', post ? 280 : 330);
-      var big = String(score), w1 = ctx.measureText(big).width;
-      D.setFont(ctx, '500', post ? 120 : 140);
-      var small = '/' + marks.length, w2 = ctx.measureText(small).width, x0 = 540 - (w1 + w2) / 2;
-      ctx.textAlign = 'left';
-      D.setFont(ctx, '700', post ? 280 : 330); ctx.fillText(big, x0, y);
-      ctx.shadowBlur = 0; ctx.fillStyle = '#9DB2C8';
-      D.setFont(ctx, '500', post ? 120 : 140); ctx.fillText(small, x0 + w1 + 8, y);
+      ctx.fillStyle = '#E9C46A'; D.setFont(ctx, '700', post ? 250 : 300);
+      ctx.fillText(hasPts ? String(r.points) : r.score + '/' + marks.length, 540, y);
       ctx.restore();
+      if (hasPts) {
+        y += post ? 90 : 110;
+        ctx.fillStyle = '#9DB2C8'; D.setFont(ctx, '500', post ? 54 : 62);
+        ctx.fillText('نقطة', 540, y);
+      }
 
-      y += post ? 140 : 180;
+      y += post ? 120 : 150;
       ctx.fillStyle = '#F4EFE6';
-      D.fit(ctx, line, '700', post ? 70 : 80, 940, 44);
+      D.fit(ctx, line, '700', post ? 66 : 76, 940, 44);
       ctx.fillText(line, 540, y);
 
       // a pearl for every question: teal when right, faint when not
-      y += post ? 120 : 160;
+      y += post ? 110 : 140;
       var R = 30, gap = 26, rowW = marks.length * R * 2 + (marks.length - 1) * gap, sx = 540 + rowW / 2 - R;
       marks.forEach(function (ok, i) {
         var x = sx - i * (R * 2 + gap);
@@ -251,8 +357,11 @@
           ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(244, 239, 230, 0.28)'; ctx.stroke();
         }
       });
+      y += post ? 90 : 110;
+      ctx.fillStyle = '#9DB2C8'; D.setFont(ctx, '500', post ? 40 : 46);
+      ctx.fillText(right, 540, y);
 
-      y += post ? 150 : 230;
+      y += post ? 130 : 200;
       ctx.fillStyle = '#E9C46A'; D.setFont(ctx, '700', post ? 64 : 72);
       ctx.fillText('تقدر تغلبني؟', 540, y);
 
@@ -261,6 +370,54 @@
     });
   }
   GAME.makePicture = makePicture;
+
+  /* ---------- One challenge every 24 hours, and the scores ----------
+     Ali (2026-11-03): one challenge a day. The database decides (game_status / game_start in
+     20261103_game.sql: per account when signed in, per internet address when not); this device also
+     remembers its last one, which is what counts while the database can't answer. Signed in, every score
+     is kept (my_game_results) and can be shared again any time. */
+
+  var LAST = 'shorbaka.game.last', DAY = 864e5;
+  var RPC = 'https://jfvbubrhghmivdjfbcku.supabase.co/rest/v1/rpc/';
+  function token() {
+    try {
+      var s = JSON.parse(localStorage.getItem('shorbaka.auth') || 'null');
+      return (s && (s.access_token || (s.currentSession && s.currentSession.access_token))) || '';
+    } catch (e) { return ''; }
+  }
+  function signedIn() { var A = root.ACCOUNT; return !!(A && A.on && A.on() && A.user && A.user()); }
+  // Signed in, as the account (the session account.js keeps); an expired sign-in is refreshed by
+  // account.js, so a 401 waits a moment and goes once more.
+  function rpc(name, args, again) {
+    var t = signedIn() ? token() : '';
+    return fetch(RPC + name, {
+      method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + (t || KEY), 'Content-Type': 'application/json' },
+      body: JSON.stringify(args || {})
+    }).then(function (r) {
+      if (r.status === 401 && t && !again) return new Promise(function (ok) { setTimeout(ok, 1500); }).then(function () { return rpc(name, args, true); });
+      return r.ok ? r.text().then(function (x) { return x ? JSON.parse(x) : null; }) : Promise.reject(new Error('HTTP ' + r.status));
+    });
+  }
+  function lastLocal() {
+    try { var l = JSON.parse(localStorage.getItem(LAST) || 'null'); return l && typeof l.at === 'number' ? l : null; } catch (e) { return null; }
+  }
+  function localNext() { var l = lastLocal(); return l && Date.now() - l.at < DAY ? l.at + DAY : 0; }
+
+  // «بعد 5 ساعات و 20 دقيقة»
+  function count(n, one, two, few, many) { return n === 1 ? one : n === 2 ? two : n <= 10 ? n + ' ' + few : n + ' ' + many; }
+  function wait(ms) {
+    var m = Math.max(1, Math.ceil(ms / 60000)), h = Math.floor(m / 60);
+    m = m % 60;
+    var hs = h ? count(h, 'ساعة', 'ساعتين', 'ساعات', 'ساعة') : '', ms_ = m ? count(m, 'دقيقة', 'دقيقتين', 'دقايق', 'دقيقة') : '';
+    return 'بعد ' + (hs && ms_ ? hs + ' و' + ms_ : hs || ms_);
+  }
+  var dateFmt = null;
+  function day(at) {
+    try {
+      dateFmt = dateFmt || new Intl.DateTimeFormat('ar-KW-u-nu-latn', { timeZone: 'Asia/Kuwait', weekday: 'long', day: 'numeric', month: 'long' });
+      return dateFmt.format(new Date(at));
+    } catch (e) { return new Date(at).toLocaleDateString(); }
+  }
 
   /* ---------- Page ---------- */
 
@@ -271,7 +428,9 @@
     var ui = {
       start: $('gm-start'), play: $('gm-play'), end: $('gm-end'), go: $('gm-go'),
       step: $('gm-step'), score: $('gm-score'), bar: $('gm-bar'), card: $('gm-card'), opts: $('gm-opts'),
-      next: $('gm-next'), big: $('gm-big'), line: $('gm-line'), dots: $('gm-dots'), share: $('gm-share'), again: $('gm-again')
+      next: $('gm-next'), lock: $('gm-lock'), lockT: $('gm-lock-t'), res: $('gm-res'), resList: $('gm-res-list'),
+      resEmpty: $('gm-res-empty'), resIn: $('gm-res-in'), gain: $('gm-gain'), time: $('gm-time'), timeBar: $('gm-time-bar'),
+      timeN: $('gm-time-n'), timeT: $('gm-time-t'), bigU: $('gm-big-u'), big: $('gm-big'), line: $('gm-line'), dots: $('gm-dots'), share: $('gm-share'), again: $('gm-again')
     };
     var st = null;
 
@@ -283,19 +442,99 @@
 
     function begin() {
       var s = ui.go.querySelector('span') || ui.go, was = s.textContent;
-      ui.go.disabled = ui.again.disabled = true; s.textContent = 'لحظة…';
-      load().then(function (all) {
-        st = { round: pick(all), i: 0, score: 0, marks: [] };
+      ui.go.disabled = true; s.textContent = 'لحظة…';
+      var gate = rpc('game_start').then(function (r) {
+        if (r && r.ok === false) return { locked: Date.parse(r.next) };
+        return { play: r && r.play };
+      }, function () {
+        // the database can't answer (or isn't set up yet): this device's last challenge decides
+        var next = localNext();
+        return next ? { locked: next } : {};
+      });
+      Promise.all([gate, load()]).then(function (res) {
+        var g = res[0];
+        if (g.locked) { lockUntil(g.locked); return; }
+        st = { round: pick(res[1]), i: 0, score: 0, points: 0, marks: [], play: g.play || null };
         view('play');
         ask();
         sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      }).then(function () { ui.go.disabled = ui.again.disabled = false; s.textContent = was; });
+      }).then(function () { ui.go.disabled = false; s.textContent = was; });
+    }
+
+    // The start view while waiting: when the next one opens, and the last score.
+    var lockedTo = 0, ticker = null;
+    function lockUntil(at) {
+      lockedTo = at;
+      var left = at - Date.now();
+      if (left <= 0) { lockedTo = 0; ui.go.hidden = false; ui.lock.hidden = true; clearInterval(ticker); ticker = null; return; }
+      ui.go.hidden = true; ui.lock.hidden = false;
+      ui.lockT.textContent = 'تحديك الجاي ' + wait(left);
+      if (!ticker) ticker = setInterval(function () { if (lockedTo) lockUntil(lockedTo); }, 30000);
+    }
+
+    function shareResult(r, from) {
+      if (!root.KIN || !root.KIN.openShare) return;
+      var marks = String(r.marks || '').split('').map(function (c) { return c === '1'; });
+      if (!marks.length) for (var i = 0; i < r.of; i++) marks.push(i < r.score);
+      var pic = { score: r.score, of: marks.length, marks: marks, points: typeof r.points === 'number' ? r.points : undefined };
+      var said = typeof pic.points === 'number' ? pic.points + ' نقطة' : r.score + ' من ' + marks.length;
+      root.KIN.openShare({
+        file: 'shorbaka-game',
+        make: function (format) { return makePicture(pic, format); },
+        alt: 'جبت ' + said + ' بتحدي شنو يصير لك؟',
+        mention: 'تمنشن ربعك',
+        text: 'جبت ' + said + ' بتحدي شنو يصير لك؟ تقدر تغلبني؟ https://shorbaka.com/#game'
+      }, from);
+    }
+
+    // «نتائج التحدي»: signed in, every score from the account; otherwise this device's last one.
+    function results() {
+      var list = ui.resList;
+      var draw = function (rows, inAccount) {
+        list.textContent = '';
+        rows.forEach(function (r) {
+          var li = document.createElement('li');
+          var d = document.createElement('span'); d.className = 'gm-r-day'; d.textContent = day(r.at);
+          var sc = document.createElement('b'); sc.className = 'gm-r-sc';
+          if (typeof r.points === 'number') {
+            sc.textContent = r.points;
+            var u = document.createElement('small'); u.textContent = ' نقطة · ' + r.score + '/' + r.of;
+            sc.appendChild(u);
+          } else sc.textContent = r.score + '/' + r.of;
+          var b = document.createElement('button'); b.type = 'button'; b.className = 'gm-r-share'; b.setAttribute('aria-label', 'شارك النتيجة');
+          b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11h6"/></svg><span>شارك</span>';
+          b.addEventListener('click', function () { shareResult(r, b); });
+          li.appendChild(d); li.appendChild(sc); li.appendChild(b);
+          list.appendChild(li);
+        });
+        ui.res.hidden = !rows.length && inAccount;
+        ui.resEmpty.hidden = rows.length > 0;
+        ui.resIn.hidden = inAccount || !(root.ACCOUNT && root.ACCOUNT.on && root.ACCOUNT.on());
+      };
+      var l = lastLocal(), local = l && typeof l.score === 'number' ? [l] : [];
+      if (!signedIn()) { draw(local, false); return; }
+      draw(local, true);
+      rpc('my_game_results').then(function (rows) {
+        if (!signedIn() || !Array.isArray(rows)) return;
+        draw(rows.map(function (r) { return { at: Date.parse(r.at), score: r.score, of: r.of, marks: r.marks, points: typeof r.points === 'number' ? r.points : undefined }; }), true);
+      }, function () {});
+    }
+
+    // What the start view shows: the button, or the wait; and the scores.
+    function refresh() {
+      if (!st || ui.start.hidden === false) {
+        rpc('game_status').then(function (r) {
+          if (r && r.ok === false) lockUntil(Date.parse(r.next)); else lockUntil(0);
+        }, function () { lockUntil(localNext()); });
+      }
+      results();
     }
 
     function ask() {
       var cur = st.round[st.i], q = cur.q;
       ui.step.textContent = 'سؤال ' + (st.i + 1) + ' من ' + st.round.length;
-      ui.score.textContent = st.score;
+      ui.score.textContent = st.points;
+      ui.gain.hidden = true;
       ui.bar.textContent = '';
       st.round.forEach(function (_, i) {
         var b = document.createElement('i');
@@ -308,8 +547,9 @@
       if (q.k === 'map') {
         var m = document.createElement('div');
         m.className = 'gm-map';
-        m.innerHTML = mapSvg(q.p);
+        m.innerHTML = mapSvg(q.p, { names: q.names, endName: q.endName });
         ui.card.appendChild(m);
+        if (q.example || q.mine) ui.card.insertBefore(Object.assign(document.createElement('p'), { className: 'gm-tag', textContent: q.mine ? 'من شجرة عائلتك' : 'عائلة مثال' }), m);
       }
       var h = document.createElement('p');
       h.className = 'gm-q';
@@ -326,12 +566,47 @@
       });
       ui.next.hidden = true;
       ui.card.classList.remove('is-in'); void ui.card.offsetWidth; ui.card.classList.add('is-in');
+      startClock();
     }
+
+    /* The ten seconds: a bar that empties and the seconds left. It stops at the answer; after ten seconds
+       it says a right answer now gets less. */
+    var clock = null;
+    function startClock() {
+      stopClock();
+      var t0 = performance.now();
+      st.t0 = t0;
+      ui.time.classList.remove('is-over');
+      ui.timeBar.style.transition = 'none';
+      ui.timeBar.style.transform = 'scaleX(1)';
+      void ui.timeBar.offsetWidth;
+      ui.timeBar.style.transition = 'transform ' + LIMIT + 'ms linear';
+      ui.timeBar.style.transform = 'scaleX(0)';
+      var tick = function () {
+        var left = LIMIT - (performance.now() - t0);
+        if (left > 0) ui.timeN.textContent = Math.ceil(left / 1000);
+        else { ui.timeN.textContent = '0'; ui.time.classList.add('is-over'); ui.timeT.textContent = 'خلص الوقت، الجواب الصح الحين بـ 25 نقطة'; stopClock(); }
+      };
+      ui.timeT.textContent = 'كل ما جاوبت أسرع، نقاطك تزيد';
+      tick();
+      clock = setInterval(tick, 200);
+    }
+    function stopClock() { if (clock) { clearInterval(clock); clock = null; } }
 
     function answer(btn, c) {
       if (st.marks.length > st.i) return;
+      var ms = performance.now() - st.t0, got = points(c.right, ms);
+      stopClock();
+      var w = ui.timeBar.getBoundingClientRect().width, full = ui.time.querySelector('.gm-time-track').getBoundingClientRect().width;
+      ui.timeBar.style.transition = 'none';
+      ui.timeBar.style.transform = 'scaleX(' + (full ? Math.max(0, Math.min(1, w / full)) : 0) + ')';
       st.marks.push(c.right);
       if (c.right) st.score++;
+      st.points += got;
+      ui.gain.textContent = '+' + got;
+      ui.gain.className = 'gm-gain' + (got ? '' : ' is-zero');
+      ui.gain.hidden = false;
+      ui.timeT.textContent = c.right ? (ms <= LIMIT ? 'جاوبت بـ ' + (ms / 1000).toFixed(1) + ' ثانية' : 'جاوبت بعد ما خلص الوقت') : 'جواب غلط';
       var btns = Array.prototype.slice.call(ui.opts.children), cur = st.round[st.i];
       btns.forEach(function (b, i) {
         b.disabled = true;
@@ -341,9 +616,9 @@
       });
       if (cur.q.k === 'map') {
         var right = cur.choices.filter(function (x) { return x.right; })[0];
-        ui.card.querySelector('.gm-map').innerHTML = mapSvg(cur.q.p, { answer: right.text });
+        ui.card.querySelector('.gm-map').innerHTML = mapSvg(cur.q.p, { names: cur.q.names, endName: cur.q.endName, answer: cur.q.names ? cur.q.endName + ': ' + right.text : right.text });
       }
-      ui.score.textContent = st.score;
+      ui.score.textContent = st.points;
       var bars = ui.bar.children;
       if (bars[st.i]) bars[st.i].className = c.right ? 'is-ok' : 'is-no';
       var last = st.i >= st.round.length - 1;
@@ -354,18 +629,30 @@
 
     function finish() {
       view('end');
+      stopClock();
       ui.big.innerHTML = '';
-      var b = document.createElement('b'); b.textContent = st.score;
-      var s = document.createElement('span'); s.textContent = '/' + st.marks.length;
-      ui.big.appendChild(b); ui.big.appendChild(s);
+      var b = document.createElement('b'); b.textContent = st.points;
+      ui.big.appendChild(b);
+      ui.bigU.textContent = 'نقطة · ' + st.score + ' من ' + st.marks.length + ' صح';
       ui.line.textContent = verdict(st.score, st.marks.length);
       ui.dots.textContent = '';
       st.marks.forEach(function (ok) { var i = document.createElement('i'); if (ok) i.className = 'is-ok'; ui.dots.appendChild(i); });
+      var marks = st.marks.map(function (ok) { return ok ? '1' : '0'; }).join('');
+      var at = Date.now();
+      try { localStorage.setItem(LAST, JSON.stringify({ at: at, score: st.score, of: st.marks.length, marks: marks, points: st.points })); } catch (e) {}
+      if (st.play) rpc('game_finish', { play: st.play, sc: st.score, total: st.marks.length, marks: marks, pts: st.points }).then(results, function () {});
+      lockUntil(at + DAY);
+      results();
       sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 
     ui.go.addEventListener('click', begin);
-    ui.again.addEventListener('click', begin);
+    ui.again.addEventListener('click', function () { view('start'); refresh(); sec.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+    ui.resIn.addEventListener('click', function () { if (root.KIN && root.KIN.openAuth) root.KIN.openAuth('سجّل دخول عشان تنحفظ نتائجك', ui.resIn); });
+    if (root.ACCOUNT && root.ACCOUNT.onChange) {
+      root.ACCOUNT.onChange(function () { refresh(); });
+      if (root.ACCOUNT.ready) root.ACCOUNT.ready.then(refresh);
+    }
     ui.next.addEventListener('click', function () {
       if (st.i >= st.round.length - 1) { finish(); return; }
       st.i++;
@@ -373,18 +660,13 @@
     });
     ui.share.addEventListener('click', function () {
       if (!st || !root.KIN || !root.KIN.openShare) return;
-      var score = st.score, marks = st.marks.slice();
-      root.KIN.openShare({
-        file: 'shorbaka-game',
-        make: function (format) { return makePicture(score, marks, format); },
-        alt: 'جبت ' + score + ' من ' + marks.length + ' بتحدي شنو يصير لك؟',
-        mention: 'تمنشن ربعك',
-        text: 'جبت ' + score + ' من ' + marks.length + ' بتحدي شنو يصير لك؟ تقدر تغلبني؟ https://shorbaka.com/#game'
-      }, ui.share);
+      shareResult({ score: st.score, of: st.marks.length, points: st.points, marks: st.marks.map(function (ok) { return ok ? '1' : '0'; }).join('') }, ui.share);
     });
 
-    GAME.shown = function (on) { if (on) load(); };
+    GAME.shown = function (on) { if (on) { load(); if (!ui.start.hidden) refresh(); } };
+    GAME.showResults = function () { view('start'); refresh(); ui.res.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
     view('start');
+    refresh();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

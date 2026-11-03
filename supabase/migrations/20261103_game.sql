@@ -2,7 +2,7 @@
 -- («شنو يصير لك؟») or a question / riddle, each with three answers and the first one right. Admins add,
 -- change and turn them on or off from shorbaka.com/dash/ → «الأسئلة». Every visitor reads the ones that
 -- are on through game_questions(); a round picks 10 of them at random in the browser.
--- Needs 20261102_admin.sql first. Running it also puts in the starter questions (game-bank.js).
+-- Needs 20261102_admin.sql and 20261102_site_flags.sql first. Running it also puts in the starter questions (game-bank.js).
 
 create table public.game_questions (
   id bigint generated always as identity primary key,
@@ -93,6 +93,100 @@ revoke execute on function public.admin_game_questions(),
 grant execute on function public.admin_game_questions(),
   public.admin_save_question(bigint, text, text, text, text, text, text, boolean),
   public.admin_set_question_on(bigint, boolean), public.admin_delete_question(bigint) to authenticated;
+
+-- One challenge every 24 hours (Ali, 2026-11-03). Signed in: per account, and every score is kept
+-- («نتائج التحدي» in the account menu). Not signed in: per internet address (kept only as a hash, and
+-- forgotten after two days); the score isn't kept. Admins can play any time. The address check can be
+-- turned off from the dashboard (المزايا → game_ip), since a whole house shares one address.
+create table public.game_plays (
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users (id) on delete cascade,
+  ip_hash text,
+  score smallint check (score between 0 and 50),
+  of_n smallint check (of_n between 1 and 50),
+  marks text check (marks ~ '^[01]{0,50}$'),
+  points smallint check (points between 0 and 5000),
+  played_at timestamptz not null default now()
+);
+create index game_plays_user on public.game_plays (user_id, played_at desc);
+create index game_plays_ip on public.game_plays (ip_hash, played_at desc) where user_id is null;
+comment on table public.game_plays is 'Each «تحدي» played: who (account, or a hash of the address), when, and the score.';
+alter table public.game_plays enable row level security;
+revoke all on public.game_plays from anon, authenticated;
+
+insert into public.site_flags (key, is_on) values ('game_ip', true) on conflict (key) do nothing;
+
+-- The address the request came from, hashed (null when unknown).
+create function public.game_ip_hash() returns text
+language sql stable security definer set search_path = '' as $$
+  select case when ip is null or ip = '' then null
+    else encode(extensions.digest('shorbaka-game:' || ip, 'sha256'), 'hex') end
+  from (select btrim(coalesce(h ->> 'cf-connecting-ip', h ->> 'x-real-ip', split_part(h ->> 'x-forwarded-for', ',', 1))) as ip
+    from (select coalesce(nullif(current_setting('request.headers', true), ''), '{}')::json as h) x) y;
+$$;
+
+-- When the last challenge was, for whoever is asking (null: none in the last 24 hours, or an admin).
+create function public.game_last_play() returns timestamptz
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  uid uuid := (select auth.uid());
+  ih text;
+begin
+  if uid is not null then
+    if exists (select 1 from public.admins where user_id = uid) then return null; end if;
+    return (select max(played_at) from public.game_plays where user_id = uid and played_at > now() - interval '24 hours');
+  end if;
+  if not coalesce((select is_on from public.site_flags where key = 'game_ip'), true) then return null; end if;
+  ih := public.game_ip_hash();
+  if ih is null then return null; end if;
+  return (select max(played_at) from public.game_plays where user_id is null and ip_hash = ih and played_at > now() - interval '24 hours');
+end $$;
+
+-- Can I play now? {ok: true} or {ok: false, next: when}.
+create function public.game_status() returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  last timestamptz := public.game_last_play();
+begin
+  if last is null then return jsonb_build_object('ok', true); end if;
+  return jsonb_build_object('ok', false, 'next', last + interval '24 hours');
+end $$;
+
+-- Starts a challenge: {ok: true, play: id} (the 24 hours start now), or {ok: false, next: when}.
+create function public.game_start() returns jsonb
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  uid uuid := (select auth.uid());
+  last timestamptz := public.game_last_play();
+  pid bigint;
+begin
+  if last is not null then return jsonb_build_object('ok', false, 'next', last + interval '24 hours'); end if;
+  delete from public.game_plays where user_id is null and played_at < now() - interval '2 days';
+  insert into public.game_plays (user_id, ip_hash) values (uid, case when uid is null then public.game_ip_hash() end)
+    returning id into pid;
+  return jsonb_build_object('ok', true, 'play', pid);
+end $$;
+
+-- The score of a challenge started within the hour, by the same account (or the same not-signed-in visitor).
+-- sc: right answers out of total; pts: the points (100 a question at most, fewer the slower).
+create function public.game_finish(play bigint, sc integer, total integer, marks text, pts integer) returns void
+language sql volatile security definer set search_path = '' as $$
+  update public.game_plays set score = sc, of_n = total, marks = game_finish.marks, points = pts
+  where id = play and score is null and played_at > now() - interval '1 hour'
+    and user_id is not distinct from (select auth.uid());
+$$;
+
+-- My scores, newest first: [{at, score, of, marks, points}].
+create function public.my_game_results() returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object('at', played_at, 'score', score, 'of', of_n, 'marks', marks, 'points', points) order by played_at desc), '[]'::jsonb)
+  from (select * from public.game_plays where user_id = (select auth.uid()) and score is not null order by played_at desc limit 200) r;
+$$;
+
+revoke execute on function public.game_ip_hash(), public.game_last_play(), public.game_status(), public.game_start(),
+  public.game_finish(bigint, integer, integer, text, integer), public.my_game_results() from public;
+grant execute on function public.game_status(), public.game_start(), public.game_finish(bigint, integer, integer, text, integer) to anon, authenticated;
+grant execute on function public.my_game_results() to authenticated;
 
 -- The starter questions (the same list as game-bank.js).
 insert into public.game_questions (kind, question, path, answer, wrong1, wrong2) values

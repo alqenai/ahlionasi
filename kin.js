@@ -1654,6 +1654,13 @@
     window.addEventListener('hashchange', function () { showSection(hashSec(), hashSec() !== 'kin'); });
     showSection(hashSec(), false);
     if (hashSec() !== 'kin' && $(hashSec())) setTimeout(function () { $(hashSec()).scrollIntoView({ block: 'start' }); }, 0);
+    var acctGame = $('acct-game');
+    if (acctGame) acctGame.addEventListener('click', function () {
+      closeMenu();
+      if (history.replaceState) history.replaceState(null, '', '#game');
+      showSection('game', false);
+      if (root.GAME && root.GAME.showResults) root.GAME.showResults();
+    });
     var acctTree = $('acct-tree');
     if (acctTree) acctTree.addEventListener('click', function () {
       closeMenu();
