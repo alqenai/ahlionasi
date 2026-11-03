@@ -2395,7 +2395,7 @@
           var n = names();
           return KIN.makeStory(n.me, n.them, walk, format, { rel: rel, more: more(n.them) });
         },
-        text: 'شوف شنو يصير لك أي أحد على شرباكة: https://shorbaka.com',
+        text: 'شوف شنو يصير لك أي أحد على شرباكة: https://shorbaka.com/#kin',
         choice: items.length < 2 ? null : {
           label: 'الأسامي', items: items, value: hide,
           set: function (v) { hide = v; words(); setHide(v); }
