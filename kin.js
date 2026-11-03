@@ -1573,6 +1573,22 @@
         ui.wallet.scrollIntoView({ block: 'start', behavior: 'smooth' });
         ui.wallet.focus({ preventScroll: true });
       });
+      // Admins get «لوحة التحكم» (/dash/) in the menu; the dashboard has «الموقع» to come back.
+      var acctDash = $('acct-dash');
+      if (acctDash) {
+        var dashCheck = function (u) {
+          acctDash.hidden = true;
+          var a = accounts();
+          if (u && a && a.isAdmin) a.isAdmin().then(function (yes) {
+            var now = a.user();
+            acctDash.hidden = !(yes && now && now.id === u.id);
+          });
+        };
+        if (root.ACCOUNT) {
+          root.ACCOUNT.onChange(dashCheck);
+          root.ACCOUNT.ready.then(function () { dashCheck(root.ACCOUNT.user()); });
+        }
+      }
       ui.acctOut.addEventListener('click', function () {
         var a = accounts();
         closeMenu();

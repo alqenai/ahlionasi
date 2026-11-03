@@ -293,7 +293,20 @@
     return client.rpc('delete_my_account').then(rows).then(signOut);
   }
 
+  /* «لوحة التحكم» in the account menu shows only for admins (public.admins, checked by am_i_admin()).
+     Asked once per account; any failure counts as no. */
+  var adminFor = null, adminAsk = null;
+  function isAdmin() {
+    if (!on || !client || !user) return Promise.resolve(false);
+    if (adminFor !== user.id) {
+      adminFor = user.id;
+      adminAsk = client.rpc('am_i_admin').then(function (r) { return !r.error && r.data === true; }, function () { return false; });
+    }
+    return adminAsk;
+  }
+
   root.ACCOUNT = {
+    isAdmin: isAdmin,
     on: function () { return on; },
     ready: ready,
     user: function () { return user; },
