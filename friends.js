@@ -597,7 +597,8 @@
   /* ---------- Page ---------- */
 
   var LOCAL = 'shorbaka.friends.v1', UNSAVED = 'shorbaka.friends.unsaved';
-  var SUGGEST = ['الديوانية', 'الدوام', 'الجامعة', 'المدرسة', 'كرة القدم', 'النادي', 'الدايفنق', 'القراءة'];
+  // The groups a start comes with, all three picked (Ali: just these three; «+ قروب» adds any other)
+  var SUGGEST = ['ربع الدوام', 'ربع الديوانية', 'ربع الجامعة'];
   var ZOOM = {
     out: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20M7.5 10.5h6"/>',
     in: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20M7.5 10.5h6M10.5 7.5v6"/>'
@@ -688,7 +689,7 @@
     var $ = function (id) { return document.getElementById(id); };
     var ui = {
       sec: $('friends'), count: $('fr-count'), msg: $('fr-msg'), retry: $('fr-retry'),
-      start: $('fr-start'), meName: $('fr-me'), sugg: $('fr-sugg'), startGName: $('fr-start-gname'), startGAdd: $('fr-start-gadd'), startErr: $('fr-start-err'),
+      start: $('fr-start'), meName: $('fr-me'), sugg: $('fr-sugg'), startGForm: $('fr-start-gform'), startGName: $('fr-start-gname'), startGAdd: $('fr-start-gadd'), startErr: $('fr-start-err'),
       wrap: $('fr-wrap'), groups: $('fr-groups'), gForm: $('fr-g-form'), gNew: $('fr-g-new'),
       add: $('fr-add'), zoom: $('fr-zoom'), scroll: $('fr-scroll'), stage: $('fr-stage'), canvas: $('fr-canvas'), hint: $('fr-hint'),
       share: $('fr-share'), pdf: $('fr-pdf'), note: $('fr-note'), saveRetry: $('fr-save-retry'), signIn: $('fr-in'),
@@ -707,7 +708,7 @@
 
     var st = { doc: null, where: 'local', loaded: false, failed: false, seq: 0, saving: null, again: false, pending: false, saveErr: false,
       mode: null, pid: null, gid: null, sel: [], newSel: [], from: null, gFrom: null, lastAdded: null, center: true, zl: 0, z: 1, L: null,
-      starts: [], custom: [], keep: null, fontsOk: false, noTable: false };
+      starts: SUGGEST.slice(), custom: [], keep: null, fontsOk: false, noTable: false };
     var acctReady = !root.ACCOUNT, timer = null;
 
     function accounts() { return root.ACCOUNT && root.ACCOUNT.on() ? root.ACCOUNT : null; }
@@ -978,6 +979,19 @@
         });
         ui.sugg.appendChild(c);
       });
+      // «+ قروب»: a group of my own, written in the field it opens
+      if (SUGGEST.length + st.custom.length < MAXG) {
+        var plus = el('button', 'tr-chip tr-chip-sm wk-dept-new', 'قروب');
+        plus.type = 'button';
+        plus.id = 'fr-start-plus';
+        plus.setAttribute('aria-expanded', String(!ui.startGForm.hidden));
+        plus.addEventListener('click', function () {
+          ui.startGForm.hidden = !ui.startGForm.hidden;
+          plus.setAttribute('aria-expanded', String(!ui.startGForm.hidden));
+          if (!ui.startGForm.hidden) ui.startGName.focus();
+        });
+        ui.sugg.appendChild(plus);
+      } else ui.startGForm.hidden = true;
     }
     function addStart() {
       var name = clip(ui.startGName.value, GROUP);
@@ -985,22 +999,28 @@
       if (SUGGEST.concat(st.custom).indexOf(name) < 0) st.custom.push(name);
       if (st.starts.indexOf(name) < 0) st.starts.push(name);
       ui.startGName.value = '';
+      ui.startGForm.hidden = true;
       ui.startErr.hidden = true;
       drawStarts();
       return true;
     }
-    ui.startGAdd.addEventListener('click', function () { addStart(); ui.startGName.focus(); });
+    function addStartNow() {
+      if (!addStart()) return;
+      var plus = $('fr-start-plus');
+      (plus || ui.meName).focus();
+    }
+    ui.startGAdd.addEventListener('click', addStartNow);
     ui.startGName.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      addStart();
+      addStartNow();
     });
     ui.start.addEventListener('submit', function (e) {
       e.preventDefault();
       if (clip(ui.startGName.value, GROUP)) addStart();
       var name = clip(ui.meName.value, NAME);
       if (!name) { ui.startErr.textContent = 'اكتب اسمك'; ui.startErr.hidden = false; ui.meName.focus(); return; }
-      if (!st.starts.length) { ui.startErr.textContent = 'اختار قروب واحد على الأقل، أو اكتب قروبك'; ui.startErr.hidden = false; return; }
+      if (!st.starts.length) { ui.startErr.textContent = 'اختار قروب واحد على الأقل، أو ضيف قروبك'; ui.startErr.hidden = false; return; }
       st.doc = blank(name, st.starts.slice(0, MAXG));
       st.center = true;
       var gs = Object.keys(st.doc.g);

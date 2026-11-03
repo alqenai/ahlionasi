@@ -702,7 +702,7 @@
     .wk-key i, .wk-dept i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
     .wk-dept { gap: 7px; }
     .wk-dept[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--teal); }
-    .wk-dept-new::before { content: "+"; font-size: 1.05rem; font-weight: 700; color: var(--teal); }
+    .tr-chip.wk-dept-new::before { content: "+"; font-size: 1.05rem; font-weight: 700; color: var(--teal); }  /* over .tr-chip-sm's none */
     .wk-p-edit { display: grid; gap: 10px; margin-top: 4px; }
     .wk-p-edit .tr-p-rename { margin-top: 0; }
     .wk-p-edit label > span, .wk-p-form label > span { display: block; font-size: .82rem; color: var(--muted); margin: 0 4px 6px; }
@@ -1080,8 +1080,8 @@
         <div class="tr-field">
           <span id="fr-sugg-label">قروباتك</span>
           <div class="tr-p-adds" id="fr-sugg" role="group" aria-labelledby="fr-sugg-label"></div>
-          <div class="tr-fam-form fr-start-g">
-            <label><span>أو اكتب قروبك</span><input class="tr-input" id="fr-start-gname" type="text" maxlength="24" autocomplete="off" placeholder="مثال: ربع البر" enterkeyhint="done"></label>
+          <div class="tr-fam-form fr-start-g" id="fr-start-gform" hidden>
+            <label><span>اسم القروب</span><input class="tr-input" id="fr-start-gname" type="text" maxlength="24" autocomplete="off" placeholder="مثال: ربع البر" enterkeyhint="done"></label>
             <button type="button" class="kin-w-ok" id="fr-start-gadd"><span>ضيف</span></button>
           </div>
         </div>
@@ -1092,7 +1092,7 @@
       <div class="tr-wrap" id="fr-wrap" hidden>
         <div class="fr-groups" id="fr-groups" role="group" aria-label="قروباتك"></div>
         <form class="tr-fam-form fr-g-form" id="fr-g-form" hidden>
-          <label><span>اسم القروب</span><input class="tr-input" id="fr-g-new" type="text" maxlength="24" autocomplete="off" placeholder="مثال: الديوانية" enterkeyhint="done"></label>
+          <label><span>اسم القروب</span><input class="tr-input" id="fr-g-new" type="text" maxlength="24" autocomplete="off" placeholder="مثال: ربع البر" enterkeyhint="done"></label>
           <button type="submit" class="kin-w-ok"><span>ضيف</span></button>
         </form>
         <div class="tr-bar">
@@ -1362,7 +1362,7 @@
           <p class="tr-p-label" id="fr-p-glabel">وين تعرفه؟</p>
           <div class="tr-p-adds" id="fr-p-groups" role="group" aria-labelledby="fr-p-glabel"></div>
           <div class="tr-fam-form fr-p-gform" id="fr-p-gform" hidden>
-            <label><span>اسم القروب</span><input class="tr-input" id="fr-p-gname" type="text" maxlength="24" autocomplete="off" placeholder="مثال: الديوانية" enterkeyhint="done"></label>
+            <label><span>اسم القروب</span><input class="tr-input" id="fr-p-gname" type="text" maxlength="24" autocomplete="off" placeholder="مثال: ربع البر" enterkeyhint="done"></label>
             <button type="button" class="kin-w-ok" id="fr-p-gadd"><span>ضيف</span></button>
           </div>
         </div>
@@ -1453,7 +1453,7 @@
   <script src="/kin.js?v=25" defer></script>
   <script src="/tree.js?v=21" defer></script>
   <script src="/work.js?v=3" defer></script>
-  <script src="/friends.js?v=1" defer></script>
+  <script src="/friends.js?v=2" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
