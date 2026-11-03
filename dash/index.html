@@ -144,6 +144,16 @@
     .feed .txt bdi { direction: ltr; unicode-bidi: isolate; color: var(--muted); word-break: break-all; }
     .feed time { flex: none; font-size: .78rem; color: var(--muted); }
     .note { font-size: .8rem; color: var(--muted); margin-top: 14px; }
+    .g-list { margin-top: 10px; }
+    .g-list h3 { font-size: 1rem; font-weight: 500; margin-bottom: 4px; }
+    .feed .chip { margin-inline-start: 4px; }
+    .g-who { color: var(--muted); }
+    /* on a phone: the tabs on two rows (six of them), and each challenge on two lines (who, then the score) */
+    @media (max-width: 640px) {
+      .tabs .tl { flex-wrap: wrap; overflow: visible; }
+      .g-sep { display: none; }
+      .g-res { display: block; margin-top: 2px; }
+    }
     .q-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .q-head .count { margin: 0; }
     .q-tools { display: grid; gap: 10px; margin: 14px 0 6px; }
@@ -154,7 +164,9 @@
     .qrow { display: flex; gap: 12px; padding: 14px; align-items: flex-start; }
     .qrow.is-off { opacity: .55; }
     .qm { flex: 1; min-width: 0; }
-    .qtop { display: flex; align-items: center; gap: 8px; }
+    .qtop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .qstat { font-size: .78rem; color: var(--muted); }
+    .qstat b { color: var(--pearl); font-weight: 500; }
     .qid { font-size: .75rem; color: var(--muted); }
     .qmap { display: flex; justify-content: center; margin-top: 8px; font-family: "Readex Pro", system-ui, sans-serif; }
     .qmap svg { max-width: 100%; height: auto; max-height: 150px; }
@@ -238,6 +250,7 @@
         <button class="tab" role="tab" aria-selected="true" data-tab="overview">نظرة عامة</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="users">المستخدمين</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="activity">آخر الأحداث</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="game">التحدي</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="questions">الأسئلة</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="flags">المزايا</button>
         </div>
@@ -276,6 +289,16 @@
         <div class="more"><button class="btn" id="u-more" type="button" hidden>اعرض أكثر</button></div>
       </section>
 
+      <section id="p-game" role="tabpanel" hidden>
+        <div class="tiles" id="g-tiles"></div>
+        <div class="card g-list">
+          <h3>آخر التحديات</h3>
+          <ul class="feed" id="g-feed"></ul>
+          <div class="more"><button class="btn" id="g-more" type="button" hidden>اعرض أكثر</button></div>
+        </div>
+        <p class="note">كل تحدي ينحفظ هني، مسجّل أو زائر. الزائر ينحسب بجهازه، ولعب الأدمن مو محسوب بالأرقام.</p>
+      </section>
+
       <section id="p-questions" role="tabpanel" hidden>
         <div class="q-head">
           <p class="count" id="q-count"></p>
@@ -289,10 +312,11 @@
             <button class="tab" type="button" data-f="off" aria-selected="false">طافية</button>
             <button class="tab" type="button" data-f="map" aria-selected="false">خرايط</button>
             <button class="tab" type="button" data-f="text" aria-selected="false">أسئلة</button>
+            <button class="tab" type="button" data-f="top" aria-selected="false">الأكثر ظهور</button>
           </div>
           <input class="input" id="q-search" type="search" placeholder="دوّر بالسؤال أو الجواب" autocomplete="off">
         </div>
-        <p class="note">كل لعبة تطلع 10 أسئلة عشوائية من الشغّالة. الجواب الصح ينكتب أول، واللعبة تخلط ترتيب الأجوبة.</p>
+        <p class="note">كل تحدي يطلع 4 أسئلة عشوائية من الشغّالة (خريطتين وسؤالين)، والخامس من شجرة اللاعب. الجواب الصح ينكتب أول، واللعبة تخلط ترتيب الأجوبة.</p>
         <div class="qs" id="qs"></div>
       </section>
       <section id="p-flags" role="tabpanel" hidden>
@@ -309,7 +333,7 @@
   <div class="toast" id="toast" role="status" hidden></div>
 
   <script src="/account.js?v=14"></script>
-  <script src="/game.js?v=7"></script>
-  <script src="/dash/dash.js?v=3"></script>
+  <script src="/game.js?v=8"></script>
+  <script src="/dash/dash.js?v=4"></script>
 </body>
 </html>
