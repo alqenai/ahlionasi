@@ -34,6 +34,8 @@
     header .mark { width: 40px; height: 40px; display: block; }
     header h1 { font-size: 1.25rem; font-weight: 700; }
     header .who { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); min-width: 0; }
+    .site-link { margin-inline-start: auto; text-decoration: none; color: var(--pearl); }
+    .who:not([hidden]) + .site-link { margin-inline-start: 0; }
     header .who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw; }
 
     .btn {
@@ -155,6 +157,7 @@
       <a href="/" aria-label="شرباكة"><img class="mark" src="/favicon.svg?v=2" alt=""></a>
       <h1>لوحة التحكم</h1>
       <div class="who" id="who" hidden><span id="who-email"></span><button class="btn small" id="signout" type="button">اطلع</button></div>
+      <a class="btn small site-link" href="/"><svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6.5 8 6.5M6.5 9.5V19h11V9.5"/></svg>الموقع</a>
     </header>
 
     <section class="gate card" id="g-wait"><p>لحظة…</p></section>
@@ -250,7 +253,7 @@
   </div>
   <div class="toast" id="toast" role="status" hidden></div>
 
-  <script src="/account.js?v=13"></script>
+  <script src="/account.js?v=14"></script>
   <script src="/dash/dash.js?v=2"></script>
 </body>
 </html>

@@ -366,6 +366,8 @@
       font-size: .95rem; text-align: start; cursor: pointer;
     }
     .acct-item:hover { background: rgba(244, 239, 230, .06); }
+    a.acct-item { text-decoration: none; font-family: inherit; }
+    .acct-item[hidden] { display: none; }
     .acct-item svg { width: 20px; height: 20px; flex: none; color: var(--muted); }
     .acct-count { margin-inline-start: auto; font-size: .82rem; color: var(--muted); }
     .acct-danger, .acct-danger svg { color: var(--coral); }
@@ -512,18 +514,15 @@
     main:not([data-sec="tree"]) #tree { display: none; }
     main:not([data-sec="work"]) #work { display: none; }
     main:not([data-sec="friends"]) #friends { display: none; }
-    /* four sections in the switcher: their short names («يصير لك؟ · عائلتي · دوامي · ربعي»), and the full
-       ones on a computer, where the switcher gets wider than the column; on a phone the words alone */
-    .secs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .sec-l { display: none; }
-    @media (min-width: 760px) {
-      .secs { width: min(720px, calc(100vw - 48px)); }
-      .sec-l { display: inline; }
-    }
+    /* four sections in the switcher, short names «شنو يصير لك؟ · عائلتي · دوامي · ربعي» (Ali, 2026-11-03),
+       as wide as the card under it; on a phone the words alone, and «شنو» drops only on the narrowest */
+    .secs { display: flex; }
+    .sec { flex: 1 1 auto; }
     @media (max-width: 459px) {
       .sec { gap: 6px; padding: 0 4px; font-size: .9rem; }
       .sec svg { display: none; }
     }
+    @media (max-width: 359px) { .sec-l { display: none; } }
 
     /* «شجرة عائلتي» */
     .tree:focus { outline: none; }
@@ -856,6 +855,7 @@
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-wallet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg><span>اللي يصيرون لي</span><span class="acct-count" id="acct-count"></span></button>
         <button type="button" class="acct-item" id="acct-tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>شجرة عائلتي</span><span class="acct-count" id="acct-tree-count"></span></button>
+        <a class="acct-item" id="acct-dash" href="/dash/" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="8" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="14.5" width="7" height="6" rx="1.5"/></svg><span>لوحة التحكم</span></a>
         <div class="acct-sep"></div>
         <button type="button" class="acct-item" id="acct-out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h10"/></svg><span>تسجيل الخروج</span></button>
         <button type="button" class="acct-item acct-danger" id="acct-del"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2M6.5 7l1 12.2a1.5 1.5 0 0 0 1.5 1.3h6a1.5 1.5 0 0 0 1.5-1.3l1-12.2M10 11v6M14 11v6"/></svg><span>حذف الحساب</span></button>
@@ -877,8 +877,8 @@
 
     <nav class="secs" aria-label="أقسام شرباكة">
       <a class="sec" href="#kin" data-sec="kin" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="7.5" r="3"/><circle cx="17.5" cy="16.5" r="3"/><path d="M9 9.6l6 4.8"/></svg><span><span class="sec-l">شنو </span>يصير لك؟</span></a>
-      <a class="sec" href="#tree" data-sec="tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span><span class="sec-l">شجرة </span>عائلتي</span></a>
-      <a class="sec" href="#work" data-sec="work"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7V5.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V7M3 13h18"/></svg><span><span class="sec-l">شجرة </span>دوامي</span></a>
+      <a class="sec" href="#tree" data-sec="tree"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/></svg><span>عائلتي</span></a>
+      <a class="sec" href="#work" data-sec="work"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7V5.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V7M3 13h18"/></svg><span>دوامي</span></a>
       <a class="sec" href="#friends" data-sec="friends"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5v17M12 3.5v17M19 3.5v17"/><circle cx="5" cy="9" r="1.6"/><path d="M3.5 15.5h10"/><circle cx="19" cy="12" r="1.6"/></svg><span>ربعي</span></a>
     </nav>
 
@@ -1448,9 +1448,9 @@
   </div>
 
   <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
-  <script src="/account.js?v=13" defer></script>
+  <script src="/account.js?v=14" defer></script>
   <script src="/flags.js?v=1" defer></script>
-  <script src="/kin.js?v=25" defer></script>
+  <script src="/kin.js?v=26" defer></script>
   <script src="/tree.js?v=21" defer></script>
   <script src="/work.js?v=3" defer></script>
   <script src="/friends.js?v=3" defer></script>
