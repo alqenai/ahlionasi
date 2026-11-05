@@ -36,6 +36,13 @@ Static files, no build step, served by GitHub Pages from `main`:
    - `CNAME` record for `www` → `alqenai.github.io`
 4. In Settings → Pages, tick **Enforce HTTPS** once the certificate is ready. Google sign-in needs HTTPS.
 
+## Search engines (SEO)
+
+- `index.html` carries the title, description, canonical URL, Open Graph and Twitter cards, and JSON-LD (Organization, WebSite, WebApplication). Only the home page is indexed: the sections (`#kin`, `#tree`…) are parts of it, not separate URLs.
+- `sitemap.xml` lists the home page; `robots.txt` points to it. Update `<lastmod>` when the home page changes a lot.
+- Private pages stay out of search: `/dash/` and the tree links `/t/`, `/w/`, `/f/` carry `noindex` and are never in the sitemap. They are left crawlable in `robots.txt` on purpose, so search engines can read that `noindex`. The codes after `#` are never sent to any server.
+- Google Search Console and Bing Webmaster Tools are verified with a DNS TXT record at Hover (no file in this repo).
+
 ## Accounts (Google sign-in)
 
 1. Supabase project with the migrations in `supabase/migrations/` applied.

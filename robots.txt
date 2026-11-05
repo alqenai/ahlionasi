@@ -1,3 +1,9 @@
+# shorbaka.com
+# Private pages (/dash/, and tree links under /t/, /w/, /f/) stay open to crawlers
+# on purpose: each one carries <meta name="robots" content="noindex">, and a crawler
+# can only see that tag if it is allowed to load the page.
 User-agent: *
 Allow: /
-Disallow: /dash/
+Disallow: /supabase/
+
+Sitemap: https://shorbaka.com/sitemap.xml
