@@ -557,6 +557,44 @@
     .gm-opt.is-off { opacity: .45; }
     @keyframes gm-no { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
     .gm-next { width: 100%; margin-top: 14px; }
+    /* «تحدي» on one screen (Ali, 2026-11-05: "no scroll"): on this tab the logo is small and sits up top beside the
+       account button, and a question, its map and its three answers fit the phone's screen without scrolling. */
+    body:has(main[data-sec="game"]) { justify-content: flex-start; padding-top: calc(14px + env(safe-area-inset-top)); }
+    main[data-sec="game"] > h1 { align-self: flex-start; margin-top: 7px; }
+    main[data-sec="game"] > h1 .wm { width: 116px; }
+    main[data-sec="game"] > .latin { display: none; }
+    main[data-sec="game"] .secs { margin-top: 18px; }
+    main[data-sec="game"] .secs ~ .kin { margin-top: 12px; scroll-margin-top: 0; }
+    .game:has(#gm-play:not([hidden])) { padding: 14px 14px 14px; }
+    #gm-play .gm-bar { margin-top: 8px; }
+    #gm-play .gm-time { margin-top: 8px; }
+    #gm-play .gm-time-n { width: 30px; height: 30px; font-size: .92rem; }
+    #gm-play .gm-time-t { margin-top: 4px; font-size: .78rem; }
+    #gm-play .gm-card { margin-top: 8px; padding: 10px 12px; }
+    #gm-play .gm-map svg { max-height: clamp(120px, calc(100svh - 500px), 300px); }
+    #gm-play .gm-tag { margin-bottom: 4px; }
+    #gm-play .gm-q { font-size: 1.1rem; line-height: 1.6; }
+    #gm-play .gm-map + .gm-q { margin-top: 6px; }
+    #gm-play .gm-card.is-text .gm-q { padding: 18px 4px; }
+    #gm-play .gm-opts { gap: 8px; margin-top: 10px; }
+    #gm-play .gm-opt { min-height: 50px; font-size: 1.02rem; }
+    #gm-play .gm-next { margin-top: 10px; min-height: 50px; }
+    /* phones: while a round is on, the tabs step aside (they come back with the result), and on the shortest screens
+       the line under the clock goes too (the +points chip already says how it went) */
+    @media (max-height: 820px) {
+      main[data-sec="game"]:has(#gm-play:not([hidden])) .secs { display: none; }
+      main[data-sec="game"]:has(#gm-play:not([hidden])) > h1 { margin-bottom: 4px; }
+      #gm-play .gm-map svg { max-height: clamp(96px, calc(100svh - 478px), 300px); }
+      #gm-play .gm-card:has(.gm-tag) .gm-map svg { max-height: clamp(90px, calc(100svh - 504px), 300px); }
+    }
+    @media (max-height: 600px) {
+      #gm-play .gm-time-t { display: none; }
+      #gm-play .gm-opt { min-height: 46px; }
+      #gm-play .gm-next { min-height: 46px; }
+      #gm-play .gm-card.is-text .gm-q { padding: 10px 4px; }
+      #gm-play .gm-map svg { max-height: clamp(96px, calc(100svh - 440px), 300px); }
+      #gm-play .gm-card:has(.gm-tag) .gm-map svg { max-height: clamp(90px, calc(100svh - 466px), 300px); }
+    }
     .gm-end { text-align: center; }
     .gm-big { direction: ltr; margin-top: 18px; line-height: 1; }
     .gm-big b { font-size: 5.5rem; font-weight: 700; color: var(--sand); text-shadow: 0 0 40px rgba(233, 196, 106, .35); }
@@ -1548,7 +1586,7 @@
   <script src="/work.js?v=3" defer></script>
   <script src="/friends.js?v=3" defer></script>
   <script src="/game-bank.js?v=1" defer></script>
-  <script src="/game.js?v=8" defer></script>
+  <script src="/game.js?v=9" defer></script>
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>

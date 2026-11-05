@@ -480,7 +480,8 @@
         st = { round: pick(res[1]), i: 0, score: 0, points: 0, marks: [], play: g.play || null };
         view('play');
         ask();
-        sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        // the whole round sits on one screen under the small logo and the tabs (Ali, 2026-11-05), so it starts at the top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }).then(function () { ui.go.disabled = false; s.textContent = was; });
     }
 
@@ -692,11 +693,11 @@
         return /HTTP 404/.test(e && e.message) ? rpc('game_finish', done) : Promise.reject(e);
       }).then(results, results);
       else results();
-      sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     ui.go.addEventListener('click', begin);
-    ui.again.addEventListener('click', function () { view('start'); refresh(); sec.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+    ui.again.addEventListener('click', function () { view('start'); refresh(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
     ui.resIn.addEventListener('click', function () { if (root.KIN && root.KIN.openAuth) root.KIN.openAuth('سجّل دخول عشان تنحفظ نتائجك', ui.resIn); });
     if (root.ACCOUNT && root.ACCOUNT.onChange) {
       root.ACCOUNT.onChange(function () { refresh(); });
